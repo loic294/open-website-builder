@@ -2,10 +2,8 @@ import { LitElement, html, css, unsafeCSS } from "lit";
 import { Editor, Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import BubbleMenu from "@tiptap/extension-bubble-menu";
-import Link from "@tiptap/extension-link";
 import { TextStyle } from "@tiptap/extension-text-style";
 import TextAlign from "@tiptap/extension-text-align";
-import UnderlineExtension from "@tiptap/extension-underline";
 import {
   AlignCenter,
   AlignJustify,
@@ -81,6 +79,7 @@ class Text extends LitElement {
   static properties = {
     content: { type: String },
     node: { type: Object },
+    pageConfig: { type: Object },
   };
 
   static styles = unsafeCSS(styles);
@@ -89,7 +88,42 @@ class Text extends LitElement {
     super();
     this.content = "";
     this.node = null;
+    this.pageConfig = null;
     this.editor = null;
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  updateNodeContent(nodes, targetNodeId, nextContent) {
+    return nodes.map((currentNode) => {
+      if (currentNode?.id === targetNodeId && currentNode?.type === "text") {
+        return {
+          ...currentNode,
+          content: nextContent,
+        };
+      }
+
+      if (Array.isArray(currentNode?.content)) {
+        return {
+          ...currentNode,
+          content: this.updateNodeContent(
+            currentNode.content,
+            targetNodeId,
+            nextContent,
+          ),
+        };
+      }
+
+      return currentNode;
+    });
   }
 
   firstUpdated() {
@@ -99,13 +133,8 @@ class Text extends LitElement {
       injectCSS: true,
       extensions: [
         StarterKit,
-        UnderlineExtension,
         TextAlign.configure({
           types: ["heading", "paragraph"],
-        }),
-        Link.configure({
-          openOnClick: false,
-          autolink: true,
         }),
         TextStyle,
         FontSize,
@@ -130,13 +159,23 @@ class Text extends LitElement {
       onBlur: ({ editor }) => {
         const nextContent = editor.getHTML();
         this.content = nextContent;
-        this.dispatchEvent(
-          new CustomEvent("content-changed", {
-            detail: nextContent,
-            bubbles: true,
-            composed: true,
-          }),
-        );
+
+        if (!this.pageConfig || !this.node?.id) {
+          return;
+        }
+
+        const nextPageConfig = {
+          ...this.pageConfig,
+          content: this.updateNodeContent(
+            Array.isArray(this.pageConfig.content)
+              ? this.pageConfig.content
+              : [],
+            this.node.id,
+            nextContent,
+          ),
+        };
+
+        this.dispatchPageConfigUpdated(nextPageConfig);
       },
     });
   }
@@ -434,17 +473,15 @@ class Text extends LitElement {
 
 export const editorRenderText = (
   node,
-  onAddSection,
-  onContentChanged,
+  pageConfig,
+  onPageConfigUpdated,
   renderNode,
 ) => {
   return html`<site-text
     .node=${node}
+    .pageConfig=${pageConfig}
     .content=${String(node.content ?? "")}
-    @content-changed=${async (event) => {
-      event.stopPropagation();
-      onContentChanged(node, event.detail);
-    }}
+    @page-config-updated=${onPageConfigUpdated}
   ></site-text>`;
 };
 

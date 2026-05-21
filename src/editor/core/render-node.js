@@ -7,14 +7,14 @@ const renderComponents = new Map();
 renderComponents.set("section", editorRenderSiteSection);
 renderComponents.set("text", editorRenderText);
 
-export function renderNode(node, onAddSection, onContentChanged, renderNode) {
+export function renderNode(node, pageConfig, onPageConfigUpdated, renderNode) {
   if (!node || typeof node !== "object") {
     return html``;
   }
 
   const renderFunction = renderComponents.get(node.type);
   if (renderFunction) {
-    return renderFunction(node, onAddSection, onContentChanged, renderNode);
+    return renderFunction(node, pageConfig, onPageConfigUpdated, renderNode);
   }
 
   return html`No content to display`;

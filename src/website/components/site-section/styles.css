@@ -46,6 +46,7 @@ section:hover .add-section-button {
   padding: 5px 7px;
   z-index: 1;
   display: none;
+  gap: 4px;
 }
 
 .section-controls svg {

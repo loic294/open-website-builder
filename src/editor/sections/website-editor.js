@@ -2,6 +2,7 @@ import { LitElement, html, css, unsafeCSS } from "lit";
 
 import "../components/button/button.js";
 import { renderNode } from "../core/render-node.js";
+import { savePageConfig } from "../utils/save-page-config.js";
 
 import "../../website/components/site-section/site-section.js";
 import "../../website/components/text/text.js";
@@ -43,64 +44,12 @@ class WebsiteEditor extends LitElement {
     }
   }
 
-  async savePageConfig(pageConfig) {
-    const response = await fetch("/__save-page-config", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(pageConfig),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to save page config: ${response.status}`);
-    }
-  }
-
-  async addSectionAfter(node, position = "after") {
-    const content = Array.isArray(this.pageConfig?.content)
-      ? this.pageConfig.content
-      : [];
-    const index = content.indexOf(node);
-    const nextSection = {
-      id: `section-${Date.now()}`,
-      type: "section",
-      content: [
-        {
-          id: `text-${Date.now()}`,
-          type: "text",
-          content: `New section ${Date.now()}`,
-        },
-      ],
-    };
-
-    const nextContent = [...content];
-
-    if (index === -1) {
-      nextContent.push(nextSection);
-    } else {
-      const insertionIndex = position === "before" ? index : index + 1;
-      nextContent.splice(insertionIndex, 0, nextSection);
-    }
-
-    this.pageConfig = {
-      ...this.pageConfig,
-      content: nextContent,
-    };
+  onPageConfigUpdated = async (event) => {
+    event.stopPropagation();
+    this.pageConfig = event.detail;
 
     try {
-      await this.savePageConfig(this.pageConfig);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  onContentChanged = async (node, newContent) => {
-    console.log("Text changed:", newContent);
-    node.content = newContent;
-
-    try {
-      await this.savePageConfig(this.pageConfig);
+      await savePageConfig(this.pageConfig);
     } catch (error) {
       console.error(error);
     }
@@ -127,8 +76,8 @@ class WebsiteEditor extends LitElement {
         ${content.map((node) =>
           renderNode(
             node,
-            this.addSectionAfter.bind(this),
-            this.onContentChanged.bind(this),
+            this.pageConfig,
+            this.onPageConfigUpdated,
             renderNode,
           ),
         )}
