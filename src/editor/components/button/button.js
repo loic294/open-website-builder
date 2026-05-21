@@ -16,4 +16,4 @@ export class EditorButton extends LitElement {
   }
 }
 
-customElements.define("editor-button", EditorButton);
+customElements.define("editor-btn", EditorButton);

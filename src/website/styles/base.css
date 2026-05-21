@@ -1,5 +1,27 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 .website {
+  font-size: 24px;
   font-family: var(--website-body-font-family);
+  font-variation-settings: "wght" 300;
+  color: var(--website-text-color);
+  background: var(--website-background-color);
+  line-height: 1.2;
 }
 
 .website h1,
@@ -9,4 +31,5 @@
 .website h5,
 .website h6 {
   font-family: var(--website-title-font-family);
+  margin: 0 0 1rem;
 }

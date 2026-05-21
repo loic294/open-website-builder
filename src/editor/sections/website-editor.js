@@ -1,18 +1,20 @@
 import { LitElement, html, css, unsafeCSS } from "lit";
 
-import "./editor/components/button/button.js";
+import "../components/button/button.js";
+import { renderNode } from "../core/render-node.js";
 
-import "./website/components/site-section/site-section.js";
-import "./website/components/text/text.js";
+import "../../website/components/site-section/site-section.js";
+import "../../website/components/text/text.js";
 
-import baseStyle from "./website/styles/base.css?inline";
+import baseStyle from "../../website/styles/base.css?inline";
+import styles from "./website-editor-styles.css?inline";
 
-class MyElement extends LitElement {
+class WebsiteEditor extends LitElement {
   static properties = {
     pageConfig: { state: true },
   };
 
-  static styles = [unsafeCSS(baseStyle), css``];
+  static styles = [unsafeCSS(baseStyle), unsafeCSS(styles), css``];
 
   constructor() {
     super();
@@ -55,7 +57,7 @@ class MyElement extends LitElement {
     }
   }
 
-  async addSectionAfter(node) {
+  async addSectionAfter(node, position = "after") {
     const content = Array.isArray(this.pageConfig?.content)
       ? this.pageConfig.content
       : [];
@@ -77,7 +79,8 @@ class MyElement extends LitElement {
     if (index === -1) {
       nextContent.push(nextSection);
     } else {
-      nextContent.splice(index + 1, 0, nextSection);
+      const insertionIndex = position === "before" ? index : index + 1;
+      nextContent.splice(insertionIndex, 0, nextSection);
     }
 
     this.pageConfig = {
@@ -92,51 +95,16 @@ class MyElement extends LitElement {
     }
   }
 
-  renderNode(node) {
-    if (!node || typeof node !== "object") {
-      return html``;
+  onContentChanged = async (node, newContent) => {
+    console.log("Text changed:", newContent);
+    node.content = newContent;
+
+    try {
+      await this.savePageConfig(this.pageConfig);
+    } catch (error) {
+      console.error(error);
     }
-
-    if (node.type === "section") {
-      const children = Array.isArray(node.content) ? node.content : [];
-      return html`<site-section
-        @add-section=${(event) => {
-          event.stopPropagation();
-          this.addSectionAfter(node);
-        }}
-      >
-        ${children.map((child) => this.renderNode(child))}
-      </site-section>`;
-    }
-
-    if (node.type === "text") {
-      return html`<site-text
-        .node=${node}
-        .content=${String(node.content ?? "")}
-        @content-changed=${async (event) => {
-          event.stopPropagation();
-          console.log("Text changed:", event.detail);
-          this.pageConfig = {
-            ...this.pageConfig,
-            content: this.pageConfig.content.map((n) => {
-              if (n.id === node.id) {
-                return { ...n, content: event.detail };
-              }
-              return n;
-            }),
-          };
-
-          try {
-            await this.savePageConfig(this.pageConfig);
-          } catch (error) {
-            console.error(error);
-          }
-        }}
-      ></site-text>`;
-    }
-
-    return html`No content to display`;
-  }
+  };
 
   render() {
     if (!this.pageConfig) {
@@ -147,10 +115,26 @@ class MyElement extends LitElement {
       ? this.pageConfig.content
       : [];
 
-    return html`<div class="website">
-      ${content.map((node) => this.renderNode(node))}
+    return html`<div class="editor">
+      <div class="editor-top-menu">
+        <div class="page-info">
+          <span class="page-title">Home</span>
+          <span class="page-path">/index</span>
+        </div>
+        <editor-btn>Publish</editor-btn>
+      </div>
+      <div class="website website-container">
+        ${content.map((node) =>
+          renderNode(
+            node,
+            this.addSectionAfter.bind(this),
+            this.onContentChanged.bind(this),
+            renderNode,
+          ),
+        )}
+      </div>
     </div>`;
   }
 }
 
-customElements.define("website-editor", MyElement);
+customElements.define("website-editor", WebsiteEditor);

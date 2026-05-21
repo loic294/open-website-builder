@@ -1,18 +1,28 @@
 body {
-  background: #fff;
+  background: #f1f1f1;
   color: #222;
   font-family: system-ui, sans-serif;
   margin: 0;
   padding: 1rem;
-}
-main {
-  margin: 2rem auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #eee;
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+main {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+editor-menu {
+  width: 280px;
+}
+
+website-editor {
+  flex: 1;
 }

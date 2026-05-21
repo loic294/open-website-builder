@@ -7,4 +7,12 @@
   --editor-black-color: #000000;
   --editor-text-color: #000000;
   --editor-text-color-light: #ffffff;
+  --editor-text-danger: #d73c3c;
+
+  --editor-default-border: 4px solid var(--editor-light-color);
+
+  --editor-border-radius: 4px;
+  --editor-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  --editor-background: var(--editor-light-color);
 }

@@ -5,9 +5,40 @@ button {
   padding: 8px 16px;
   cursor: pointer;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: transform 0.2s;
+  transition: filter 0.2s;
+}
+
+button:hover,
+button:focus-visible {
+  filter: brightness(0.92);
 }
 
 button.primary {
   background-color: var(--editor-primary-color, #ffc700);
   color: var(--editor-text-color, #000000);
+}
+
+button.secondary {
+  background-color: var(--editor-secondary-color, #000000);
+  color: var(--editor-text-color, #000000);
+}
+
+button.light {
+  background-color: var(--editor-light-color, #fbfbfb);
+  color: var(--editor-text-color, #000000);
+}
+
+button.icon {
+  padding: 6px;
+  min-width: 30px;
+  min-height: 30px;
+}
+
+button.text-danger {
+  color: var(--editor-text-danger, #ff0000);
 }

@@ -1,44 +1,16 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, unsafeCSS } from "lit";
+import { Trash, Pencil, createElement } from "lucide/dist/cjs/lucide";
+import styles from "./styles.css?inline";
 
 export class SiteSection extends LitElement {
-  static styles = css`
-    section {
-      position: relative;
-      padding: 20px;
-    }
+  static styles = unsafeCSS(styles);
 
-    section:hover:before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      border: 4px solid #ffc700;
-      z-index: -1;
-    }
-
-    .add-section-button {
-      position: absolute;
-      top: 0%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1;
-      display: none;
-    }
-
-    .add-section-button.bottom {
-      top: 100%;
-    }
-
-    section:hover .add-section-button {
-      display: block;
-    }
-  `;
-
-  addSection() {
+  addSection(position) {
     this.dispatchEvent(
       new CustomEvent("add-section", {
+        detail: {
+          position: position,
+        },
         bubbles: true,
         composed: true,
       }),
@@ -48,23 +20,51 @@ export class SiteSection extends LitElement {
   render() {
     return html`<div>
       <section>
-        <editor-button
+        <editor-btn
           style="primary"
           class="add-section-button"
-          @click=${this.addSection}
+          @click=${() => this.addSection("before")}
         >
           Add section
-        </editor-button>
-        <slot></slot>
-        <editor-button
+        </editor-btn>
+        <div class="section-controls">
+          <editor-btn style="light">${createElement(Pencil)} Edit</editor-btn>
+          <editor-btn style="light text-danger"
+            >${createElement(Trash)}</editor-btn
+          >
+        </div>
+        <div class="container">
+          <slot></slot>
+        </div>
+        <editor-btn
           style="primary"
           class="add-section-button bottom"
-          @click=${this.addSection}
+          @click=${() => this.addSection("after")}
         >
           Add section
-        </editor-button>
+        </editor-btn>
       </section>
     </div>`;
   }
 }
+
+export const editorRenderSiteSection = (
+  node,
+  onAddSection,
+  onContentChanged,
+  renderNode,
+) => {
+  const children = Array.isArray(node.content) ? node.content : [];
+  return html`<site-section
+    @add-section=${(event) => {
+      event.stopPropagation();
+      onAddSection(node, event.detail?.position);
+    }}
+  >
+    ${children.map((child) =>
+      renderNode(child, onAddSection, onContentChanged, renderNode),
+    )}
+  </site-section>`;
+};
+
 customElements.define("site-section", SiteSection);

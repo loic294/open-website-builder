@@ -1,0 +1,33 @@
+.editor {
+  background-color: var(--editor-white-color);
+  max-height: calc(100vh - 2rem);
+}
+
+.editor-top-menu {
+  border-bottom: var(--editor-default-border);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.editor-top-menu .page-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-top-menu .page-info .page-tile {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--editor-text-color);
+}
+
+.editor-top-menu .page-info .page-path {
+  font-size: 14px;
+  color: var(--editor-text-color);
+}
+
+.website-container {
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}

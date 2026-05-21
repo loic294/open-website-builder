@@ -1,0 +1,119 @@
+:host {
+  display: block;
+}
+
+:host > div {
+  display: block;
+  padding: 0;
+  margin: 0;
+  height: auto;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.menu {
+  width: min(560px, calc(100vw - 24px));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 6px;
+  background-color: var(--editor-background);
+  border-radius: var(--editor-border-radius);
+  box-shadow: var(--editor-box-shadow);
+  visibility: hidden;
+  position: fixed;
+  transform: translateY(12px);
+}
+
+.menu svg {
+  height: 14px;
+  width: 14px;
+}
+
+.toolbar-select {
+  border: none;
+  border-radius: var(--editor-border-radius);
+  padding: 4px 6px;
+  height: 30px;
+  min-width: 68px;
+  background: var(--editor-light-color, #fbfbfb);
+  color: var(--editor-text-color, #000000);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heading-style-select {
+  min-width: 88px;
+}
+
+.ProseMirror {
+  display: block;
+  padding: 0;
+  margin: 0;
+  height: auto;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.ProseMirror p,
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6,
+.ProseMirror blockquote,
+.ProseMirror pre {
+  padding: 0;
+  margin: 0;
+  height: auto;
+  line-height: 1.2;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  font-family: var(--website-title-font-family);
+  line-height: 1.1;
+}
+
+.ProseMirror h1 {
+  font-size: 3.2em;
+}
+
+.ProseMirror h2 {
+  font-size: 2.7em;
+}
+
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin-top: 0.15em;
+  margin-bottom: 0.35em;
+}
+
+.ProseMirror h3 {
+  font-size: 2.2em;
+}
+
+.ProseMirror h4 {
+  font-size: 1.9em;
+}
+
+.ProseMirror h5 {
+  font-size: 1.6em;
+}
+
+.ProseMirror h6 {
+  font-size: 1.35em;
+}
+
+.ProseMirror .ProseMirror-selectednode {
+  outline: 1px solid var(--editor-primary-color, #ffc700);
+  border-radius: 2px;
+}
