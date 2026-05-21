@@ -1,0 +1,12 @@
+.website {
+  font-family: var(--website-body-font-family);
+}
+
+.website h1,
+.website h2,
+.website h3,
+.website h4,
+.website h5,
+.website h6 {
+  font-family: var(--website-title-font-family);
+}

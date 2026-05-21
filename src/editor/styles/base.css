@@ -1,0 +1,18 @@
+body {
+  background: #fff;
+  color: #222;
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 1rem;
+}
+main {
+  margin: 2rem auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eee;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}

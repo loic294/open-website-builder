@@ -1,0 +1,20 @@
+{
+  "name": "open-website-builder",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.23.5",
+    "@tiptap/extension-bubble-menu": "^3.23.5",
+    "@tiptap/pm": "^3.23.5",
+    "@tiptap/starter-kit": "^3.23.5",
+    "lit": "^3.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

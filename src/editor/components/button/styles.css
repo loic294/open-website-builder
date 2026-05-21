@@ -1,0 +1,13 @@
+button {
+  background-color: var(--editor-secondary-color, #000000);
+  border: none;
+  color: var(--editor-text-color-light, white);
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+button.primary {
+  background-color: var(--editor-primary-color, #ffc700);
+  color: var(--editor-text-color, #000000);
+}
