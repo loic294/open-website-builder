@@ -14,6 +14,7 @@ export class EditorComponent extends LitElement {
   constructor() {
     super();
     this.isSettingsEditorOpen = false;
+    this.settingsDefaultState = {};
     this.settingsOverlayContainer = null;
     this.settingsOverlayContent = null;
     this.settingsOverlayTabs = [{ id: "settings", label: "Settings" }];
@@ -148,6 +149,8 @@ export class EditorComponent extends LitElement {
   }
 
   syncSettingsStateFromNode(defaultState = {}) {
+    this.settingsDefaultState = { ...defaultState };
+
     const nodeSettings =
       this.node && typeof this.node.settings === "object" && this.node.settings
         ? this.node.settings
@@ -161,6 +164,34 @@ export class EditorComponent extends LitElement {
     }
   }
 
+  getPersistedSettings(nextState) {
+    const currentSettings =
+      this.node && typeof this.node.settings === "object" && this.node.settings
+        ? this.node.settings
+        : {};
+
+    const nextPersistedSettings = {
+      ...currentSettings,
+      ...nextState,
+    };
+
+    const defaults =
+      this.settingsDefaultState && typeof this.settingsDefaultState === "object"
+        ? this.settingsDefaultState
+        : {};
+
+    for (const [key, defaultValue] of Object.entries(defaults)) {
+      if (
+        key in nextPersistedSettings &&
+        nextPersistedSettings[key] === defaultValue
+      ) {
+        delete nextPersistedSettings[key];
+      }
+    }
+
+    return nextPersistedSettings;
+  }
+
   updateNodeSettingsInTree(nodes, targetNodeId, nextSettings) {
     let didChange = false;
 
@@ -171,14 +202,21 @@ export class EditorComponent extends LitElement {
 
       if (currentNode.id === targetNodeId) {
         didChange = true;
-        return {
+
+        const hasSettings =
+          nextSettings && Object.keys(nextSettings).length > 0;
+        const nextNode = {
           ...currentNode,
-          settings: {
-            ...(currentNode.settings && typeof currentNode.settings === "object"
-              ? currentNode.settings
-              : {}),
-            ...nextSettings,
-          },
+        };
+
+        if (hasSettings) {
+          nextNode.settings = nextSettings;
+        } else {
+          delete nextNode.settings;
+        }
+
+        return {
+          ...nextNode,
         };
       }
 
@@ -208,11 +246,13 @@ export class EditorComponent extends LitElement {
     Object.assign(this, nextState);
 
     if (this.node && typeof this.node === "object") {
-      if (!this.node.settings || typeof this.node.settings !== "object") {
-        this.node.settings = {};
-      }
+      const nextPersistedSettings = this.getPersistedSettings(nextState);
 
-      Object.assign(this.node.settings, nextState);
+      if (Object.keys(nextPersistedSettings).length > 0) {
+        this.node.settings = nextPersistedSettings;
+      } else {
+        delete this.node.settings;
+      }
 
       if (
         this.pageConfig &&
@@ -222,7 +262,7 @@ export class EditorComponent extends LitElement {
         const result = this.updateNodeSettingsInTree(
           this.pageConfig.content,
           this.node.id,
-          nextState,
+          nextPersistedSettings,
         );
 
         if (result.didChange) {
