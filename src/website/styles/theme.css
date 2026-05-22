@@ -1,5 +1,21 @@
 :root {
   --website-primary-color: #007bff;
+  --website-secondary-color: #6c757d;
+  --website-light-color: #f8f9fa;
+  --website-dark-color: #343a40;
+  --website-muted-color: #6c757d;
+  --website-neutral-color: #6c757d;
+  --website-background-light-color: #f8f9fa;
+  --website-background-dark-color: #343a40;
+  --website-text-light-color: #212529;
+  --website-text-dark-color: #343a40;
+  --website-text-neutral-color: #6c757d;
+  --website-text-muted-color: #6c757d;
+  --website-success-color: #28a745;
+  --website-danger-color: #dc3545;
+  --website-warning-color: #ffc107;
+  --website-info-color: #17a2b8;
+
   --website-title-font-family: hwt-aetna-extra-condensed, serif;
   --website-body-font-family: "early-sans-variable", sans-serif;
   --website-background-color: #fff;

@@ -10,12 +10,33 @@ import {
 import styles from "./styles.css?inline";
 
 export class SiteSection extends EditorComponent {
+  static designColorVariables = [
+    "--website-primary-color",
+    "--website-secondary-color",
+    "--website-light-color",
+    "--website-dark-color",
+    "--website-muted-color",
+    "--website-neutral-color",
+    "--website-background-light-color",
+    "--website-background-dark-color",
+    "--website-text-light-color",
+    "--website-text-dark-color",
+    "--website-text-neutral-color",
+    "--website-text-muted-color",
+    "--website-success-color",
+    "--website-danger-color",
+    "--website-warning-color",
+    "--website-info-color",
+  ];
+
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
 
     settingWidth: { type: String },
     settingWidthCustomValue: { type: String },
+    settingBackgroundColor: { type: String },
+    settingTextColor: { type: String },
   };
 
   static styles = unsafeCSS(styles);
@@ -26,6 +47,8 @@ export class SiteSection extends EditorComponent {
     this.pageConfig = null;
     this.settingWidth = "normal";
     this.settingWidthCustomValue = "";
+    this.settingBackgroundColor = "";
+    this.settingTextColor = "";
   }
 
   updated(changedProperties) {
@@ -33,6 +56,8 @@ export class SiteSection extends EditorComponent {
       this.syncSettingsStateFromNode({
         settingWidth: "normal",
         settingWidthCustomValue: "",
+        settingBackgroundColor: "",
+        settingTextColor: "",
       });
     }
   }
@@ -55,6 +80,8 @@ export class SiteSection extends EditorComponent {
     this.syncSettingsStateFromNode({
       settingWidth: "normal",
       settingWidthCustomValue: "",
+      settingBackgroundColor: "",
+      settingTextColor: "",
     });
 
     this.openSettingsEditor({
@@ -62,6 +89,10 @@ export class SiteSection extends EditorComponent {
         {
           id: "general",
           label: "General",
+        },
+        {
+          id: "design",
+          label: "Design",
         },
       ],
       content: (tab) => {
@@ -97,13 +128,58 @@ export class SiteSection extends EditorComponent {
             </settings-section>
           </div>`;
         }
+
+        if (tab === "design") {
+          return html`<div>
+            <settings-section title="Background color">
+              <editor-color-dots
+                .options=${SiteSection.designColorVariables}
+                .value=${this.settingBackgroundColor}
+                label="Background color"
+                @change=${(e) => {
+                  this.updateSettingsState({
+                    settingBackgroundColor: e.detail.value,
+                  });
+                }}
+              ></editor-color-dots>
+            </settings-section>
+            <settings-section title="Text color">
+              <editor-color-dots
+                .options=${SiteSection.designColorVariables}
+                .value=${this.settingTextColor}
+                label="Text color"
+                @change=${(e) => {
+                  this.updateSettingsState({
+                    settingTextColor: e.detail.value,
+                  });
+                }}
+              ></editor-color-dots>
+            </settings-section>
+          </div>`;
+        }
+
+        return html``;
       },
     });
   }
 
   render() {
+    const widthStyle =
+      this.settingWidth === "custom" && this.settingWidthCustomValue
+        ? `width: ${this.settingWidthCustomValue};`
+        : "";
+    const backgroundColorStyle = this.settingBackgroundColor
+      ? `background-color: var(${this.settingBackgroundColor});`
+      : "";
+    const textColorStyle = this.settingTextColor
+      ? `color: var(${this.settingTextColor});`
+      : "";
+
     return html`<div>
-      <section class="${this.isSettingsEditorOpen ? "is-settings-open" : ""}">
+      <section
+        class="${this.isSettingsEditorOpen ? "is-settings-open" : ""}"
+        style="${widthStyle}${backgroundColorStyle}${textColorStyle}"
+      >
         <editor-btn
           style="primary"
           class="add-section-button"
@@ -133,9 +209,7 @@ export class SiteSection extends EditorComponent {
         </div>
         <div
           class="container is-${this.settingWidth}-width"
-          style="${this.settingWidth === "custom"
-            ? `width: ${this.settingWidthCustomValue};`
-            : ""}"
+          style="${widthStyle}"
         >
           <slot></slot>
         </div>

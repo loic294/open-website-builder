@@ -1,0 +1,36 @@
+.color-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+
+.color-dot:hover {
+  transform: scale(1.08);
+}
+
+.color-dot.is-selected {
+  outline: 2px solid #1e1b16;
+  outline-offset: 2px;
+}
+
+.color-dot.is-none {
+  background:
+    linear-gradient(
+      135deg,
+      transparent 45%,
+      #7a7366 45%,
+      #7a7366 55%,
+      transparent 55%
+    ),
+    #ffffff;
+}
