@@ -41,6 +41,32 @@ export function createJsonDataResolvers({ contentRoot }) {
   const collectionsDir = resolve(contentRoot, "collections");
   const sharedDir = resolve(contentRoot, "shared");
 
+  async function resolveSharedComponentFilePath(componentId) {
+    const normalizedComponentId = sanitizeId(componentId);
+    if (!normalizedComponentId) {
+      throw new Error("Component id is required");
+    }
+
+    const componentFiles = await listJsonFileNames(sharedDir);
+    for (const fileName of componentFiles) {
+      const filePath = resolve(sharedDir, fileName);
+      const componentConfig = await readJsonFile(filePath);
+      if (sanitizeId(componentConfig?.id) === normalizedComponentId) {
+        return filePath;
+      }
+    }
+
+    const directPath = resolve(sharedDir, `${normalizedComponentId}.json`);
+    try {
+      await readFile(directPath, "utf8");
+      return directPath;
+    } catch {
+      // Keep the fallback to preserve compatibility with files missing an id.
+    }
+
+    throw new Error(`Component not found: ${componentId}`);
+  }
+
   async function resolvePageFilePath(pageId) {
     const normalizedPageId = sanitizeId(pageId);
     if (!normalizedPageId) {
@@ -251,14 +277,13 @@ export function createJsonDataResolvers({ contentRoot }) {
   }
 
   async function getComponentConfig(componentId) {
-    const normalizedComponentId = sanitizeId(componentId);
-    const componentPath = resolve(sharedDir, `${normalizedComponentId}.json`);
+    const componentPath = await resolveSharedComponentFilePath(componentId);
     return await readJsonFile(componentPath);
   }
 
   async function saveComponentConfig(componentId, componentConfig) {
     const normalizedComponentId = sanitizeId(componentId);
-    const componentPath = resolve(sharedDir, `${normalizedComponentId}.json`);
+    const componentPath = await resolveSharedComponentFilePath(componentId);
     await writeFile(componentPath, toJsonString(componentConfig));
     return { ok: true, id: normalizedComponentId };
   }
