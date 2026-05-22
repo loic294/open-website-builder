@@ -1,5 +1,8 @@
 import { LitElement, html, unsafeCSS } from "lit";
 import {
+  AlignStartVertical,
+  AlignCenterHorizontal,
+  AlignEndVertical,
   AlignCenter,
   AlignLeft,
   AlignRight,
@@ -8,8 +11,12 @@ import {
   Columns2,
   ArrowDown,
   ArrowUp,
+  AlignHorizontalSpaceAround,
+  AlignHorizontalSpaceBetween,
+  AlignHorizontalDistributeCenter,
   Grip,
   Ellipsis,
+  MousePointerClick,
 } from "lucide/dist/cjs/lucide";
 import styles from "./styles.css?inline";
 
@@ -57,6 +64,37 @@ export class EditorAlignmentOptions extends LitElement {
     this.gridJustifyShowMore = false;
     this.gridAlignShowMore = false;
     this.gridAlignContentShowMore = false;
+    this.gridPreviewFocusCount = 0;
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.gridPreviewFocusCount = 0;
+    this.dispatchGridOverlayVisibility(false);
+  }
+
+  dispatchGridOverlayVisibility(visible) {
+    this.dispatchEvent(
+      new CustomEvent("grid-overlay-visibility-change", {
+        detail: { visible },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  onGridPreviewFieldFocus() {
+    this.gridPreviewFocusCount += 1;
+    if (this.gridPreviewFocusCount === 1) {
+      this.dispatchGridOverlayVisibility(true);
+    }
+  }
+
+  onGridPreviewFieldBlur() {
+    this.gridPreviewFocusCount = Math.max(0, this.gridPreviewFocusCount - 1);
+    if (this.gridPreviewFocusCount === 0) {
+      this.dispatchGridOverlayVisibility(false);
+    }
   }
 
   get normalizedValue() {
@@ -83,6 +121,10 @@ export class EditorAlignmentOptions extends LitElement {
   }
 
   onModeChange(mode) {
+    if (mode !== "grid" && mode !== "visual") {
+      this.gridPreviewFocusCount = 0;
+      this.dispatchGridOverlayVisibility(false);
+    }
     this.emitChange({ mode });
   }
 
@@ -191,6 +233,12 @@ export class EditorAlignmentOptions extends LitElement {
 
   renderModeSelector(value) {
     const options = [
+      {
+        label: "Visual",
+        value: "visual",
+        icon: MousePointerClick,
+        tooltip: "Visual",
+      },
       { label: "Flex", value: "flex", icon: Columns2, tooltip: "Flex" },
       { label: "Grid", value: "grid", icon: Grip, tooltip: "Grid" },
       { label: "Other", value: "other", icon: Ellipsis, tooltip: "Other" },
@@ -203,6 +251,49 @@ export class EditorAlignmentOptions extends LitElement {
         @change=${(e) => this.onModeChange(e.detail.value)}
       ></editor-radio-button>
     `;
+  }
+
+  renderVisualOptions(value) {
+    return html`<editor-text-input
+        label="Gap"
+        placeholder="16px"
+        .value=${String(value.gap || "")}
+        @change=${(e) => this.emitChange({ gap: e.detail.value })}
+        @editor-focus=${() => this.onGridPreviewFieldFocus()}
+        @editor-blur=${() => this.onGridPreviewFieldBlur()}
+      ></editor-text-input>
+      <div class="grid-size-row">
+        <editor-text-input
+          type="number"
+          label="Columns"
+          min=${1}
+          .value=${String(value.gridColumns)}
+          @change=${(event) => {
+            const nextColumns = Math.max(
+              1,
+              Number.parseInt(event.detail.value, 10) || 1,
+            );
+            this.emitChange({ gridColumns: nextColumns });
+          }}
+          @editor-focus=${() => this.onGridPreviewFieldFocus()}
+          @editor-blur=${() => this.onGridPreviewFieldBlur()}
+        ></editor-text-input>
+        <editor-text-input
+          type="number"
+          label="Rows"
+          min=${1}
+          .value=${String(value.gridRows)}
+          @change=${(event) => {
+            const nextRows = Math.max(
+              1,
+              Number.parseInt(event.detail.value, 10) || 1,
+            );
+            this.emitChange({ gridRows: nextRows });
+          }}
+          @editor-focus=${() => this.onGridPreviewFieldFocus()}
+          @editor-blur=${() => this.onGridPreviewFieldBlur()}
+        ></editor-text-input>
+      </div> `;
   }
 
   renderFlexOptions(value) {
@@ -225,47 +316,47 @@ export class EditorAlignmentOptions extends LitElement {
       {
         value: "flex-start",
         label: "Start",
-        icon: AlignLeft,
+        icon: AlignStartVertical,
         tooltip: "Justify content: start",
       },
       {
         value: "center",
         label: "Center",
-        icon: AlignCenter,
+        icon: AlignCenterHorizontal,
         tooltip: "Justify content: center",
       },
       {
         value: "flex-end",
         label: "End",
-        icon: AlignRight,
+        icon: AlignEndVertical,
         tooltip: "Justify content: end",
       },
       {
         value: "space-between",
         label: "Between",
-        icon: ArrowLeftRight,
+        icon: AlignHorizontalSpaceBetween,
         tooltip: "Justify content: space-between",
       },
       {
         value: "space-around",
         label: "Around",
-        icon: ArrowLeftRight,
+        icon: AlignHorizontalSpaceAround,
         tooltip: "Justify content: space-around",
       },
       {
         value: "space-evenly",
         label: "Evenly",
-        icon: ArrowLeftRight,
+        icon: AlignHorizontalDistributeCenter,
         tooltip: "Justify content: space-evenly",
       },
     ];
     const justifyAll = [
       ...justifyCommon,
+      { value: "stretch", label: "Stretch" },
       { value: "start", label: "Start (logical)" },
       { value: "end", label: "End (logical)" },
       { value: "left", label: "Left" },
       { value: "right", label: "Right" },
-      { value: "stretch", label: "Stretch" },
     ];
 
     const alignCommon = [
@@ -500,40 +591,42 @@ export class EditorAlignmentOptions extends LitElement {
         placeholder="16px"
         .value=${String(value.gap || "")}
         @change=${(e) => this.emitChange({ gap: e.detail.value })}
+        @editor-focus=${() => this.onGridPreviewFieldFocus()}
+        @editor-blur=${() => this.onGridPreviewFieldBlur()}
       ></editor-text-input>
+      <div class="grid-size-row">
+        <editor-text-input
+          type="number"
+          label="Columns"
+          min=${1}
+          .value=${String(value.gridColumns)}
+          @change=${(event) => {
+            const nextColumns = Math.max(
+              1,
+              Number.parseInt(event.detail.value, 10) || 1,
+            );
+            this.emitChange({ gridColumns: nextColumns });
+          }}
+          @editor-focus=${() => this.onGridPreviewFieldFocus()}
+          @editor-blur=${() => this.onGridPreviewFieldBlur()}
+        ></editor-text-input>
+        <editor-text-input
+          type="number"
+          label="Rows"
+          min=${1}
+          .value=${String(value.gridRows)}
+          @change=${(event) => {
+            const nextRows = Math.max(
+              1,
+              Number.parseInt(event.detail.value, 10) || 1,
+            );
+            this.emitChange({ gridRows: nextRows });
+          }}
+          @editor-focus=${() => this.onGridPreviewFieldFocus()}
+          @editor-blur=${() => this.onGridPreviewFieldBlur()}
+        ></editor-text-input>
+      </div>
       <settings-collapsable title="More options">
-        <div class="grid-size-row">
-          <label class="number-field">
-            <span>Rows</span>
-            <input
-              type="number"
-              min="1"
-              .value=${String(value.gridRows)}
-              @change=${(event) => {
-                const nextRows = Math.max(
-                  1,
-                  Number.parseInt(event.target.value, 10) || 1,
-                );
-                this.emitChange({ gridRows: nextRows });
-              }}
-            />
-          </label>
-          <label class="number-field">
-            <span>Columns</span>
-            <input
-              type="number"
-              min="1"
-              .value=${String(value.gridColumns)}
-              @change=${(event) => {
-                const nextColumns = Math.max(
-                  1,
-                  Number.parseInt(event.target.value, 10) || 1,
-                );
-                this.emitChange({ gridColumns: nextColumns });
-              }}
-            />
-          </label>
-        </div>
         ${this.renderPrimaryWithMore({
           title: "Justify content",
           value: value.gridJustifyContent,
@@ -609,11 +702,13 @@ export class EditorAlignmentOptions extends LitElement {
     return html`
       <div class="alignment-options">
         ${this.renderModeSelector(value)}
-        ${value.mode === "flex"
-          ? this.renderFlexOptions(value)
-          : value.mode === "grid"
-            ? this.renderGridOptions(value)
-            : this.renderOtherOptions(value)}
+        ${value.mode === "visual"
+          ? this.renderVisualOptions(value)
+          : value.mode === "flex"
+            ? this.renderFlexOptions(value)
+            : value.mode === "grid"
+              ? this.renderGridOptions(value)
+              : this.renderOtherOptions(value)}
       </div>
     `;
   }

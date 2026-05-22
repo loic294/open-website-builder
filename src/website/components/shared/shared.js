@@ -2,6 +2,11 @@ import { LitElement, html, unsafeCSS } from "lit";
 import { dataLayer } from "../../../editor/data/data-layer.js";
 import styles from "./styles.css?inline";
 
+export const defaultSharedConfig = {
+  type: "shared",
+  content: [],
+};
+
 class SharedComponent extends LitElement {
   static properties = {
     node: { type: Object },

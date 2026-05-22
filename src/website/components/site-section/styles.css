@@ -3,8 +3,29 @@ section {
 }
 
 section .container {
+  position: relative;
   padding: 6rem 2rem;
   margin: 0 auto;
+}
+
+.grid-preview-overlay {
+  padding: 6rem 2rem;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--grid-preview-columns, 1), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--grid-preview-rows, 1), minmax(0, 1fr));
+  gap: var(--grid-preview-gap, 0px);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.grid-preview-cell {
+  border: 1px dashed color-mix(in srgb, #ffc700 70%, transparent);
+  background: color-mix(in srgb, #ffc700 10%, transparent);
 }
 
 section .container.is-normal-width {

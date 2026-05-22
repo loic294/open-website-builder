@@ -9,6 +9,11 @@ import {
 } from "lucide/dist/cjs/lucide";
 import styles from "./styles.css?inline";
 
+export const defaultSectionConfig = {
+  type: "section",
+  content: [],
+};
+
 export class SiteSection extends EditorComponent {
   static designColorVariables = [
     "--website-primary-color",
@@ -54,6 +59,7 @@ export class SiteSection extends EditorComponent {
     settingGridJustifyContent: { type: String },
     settingGridAlignContent: { type: String },
     settingOtherAlignment: { type: String },
+    showGridPreviewOverlay: { type: Boolean },
   };
 
   static styles = unsafeCSS(styles);
@@ -66,7 +72,7 @@ export class SiteSection extends EditorComponent {
     this.settingWidthCustomValue = "";
     this.settingBackgroundColor = "";
     this.settingTextColor = "";
-    this.settingAlignmentMode = "flex";
+    this.settingAlignmentMode = "visual";
     this.settingGap = "";
     this.settingFlexDirection = "row";
     this.settingFlexHorizontal = "start";
@@ -83,6 +89,12 @@ export class SiteSection extends EditorComponent {
     this.settingGridJustifyContent = "start";
     this.settingGridAlignContent = "start";
     this.settingOtherAlignment = "block";
+    this.showGridPreviewOverlay = false;
+  }
+
+  closeSettingsEditor() {
+    super.closeSettingsEditor();
+    this.showGridPreviewOverlay = false;
   }
 
   updated(changedProperties) {
@@ -92,7 +104,7 @@ export class SiteSection extends EditorComponent {
         settingWidthCustomValue: "",
         settingBackgroundColor: "",
         settingTextColor: "",
-        settingAlignmentMode: "flex",
+        settingAlignmentMode: "visual",
         settingGap: "",
         settingFlexDirection: "row",
         settingFlexHorizontal: "start",
@@ -127,13 +139,18 @@ export class SiteSection extends EditorComponent {
     this.dispatchPageConfigUpdated(nextPageConfig);
   }
 
+  deleteSection() {
+    const nextPageConfig = removeSection(this.pageConfig, this.node);
+    this.dispatchPageConfigUpdated(nextPageConfig);
+  }
+
   openSectionSettings() {
     this.syncSettingsStateFromNode({
       settingWidth: "normal",
       settingWidthCustomValue: "",
       settingBackgroundColor: "",
       settingTextColor: "",
-      settingAlignmentMode: "flex",
+      settingAlignmentMode: "visual",
       settingGap: "",
       settingFlexDirection: "row",
       settingFlexHorizontal: "start",
@@ -237,6 +254,9 @@ export class SiteSection extends EditorComponent {
                     settingOtherAlignment: next.otherAlignment,
                   });
                 }}
+                @grid-overlay-visibility-change=${(e) => {
+                  this.showGridPreviewOverlay = Boolean(e.detail?.visible);
+                }}
               ></editor-alignment-options>
             </settings-section>
           </div>`;
@@ -324,6 +344,20 @@ export class SiteSection extends EditorComponent {
     }
 
     const layoutStyle = layoutStyleParts.join("");
+    const previewColumns = Math.max(
+      1,
+      Number.parseInt(this.settingGridColumns, 10) || 1,
+    );
+    const previewRows = Math.max(
+      1,
+      Number.parseInt(this.settingGridRows, 10) || 1,
+    );
+    const previewCellCount = Math.min(previewColumns * previewRows, 250);
+    const shouldRenderGridOverlay =
+      this.isSettingsEditorOpen &&
+      this.showGridPreviewOverlay &&
+      (this.settingAlignmentMode === "grid" ||
+        this.settingAlignmentMode === "visual");
 
     return html`<div>
       <section
@@ -353,7 +387,10 @@ export class SiteSection extends EditorComponent {
           <editor-btn style="light" @click=${() => this.openSectionSettings()}
             >${createElement(Pencil)} Edit</editor-btn
           >
-          <editor-btn style="light text-danger"
+          <editor-btn
+            style="light text-danger"
+            title="Delete section"
+            @click=${() => this.deleteSection()}
             >${createElement(Trash)}</editor-btn
           >
         </div>
@@ -361,6 +398,19 @@ export class SiteSection extends EditorComponent {
           class="container is-${this.settingWidth}-width"
           style="${widthStyle}${layoutStyle}"
         >
+          ${shouldRenderGridOverlay
+            ? html`
+                <div
+                  class="grid-preview-overlay"
+                  style=${`--grid-preview-columns: ${previewColumns}; --grid-preview-rows: ${previewRows}; --grid-preview-gap: ${this.settingGap || "0px"};`}
+                >
+                  ${Array.from(
+                    { length: previewCellCount },
+                    () => html`<span class="grid-preview-cell"></span>`,
+                  )}
+                </div>
+              `
+            : null}
           <slot></slot>
         </div>
         <editor-btn
@@ -427,6 +477,15 @@ export function moveSection(pageConfig, node, direction) {
   return {
     ...pageConfig,
     content,
+  };
+}
+
+export function removeSection(pageConfig, node) {
+  const content = Array.isArray(pageConfig?.content) ? pageConfig.content : [];
+
+  return {
+    ...pageConfig,
+    content: content.filter((currentNode) => currentNode !== node),
   };
 }
 

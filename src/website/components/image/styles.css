@@ -1,0 +1,48 @@
+.image-block {
+  position: relative;
+  margin: 16px 0;
+}
+
+.image-frame {
+  min-height: 180px;
+  border: 2px dashed color-mix(in srgb, #000 14%, transparent);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.image-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+  object-fit: cover;
+}
+
+.image-placeholder {
+  min-height: 180px;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  color: #7f7a73;
+  text-align: center;
+}
+
+.image-placeholder svg {
+  width: 24px;
+  height: 24px;
+  margin: 0 auto;
+}
+
+.image-toolbar {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 1;
+  display: none;
+}
+
+.image-block:hover .image-toolbar,
+.image-block.is-settings-open .image-toolbar {
+  display: block;
+}

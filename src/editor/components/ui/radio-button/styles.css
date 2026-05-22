@@ -54,6 +54,47 @@
   gap: 6px;
 }
 
+.radio-option-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background-color: var(--editor-text-color, #111827);
+  color: var(--editor-white-color, #ffffff);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease,
+    visibility 0.14s ease;
+  z-index: 4;
+}
+
+.radio-option-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--editor-text-color, #111827) transparent transparent
+    transparent;
+}
+
+.radio-option:hover .radio-option-tooltip,
+.radio-option:focus-visible .radio-option-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
 .radio-option.icon-only {
   padding-inline: 8px;
 }

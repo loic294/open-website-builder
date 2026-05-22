@@ -6,6 +6,7 @@ import { dataLayer } from "../../../data/data-layer.js";
 
 import "../../../../website/components/site-section/site-section.js";
 import "../../../../website/components/text/text.js";
+import "../../../../website/components/image/image.js";
 
 import baseStyle from "../../../../website/styles/base.css?inline";
 import styles from "./website-editor-styles.css?inline";

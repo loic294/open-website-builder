@@ -46,7 +46,7 @@ export class EditorRadioButton extends LitElement {
             (option, index) => html`
               ${(() => {
                 const hasIcon = Boolean(option.icon);
-                const tooltip = option.tooltip || option.label || option.value;
+                const tooltip = option.label || option.value;
                 return html`
                   <button
                     class="radio-option ${hasIcon ? "icon-only" : ""} ${this
@@ -57,9 +57,11 @@ export class EditorRadioButton extends LitElement {
                     @click=${() => this.handleOptionClick(option.value)}
                     aria-pressed=${this.value === option.value}
                     aria-label=${tooltip}
-                    title=${tooltip}
                   >
                     ${option.icon ? createElement(option.icon) : html``}
+                    <span class="radio-option-tooltip" role="tooltip"
+                      >${tooltip}</span
+                    >
                     ${hasIcon
                       ? html`<span class="sr-only">${option.label}</span>`
                       : option.label}

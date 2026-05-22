@@ -51,6 +51,24 @@ export class EditorTextInput extends LitElement {
     );
   }
 
+  handleFocus() {
+    this.dispatchEvent(
+      new CustomEvent("editor-focus", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  handleBlur() {
+    this.dispatchEvent(
+      new CustomEvent("editor-blur", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   render() {
     let inputElement;
     if (this.type === "number") {
@@ -67,6 +85,8 @@ export class EditorTextInput extends LitElement {
           class="text-input"
           @input=${(e) => this.handleInput(e)}
           @change=${(e) => this.handleChange(e)}
+          @focus=${() => this.handleFocus()}
+          @blur=${() => this.handleBlur()}
         />
       `;
     } else {
@@ -80,6 +100,8 @@ export class EditorTextInput extends LitElement {
           class="text-input"
           @input=${(e) => this.handleInput(e)}
           @change=${(e) => this.handleChange(e)}
+          @focus=${() => this.handleFocus()}
+          @blur=${() => this.handleBlur()}
         />
       `;
     }

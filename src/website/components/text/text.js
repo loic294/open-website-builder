@@ -29,6 +29,11 @@ import {
 
 import styles from "./styles.css?inline";
 
+export const defaultTextConfig = {
+  type: "text",
+  content: "<p>This is a default text</p>",
+};
+
 const FontSize = Extension.create({
   name: "fontSize",
 
