@@ -1,0 +1,26 @@
+.select-wrapper {
+  display: grid;
+  gap: 6px;
+}
+
+.select-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--editor-subtle-text-color, #5c5547);
+}
+
+.select-input {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e1b16;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: #1e1b16;
+}

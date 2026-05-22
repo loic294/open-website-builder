@@ -1,0 +1,44 @@
+.alignment-options {
+  display: grid;
+  gap: 12px;
+}
+
+.option-group {
+  display: grid;
+  gap: 2px;
+}
+
+.option-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--editor-subtle-text-color, #5c5547);
+}
+
+.grid-size-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.number-field {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--editor-subtle-text-color, #5c5547);
+}
+
+.number-field input {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e1b16;
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 8px;
+}
+
+.number-field input:focus {
+  outline: none;
+  border-color: #1e1b16;
+}

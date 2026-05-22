@@ -1,0 +1,42 @@
+.collapsable {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.collapsable-toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #1e1b16;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.collapsable.is-open .chevron {
+  transform: rotate(180deg);
+}
+
+.chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.collapsable-content {
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 10px;
+}

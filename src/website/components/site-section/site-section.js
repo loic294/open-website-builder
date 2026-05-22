@@ -37,6 +37,23 @@ export class SiteSection extends EditorComponent {
     settingWidthCustomValue: { type: String },
     settingBackgroundColor: { type: String },
     settingTextColor: { type: String },
+    settingAlignmentMode: { type: String },
+    settingGap: { type: String },
+    settingFlexDirection: { type: String },
+    settingFlexHorizontal: { type: String },
+    settingFlexVertical: { type: String },
+    settingFlexJustifyContent: { type: String },
+    settingFlexAlignItems: { type: String },
+    settingFlexAlignContent: { type: String },
+    settingGridRows: { type: Number },
+    settingGridColumns: { type: Number },
+    settingGridHorizontal: { type: String },
+    settingGridVertical: { type: String },
+    settingGridJustifyItems: { type: String },
+    settingGridAlignItems: { type: String },
+    settingGridJustifyContent: { type: String },
+    settingGridAlignContent: { type: String },
+    settingOtherAlignment: { type: String },
   };
 
   static styles = unsafeCSS(styles);
@@ -49,6 +66,23 @@ export class SiteSection extends EditorComponent {
     this.settingWidthCustomValue = "";
     this.settingBackgroundColor = "";
     this.settingTextColor = "";
+    this.settingAlignmentMode = "flex";
+    this.settingGap = "";
+    this.settingFlexDirection = "row";
+    this.settingFlexHorizontal = "start";
+    this.settingFlexVertical = "start";
+    this.settingFlexJustifyContent = "flex-start";
+    this.settingFlexAlignItems = "flex-start";
+    this.settingFlexAlignContent = "stretch";
+    this.settingGridRows = 2;
+    this.settingGridColumns = 2;
+    this.settingGridHorizontal = "start";
+    this.settingGridVertical = "start";
+    this.settingGridJustifyItems = "start";
+    this.settingGridAlignItems = "start";
+    this.settingGridJustifyContent = "start";
+    this.settingGridAlignContent = "start";
+    this.settingOtherAlignment = "block";
   }
 
   updated(changedProperties) {
@@ -58,6 +92,23 @@ export class SiteSection extends EditorComponent {
         settingWidthCustomValue: "",
         settingBackgroundColor: "",
         settingTextColor: "",
+        settingAlignmentMode: "flex",
+        settingGap: "",
+        settingFlexDirection: "row",
+        settingFlexHorizontal: "start",
+        settingFlexVertical: "start",
+        settingFlexJustifyContent: "flex-start",
+        settingFlexAlignItems: "flex-start",
+        settingFlexAlignContent: "stretch",
+        settingGridRows: 2,
+        settingGridColumns: 2,
+        settingGridHorizontal: "start",
+        settingGridVertical: "start",
+        settingGridJustifyItems: "start",
+        settingGridAlignItems: "start",
+        settingGridJustifyContent: "start",
+        settingGridAlignContent: "start",
+        settingOtherAlignment: "block",
       });
     }
   }
@@ -82,6 +133,23 @@ export class SiteSection extends EditorComponent {
       settingWidthCustomValue: "",
       settingBackgroundColor: "",
       settingTextColor: "",
+      settingAlignmentMode: "flex",
+      settingGap: "",
+      settingFlexDirection: "row",
+      settingFlexHorizontal: "start",
+      settingFlexVertical: "start",
+      settingFlexJustifyContent: "flex-start",
+      settingFlexAlignItems: "flex-start",
+      settingFlexAlignContent: "stretch",
+      settingGridRows: 2,
+      settingGridColumns: 2,
+      settingGridHorizontal: "start",
+      settingGridVertical: "start",
+      settingGridJustifyItems: "start",
+      settingGridAlignItems: "start",
+      settingGridJustifyContent: "start",
+      settingGridAlignContent: "start",
+      settingOtherAlignment: "block",
     });
 
     this.openSettingsEditor({
@@ -126,6 +194,51 @@ export class SiteSection extends EditorComponent {
                   ></editor-text-input>`
                 : null}
             </settings-section>
+            <settings-section title="Alignment">
+              <editor-alignment-options
+                .value=${{
+                  mode: this.settingAlignmentMode,
+                  gap: this.settingGap,
+                  flexDirection: this.settingFlexDirection,
+                  flexHorizontal: this.settingFlexHorizontal,
+                  flexVertical: this.settingFlexVertical,
+                  flexJustifyContent: this.settingFlexJustifyContent,
+                  flexAlignItems: this.settingFlexAlignItems,
+                  flexAlignContent: this.settingFlexAlignContent,
+                  gridRows: this.settingGridRows,
+                  gridColumns: this.settingGridColumns,
+                  gridHorizontal: this.settingGridHorizontal,
+                  gridVertical: this.settingGridVertical,
+                  gridJustifyItems: this.settingGridJustifyItems,
+                  gridAlignItems: this.settingGridAlignItems,
+                  gridJustifyContent: this.settingGridJustifyContent,
+                  gridAlignContent: this.settingGridAlignContent,
+                  otherAlignment: this.settingOtherAlignment,
+                }}
+                @alignment-change=${(e) => {
+                  const next = e.detail.value;
+                  this.updateSettingsState({
+                    settingAlignmentMode: next.mode,
+                    settingGap: next.gap,
+                    settingFlexDirection: next.flexDirection,
+                    settingFlexHorizontal: next.flexHorizontal,
+                    settingFlexVertical: next.flexVertical,
+                    settingFlexJustifyContent: next.flexJustifyContent,
+                    settingFlexAlignItems: next.flexAlignItems,
+                    settingFlexAlignContent: next.flexAlignContent,
+                    settingGridRows: next.gridRows,
+                    settingGridColumns: next.gridColumns,
+                    settingGridHorizontal: next.gridHorizontal,
+                    settingGridVertical: next.gridVertical,
+                    settingGridJustifyItems: next.gridJustifyItems,
+                    settingGridAlignItems: next.gridAlignItems,
+                    settingGridJustifyContent: next.gridJustifyContent,
+                    settingGridAlignContent: next.gridAlignContent,
+                    settingOtherAlignment: next.otherAlignment,
+                  });
+                }}
+              ></editor-alignment-options>
+            </settings-section>
           </div>`;
         }
 
@@ -166,7 +279,7 @@ export class SiteSection extends EditorComponent {
   render() {
     const widthStyle =
       this.settingWidth === "custom" && this.settingWidthCustomValue
-        ? `width: ${this.settingWidthCustomValue};`
+        ? `max-width: ${this.settingWidthCustomValue};`
         : "";
     const backgroundColorStyle = this.settingBackgroundColor
       ? `background-color: var(${this.settingBackgroundColor});`
@@ -174,11 +287,48 @@ export class SiteSection extends EditorComponent {
     const textColorStyle = this.settingTextColor
       ? `color: var(${this.settingTextColor});`
       : "";
+    const layoutStyleParts = [];
+
+    if (this.settingAlignmentMode === "flex") {
+      layoutStyleParts.push("display: flex;");
+      layoutStyleParts.push(`flex-direction: ${this.settingFlexDirection};`);
+      layoutStyleParts.push(
+        `justify-content: ${this.settingFlexJustifyContent};`,
+      );
+      layoutStyleParts.push(`align-items: ${this.settingFlexAlignItems};`);
+      if (this.settingGap) {
+        layoutStyleParts.push(`gap: ${this.settingGap};`);
+      }
+    }
+
+    if (this.settingAlignmentMode === "grid") {
+      layoutStyleParts.push("display: grid;");
+      layoutStyleParts.push(
+        `grid-template-columns: repeat(${this.settingGridColumns || 1}, minmax(0, 1fr));`,
+      );
+      layoutStyleParts.push(
+        `grid-template-rows: repeat(${this.settingGridRows || 1}, auto);`,
+      );
+      layoutStyleParts.push(
+        `justify-content: ${this.settingGridJustifyContent};`,
+      );
+      layoutStyleParts.push(`align-items: ${this.settingGridAlignItems};`);
+      layoutStyleParts.push(`align-content: ${this.settingGridAlignContent};`);
+      if (this.settingGap) {
+        layoutStyleParts.push(`gap: ${this.settingGap};`);
+      }
+    }
+
+    if (this.settingAlignmentMode === "other") {
+      layoutStyleParts.push(`display: ${this.settingOtherAlignment};`);
+    }
+
+    const layoutStyle = layoutStyleParts.join("");
 
     return html`<div>
       <section
         class="${this.isSettingsEditorOpen ? "is-settings-open" : ""}"
-        style="${widthStyle}${backgroundColorStyle}${textColorStyle}"
+        style="${backgroundColorStyle}${textColorStyle}"
       >
         <editor-btn
           style="primary"
@@ -209,7 +359,7 @@ export class SiteSection extends EditorComponent {
         </div>
         <div
           class="container is-${this.settingWidth}-width"
-          style="${widthStyle}"
+          style="${widthStyle}${layoutStyle}"
         >
           <slot></slot>
         </div>

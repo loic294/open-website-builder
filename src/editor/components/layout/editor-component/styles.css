@@ -17,7 +17,7 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
+  border-radius: 4px;
   background: var(--editor-background, #fbfbfb);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
   pointer-events: auto;
@@ -46,7 +46,7 @@
 
 .settings-overlay-tab {
   border: none;
-  border-radius: 8px 8px 0 0;
+  border-radius: 4px;
   padding: 8px 10px;
   background: transparent;
   color: #5c5547;
@@ -57,8 +57,8 @@
 }
 
 .settings-overlay-tab.is-active {
-  background: #ffffff;
-  color: #1e1b16;
+  background: var(--editor-secondary-color, #000000);
+  color: var(--editor-text-color-light, #fff);
   box-shadow:
     0 -1px 0 rgba(0, 0, 0, 0.04),
     0 1px 0 #ffffff;
