@@ -3,12 +3,20 @@ section {
 }
 
 section .container {
-  max-width: 960px;
   padding: 6rem 2rem;
   margin: 0 auto;
 }
 
-section:hover:before {
+section .container.is-normal-width {
+  max-width: 960px;
+}
+
+section .container.is-full-width {
+  max-width: 100%;
+}
+
+section:hover:before,
+section.is-settings-open:before {
   content: "";
   position: absolute;
   top: 0;

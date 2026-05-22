@@ -13,6 +13,9 @@ export class SiteSection extends EditorComponent {
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
+
+    settingWidth: { type: String },
+    settingWidthCustomValue: { type: String },
   };
 
   static styles = unsafeCSS(styles);
@@ -21,16 +24,17 @@ export class SiteSection extends EditorComponent {
     super();
     this.node = null;
     this.pageConfig = null;
+    this.settingWidth = "normal";
+    this.settingWidthCustomValue = "";
   }
 
-  dispatchPageConfigUpdated(nextPageConfig) {
-    this.dispatchEvent(
-      new CustomEvent("page-config-updated", {
-        detail: nextPageConfig,
-        bubbles: true,
-        composed: true,
-      }),
-    );
+  updated(changedProperties) {
+    if (changedProperties.has("node")) {
+      this.syncSettingsStateFromNode({
+        settingWidth: "normal",
+        settingWidthCustomValue: "",
+      });
+    }
   }
 
   addSection(position) {
@@ -48,16 +52,58 @@ export class SiteSection extends EditorComponent {
   }
 
   openSectionSettings() {
-    this.openSettingsEditor(html`
-      <h3>Section settings</h3>
-      <p>Settings editor placeholder for section ${this.node?.id ?? ""}.</p>
-      <editor-btn @click=${() => this.closeSettingsEditor()}>Close</editor-btn>
-    `);
+    this.syncSettingsStateFromNode({
+      settingWidth: "normal",
+      settingWidthCustomValue: "",
+    });
+
+    this.openSettingsEditor({
+      tabs: [
+        {
+          id: "general",
+          label: "General",
+        },
+      ],
+      content: (tab) => {
+        if (tab === "general") {
+          const options = [
+            { label: "Normal", value: "normal" },
+            { label: "Full width", value: "full" },
+            { label: "Custom", value: "custom" },
+          ];
+
+          return html`<div>
+            <settings-section title="Width">
+              <editor-radio-button
+                .options=${options}
+                .value=${this.settingWidth}
+                @change=${(e) => {
+                  this.updateSettingsState({ settingWidth: e.detail.value });
+                }}
+              ></editor-radio-button>
+
+              ${this.settingWidth === "custom"
+                ? html`<editor-text-input
+                    label="Custom Width"
+                    placeholder="1024px"
+                    .value=${this.settingWidthCustomValue}
+                    @change=${(e) => {
+                      this.updateSettingsState({
+                        settingWidthCustomValue: e.detail.value,
+                      });
+                    }}
+                  ></editor-text-input>`
+                : null}
+            </settings-section>
+          </div>`;
+        }
+      },
+    });
   }
 
   render() {
     return html`<div>
-      <section>
+      <section class="${this.isSettingsEditorOpen ? "is-settings-open" : ""}">
         <editor-btn
           style="primary"
           class="add-section-button"
@@ -85,7 +131,12 @@ export class SiteSection extends EditorComponent {
             >${createElement(Trash)}</editor-btn
           >
         </div>
-        <div class="container">
+        <div
+          class="container is-${this.settingWidth}-width"
+          style="${this.settingWidth === "custom"
+            ? `width: ${this.settingWidthCustomValue};`
+            : ""}"
+        >
           <slot></slot>
         </div>
         <editor-btn

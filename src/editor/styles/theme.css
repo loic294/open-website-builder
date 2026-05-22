@@ -15,8 +15,16 @@
   --editor-sharp-radius: 0px;
   --editor-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
+  --editor-settings-spacing: 8px;
+  --editor-input-border: color-mix(
+    in srgb,
+    var(--editor-text-color) 10%,
+    var(--editor-surface-color)
+  );
+
   --editor-background: var(--editor-light-color);
   --editor-surface-color: var(--editor-background);
+
   --editor-muted-text-color: color-mix(
     in srgb,
     var(--editor-text-color) 60%,

@@ -11,8 +11,8 @@
 
 .settings-overlay-panel {
   position: fixed;
-  width: 260px;
-  height: 400px;
+  width: 340px;
+  height: 480px;
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -3,12 +3,17 @@ import { X, createElement } from "lucide/dist/cjs/lucide";
 import overlayStyles from "./styles.css?inline";
 
 export class EditorComponent extends LitElement {
-  static overlayWidth = 260;
+  static overlayWidth = 340;
 
-  static overlayHeight = 400;
+  static overlayHeight = 480;
+
+  static properties = {
+    isSettingsEditorOpen: { type: Boolean },
+  };
 
   constructor() {
     super();
+    this.isSettingsEditorOpen = false;
     this.settingsOverlayContainer = null;
     this.settingsOverlayContent = null;
     this.settingsOverlayTabs = [{ id: "settings", label: "Settings" }];
@@ -56,6 +61,7 @@ export class EditorComponent extends LitElement {
 
   openSettingsEditor(options = html`<p>No settings available.</p>`) {
     this.ensureOverlayContainer();
+    this.isSettingsEditorOpen = true;
 
     if (options && typeof options === "object" && "content" in options) {
       this.settingsOverlayContent = options.content;
@@ -76,6 +82,7 @@ export class EditorComponent extends LitElement {
   }
 
   closeSettingsEditor() {
+    this.isSettingsEditorOpen = false;
     this.settingsOverlayContent = null;
     this.dragState = null;
     this.renderSettingsOverlay();
@@ -128,6 +135,111 @@ export class EditorComponent extends LitElement {
   setActiveSettingsTab(tabId) {
     this.settingsOverlayActiveTab = tabId;
     this.renderSettingsOverlay();
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  syncSettingsStateFromNode(defaultState = {}) {
+    const nodeSettings =
+      this.node && typeof this.node.settings === "object" && this.node.settings
+        ? this.node.settings
+        : {};
+
+    for (const [key, fallbackValue] of Object.entries(defaultState)) {
+      this[key] =
+        key in nodeSettings && nodeSettings[key] !== undefined
+          ? nodeSettings[key]
+          : fallbackValue;
+    }
+  }
+
+  updateNodeSettingsInTree(nodes, targetNodeId, nextSettings) {
+    let didChange = false;
+
+    const nextNodes = nodes.map((currentNode) => {
+      if (!currentNode || typeof currentNode !== "object") {
+        return currentNode;
+      }
+
+      if (currentNode.id === targetNodeId) {
+        didChange = true;
+        return {
+          ...currentNode,
+          settings: {
+            ...(currentNode.settings && typeof currentNode.settings === "object"
+              ? currentNode.settings
+              : {}),
+            ...nextSettings,
+          },
+        };
+      }
+
+      if (Array.isArray(currentNode.content)) {
+        const result = this.updateNodeSettingsInTree(
+          currentNode.content,
+          targetNodeId,
+          nextSettings,
+        );
+
+        if (result.didChange) {
+          didChange = true;
+          return {
+            ...currentNode,
+            content: result.nextNodes,
+          };
+        }
+      }
+
+      return currentNode;
+    });
+
+    return { nextNodes, didChange };
+  }
+
+  updateSettingsState(nextState) {
+    Object.assign(this, nextState);
+
+    if (this.node && typeof this.node === "object") {
+      if (!this.node.settings || typeof this.node.settings !== "object") {
+        this.node.settings = {};
+      }
+
+      Object.assign(this.node.settings, nextState);
+
+      if (
+        this.pageConfig &&
+        Array.isArray(this.pageConfig.content) &&
+        this.node.id
+      ) {
+        const result = this.updateNodeSettingsInTree(
+          this.pageConfig.content,
+          this.node.id,
+          nextState,
+        );
+
+        if (result.didChange) {
+          const nextPageConfig = {
+            ...this.pageConfig,
+            content: result.nextNodes,
+          };
+
+          this.pageConfig = nextPageConfig;
+          this.dispatchPageConfigUpdated(nextPageConfig);
+        }
+      }
+    }
+
+    if (this.isSettingsEditorOpen) {
+      this.renderSettingsOverlay();
+    }
   }
 
   disconnectedCallback() {

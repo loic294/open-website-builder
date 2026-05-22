@@ -1,0 +1,60 @@
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 2px solid var(--editor-input-border, #fbfbfb);
+  border-radius: 4px;
+  background-color: var(--editor-white-color, #ffffff);
+  margin-bottom: var(--editor-settings-spacing, 4px);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--editor-primary-color, #ffc700);
+}
+
+.input-prefix {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--editor-muted-text-color, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.text-input {
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--editor-text-color, #000000);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.text-input:focus {
+  outline: none;
+}
+
+.text-input:disabled {
+  color: var(--editor-muted-text-color, #6b7280);
+  cursor: not-allowed;
+}
+
+.text-input:read-only {
+  color: var(--editor-text-color, #000000);
+}
+
+.input-wrapper:has(.text-input:disabled),
+.input-wrapper:has(.text-input:read-only) {
+  background-color: var(--editor-muted-surface, #f3f4f6);
+  border-color: var(--editor-border-color, #d1d5db);
+}
+
+.text-input::placeholder {
+  color: var(--editor-muted-text-color, #9ca3af);
+}
