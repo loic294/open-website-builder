@@ -1,13 +1,5 @@
-export async function savePageConfig(pageConfig) {
-  const response = await fetch("/__save-page-config", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(pageConfig),
-  });
+import { dataLayer } from "../data/data-layer.js";
 
-  if (!response.ok) {
-    throw new Error(`Failed to save page config: ${response.status}`);
-  }
+export async function savePageConfig(pageConfig) {
+  await dataLayer.savePageConfig("index", pageConfig);
 }

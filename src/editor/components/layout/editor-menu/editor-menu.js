@@ -10,6 +10,7 @@ import {
   Proportions,
   createElement,
 } from "lucide/dist/cjs/lucide";
+import { dataLayer } from "../../../data/data-layer.js";
 import styles from "./styles.css?inline";
 
 const MENU_COLLAPSED_STORAGE_KEY = "editor-menu-collapsed";
@@ -18,6 +19,7 @@ class EditorMenu extends LitElement {
   static properties = {
     collapsed: { type: Boolean, reflect: true },
     sections: { state: true },
+    groupItems: { state: true },
   };
 
   static styles = unsafeCSS(styles);
@@ -30,6 +32,47 @@ class EditorMenu extends LitElement {
       collections: true,
       shared: true,
     };
+    this.groupItems = {
+      pages: [],
+      collections: [],
+      shared: [],
+    };
+    this.didLoadData = false;
+  }
+
+  async connectedCallback() {
+    super.connectedCallback();
+
+    if (this.didLoadData) {
+      return;
+    }
+
+    this.didLoadData = true;
+
+    try {
+      const [pages, collections, sharedComponents] = await Promise.all([
+        dataLayer.listPages(),
+        dataLayer.listCollections(),
+        dataLayer.listSharedComponents(),
+      ]);
+
+      this.groupItems = {
+        pages: pages.map((page) => page?.title || page?.id || "Untitled"),
+        collections: collections.map(
+          (collection) => collection?.title || collection?.id || "Untitled",
+        ),
+        shared: sharedComponents.map(
+          (component) => component?.title || component?.id || "Untitled",
+        ),
+      };
+    } catch (error) {
+      console.error(error);
+      this.groupItems = {
+        pages: [],
+        collections: [],
+        shared: [],
+      };
+    }
   }
 
   getStoredCollapsedState() {
@@ -73,6 +116,7 @@ class EditorMenu extends LitElement {
 
   renderGroup(sectionKey, title, icon, items) {
     const expanded = this.sections[sectionKey];
+    const normalizedItems = items.length > 0 ? items : ["No items yet"];
 
     return html`
       <section class="menu-group">
@@ -92,7 +136,7 @@ class EditorMenu extends LitElement {
         ${expanded && !this.collapsed
           ? html`
               <div class="group-items">
-                ${items.map(
+                ${normalizedItems.map(
                   (item) => html`
                     <div class="group-item">
                       <span class="group-item-bullet"></span>
@@ -111,7 +155,7 @@ class EditorMenu extends LitElement {
                       <span class="group-flyout-title">${title}</span>
                     </div>
                     <div class="group-items is-flyout">
-                      ${items.map(
+                      ${normalizedItems.map(
                         (item) => html`
                           <div class="group-item">
                             <span class="group-item-bullet"></span>
@@ -149,20 +193,14 @@ class EditorMenu extends LitElement {
       </div>
 
       <div class="menu-groups">
-        ${this.renderGroup("pages", "Pages", Files, [
-          "Home",
-          "About",
-          "Contact",
-        ])}
-        ${this.renderGroup("collections", "Collections", Database, [
-          "Products",
-          "Services",
-        ])}
-        ${this.renderGroup("shared", "Shared", Blocks, [
-          "Header",
-          "Footer",
-          "Announcement bar",
-        ])}
+        ${this.renderGroup("pages", "Pages", Files, this.groupItems.pages)}
+        ${this.renderGroup(
+          "collections",
+          "Collections",
+          Database,
+          this.groupItems.collections,
+        )}
+        ${this.renderGroup("shared", "Shared", Blocks, this.groupItems.shared)}
       </div>
 
       <div class="sidebar-footer">

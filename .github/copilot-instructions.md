@@ -119,3 +119,17 @@ Before starting a new task in the above plan, update progress in the plan.
 - When styling UI, use project CSS variables for colors, text, borders, shadows, and radii instead of raw hex, rgba, or ad hoc values.
 - If a needed design token does not exist yet, add it to the shared theme first and then consume the variable from component styles.
 - Favor squared-off surfaces and controls; use the project radius tokens instead of rounded one-off values.
+
+## Data Layer Contract
+
+- Frontend components must use the shared data layer module at `src/editor/data/data-layer.js` for all content operations.
+- The data layer API is database-agnostic and exposes only domain functions (pages, collections, shared components), never storage details.
+- Backend resolvers live in the Vite server layer and currently resolve against JSON files under `../my-personal-website`.
+- JSON-backed resolver implementation is in `server/data/json-data-resolvers.js`; HTTP route wiring is in `server/data/data-api-middleware.js`.
+- Avoid direct `fetch` calls to ad-hoc endpoints from components; add/extend data-layer functions instead.
+
+### Supported Data Functions
+
+- Pages: `listPages`, `getPageConfig`, `savePageConfig`, `createPage`.
+- Collections: `listCollections`, `getAllCollectionsContent`, `getCollectionItemContent`, `addCollectionItem`, `updateCollectionItem`.
+- Shared components: `listSharedComponents`, `getComponentConfig`, `saveComponentConfig`, `createComponentConfig`.

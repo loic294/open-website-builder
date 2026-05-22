@@ -1,11 +1,5 @@
 import { html } from "lit";
-
-import { editorRenderSiteSection } from "../../website/components/site-section/site-section";
-import { editorRenderText } from "../../website/components/text/text";
-
-const renderComponents = new Map();
-renderComponents.set("section", editorRenderSiteSection);
-renderComponents.set("text", editorRenderText);
+import { renderComponents } from "../../website/components/components";
 
 export function renderNode(node, pageConfig, onPageConfigUpdated, renderNode) {
   if (!node || typeof node !== "object") {

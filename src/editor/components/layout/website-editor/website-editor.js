@@ -2,7 +2,7 @@ import { LitElement, html, css, unsafeCSS } from "lit";
 
 import "../../ui/button/button.js";
 import { renderNode } from "../../../core/render-node.js";
-import { savePageConfig } from "../../../utils/save-page-config.js";
+import { dataLayer } from "../../../data/data-layer.js";
 
 import "../../../../website/components/site-section/site-section.js";
 import "../../../../website/components/text/text.js";
@@ -33,14 +33,16 @@ class WebsiteEditor extends LitElement {
     this.didLoadConfig = true;
 
     try {
-      const response = await fetch("/__page-config");
-      if (!response.ok) {
-        throw new Error(`Failed to load page config: ${response.status}`);
-      }
-      this.pageConfig = await response.json();
+      this.pageConfig = await dataLayer.getPageConfig("index");
     } catch (error) {
       console.error(error);
-      this.pageConfig = { type: "page", title: "Home", content: [] };
+      this.pageConfig = {
+        type: "page",
+        id: "home",
+        title: "Home",
+        url: "/",
+        content: [],
+      };
     }
   }
 
@@ -49,7 +51,7 @@ class WebsiteEditor extends LitElement {
     this.pageConfig = event.detail;
 
     try {
-      await savePageConfig(this.pageConfig);
+      await dataLayer.savePageConfig("index", this.pageConfig);
     } catch (error) {
       console.error(error);
     }
