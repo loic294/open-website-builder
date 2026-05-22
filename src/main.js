@@ -1,2 +1,2 @@
-import "./editor/sections/website-editor.js";
-import "./editor/sections/editor-menu.js";
+import "./editor/components/layout/website-editor/website-editor.js";
+import "./editor/components/layout/editor-menu/editor-menu.js";

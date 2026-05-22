@@ -21,8 +21,18 @@ main {
 
 editor-menu {
   width: 280px;
+  flex: 0 0 280px;
+  transition:
+    width 0.22s ease,
+    flex-basis 0.22s ease;
+}
+
+editor-menu[collapsed] {
+  width: 36px;
+  flex-basis: 36px;
 }
 
 website-editor {
   flex: 1;
+  min-width: 0;
 }

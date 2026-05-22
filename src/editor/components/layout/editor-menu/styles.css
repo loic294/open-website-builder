@@ -1,0 +1,269 @@
+:host {
+  display: block;
+}
+
+.sidebar {
+  width: 280px;
+  min-height: calc(100vh - 3rem);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  padding-left: 0px;
+  overflow: visible;
+  transition: width 0.22s ease;
+}
+
+.sidebar.collapsed {
+  width: 26px;
+  padding-inline: 10px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.brand {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon,
+.icon-button,
+.section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-icon svg {
+  width: 26px;
+  height: 26px;
+  color: var(--editor-primary-color);
+}
+
+.brand-copy {
+  min-width: 0;
+}
+
+.brand-title {
+  display: block;
+  color: var(--editor-text-color);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand-subtitle {
+  display: block;
+  color: var(--editor-muted-text-color);
+  font-size: 11px;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--editor-sharp-radius);
+  background: transparent;
+  color: var(--editor-text-color);
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.icon-button:hover {
+  transform: translateY(-1px);
+}
+
+.menu-groups {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  overflow: visible;
+}
+
+.menu-group {
+  position: relative;
+  overflow: hidden;
+}
+
+.group-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  padding: 12px 12px;
+  color: var(--editor-text-color);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.group-toggle:hover {
+  background: var(--editor-hover-surface);
+}
+
+.group-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chevron {
+  transition: transform 0.18s ease;
+}
+
+.chevron.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+.group-items {
+  display: grid;
+  gap: 4px;
+  padding: 0 8px 10px;
+}
+
+.group-flyout-wrap {
+  position: absolute;
+  top: -10px;
+  left: 100%;
+  padding-left: 12px;
+  z-index: 20;
+}
+
+.group-flyout {
+  min-width: 180px;
+  padding: 10px 8px;
+  border-radius: var(--editor-sharp-radius);
+  background: var(--editor-white-color);
+  box-shadow: var(--editor-box-shadow);
+}
+
+.group-flyout-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  color: var(--editor-text-color);
+}
+
+.group-flyout-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.group-items.is-flyout {
+  padding: 0;
+}
+
+.group-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: var(--editor-subtle-text-color);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.group-item:hover {
+  background: var(--editor-hover-surface);
+}
+
+.group-item-bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--editor-muted-text-color);
+  flex: 0 0 auto;
+}
+
+.sidebar.collapsed .brand-copy,
+.sidebar.collapsed .group-label,
+.sidebar.collapsed .chevron,
+.sidebar.collapsed .group-items:not(.is-flyout),
+.sidebar.collapsed .settings-label {
+  display: none;
+}
+
+.sidebar.collapsed .group-toggle {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.sidebar.collapsed .group-flyout-wrap {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    visibility 0.18s ease;
+}
+
+.sidebar.collapsed .menu-group:hover .group-flyout-wrap,
+.sidebar.collapsed .menu-group:focus-within .group-flyout-wrap {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.sidebar.collapsed .sidebar-header {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.sidebar.collapsed .menu-group {
+  background: transparent;
+  border-color: transparent;
+  overflow: visible;
+}
+
+.sidebar.collapsed .group-toggle:hover,
+.sidebar.collapsed .settings-button:hover {
+  background: var(--editor-hover-surface);
+}
+
+.sidebar-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.settings-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  border-radius: var(--editor-sharp-radius);
+  background: transparent;
+  color: var(--editor-text-color);
+  padding: 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.settings-button:hover {
+  background: var(--editor-hover-surface);
+}
+
+.sidebar.collapsed .settings-button {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}

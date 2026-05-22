@@ -1,13 +1,13 @@
 import { LitElement, html, css, unsafeCSS } from "lit";
 
-import "../components/button/button.js";
-import { renderNode } from "../core/render-node.js";
-import { savePageConfig } from "../utils/save-page-config.js";
+import "../../ui/button/button.js";
+import { renderNode } from "../../../core/render-node.js";
+import { savePageConfig } from "../../../utils/save-page-config.js";
 
-import "../../website/components/site-section/site-section.js";
-import "../../website/components/text/text.js";
+import "../../../../website/components/site-section/site-section.js";
+import "../../../../website/components/text/text.js";
 
-import baseStyle from "../../website/styles/base.css?inline";
+import baseStyle from "../../../../website/styles/base.css?inline";
 import styles from "./website-editor-styles.css?inline";
 
 class WebsiteEditor extends LitElement {

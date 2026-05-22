@@ -1,4 +1,5 @@
-import { LitElement, html, unsafeCSS } from "lit";
+import { html, unsafeCSS } from "lit";
+import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import {
   ArrowDown,
   ArrowUp,
@@ -8,7 +9,7 @@ import {
 } from "lucide/dist/cjs/lucide";
 import styles from "./styles.css?inline";
 
-export class SiteSection extends LitElement {
+export class SiteSection extends EditorComponent {
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
@@ -46,6 +47,14 @@ export class SiteSection extends LitElement {
     this.dispatchPageConfigUpdated(nextPageConfig);
   }
 
+  openSectionSettings() {
+    this.openSettingsEditor(html`
+      <h3>Section settings</h3>
+      <p>Settings editor placeholder for section ${this.node?.id ?? ""}.</p>
+      <editor-btn @click=${() => this.closeSettingsEditor()}>Close</editor-btn>
+    `);
+  }
+
   render() {
     return html`<div>
       <section>
@@ -69,7 +78,9 @@ export class SiteSection extends LitElement {
             @click=${() => this.moveSection("down")}
             >${createElement(ArrowDown)}</editor-btn
           >
-          <editor-btn style="light">${createElement(Pencil)} Edit</editor-btn>
+          <editor-btn style="light" @click=${() => this.openSectionSettings()}
+            >${createElement(Pencil)} Edit</editor-btn
+          >
           <editor-btn style="light text-danger"
             >${createElement(Trash)}</editor-btn
           >

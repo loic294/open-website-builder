@@ -12,7 +12,29 @@
   --editor-default-border: 4px solid var(--editor-light-color);
 
   --editor-border-radius: 4px;
+  --editor-sharp-radius: 0px;
   --editor-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   --editor-background: var(--editor-light-color);
+  --editor-surface-color: var(--editor-background);
+  --editor-muted-text-color: color-mix(
+    in srgb,
+    var(--editor-text-color) 60%,
+    var(--editor-surface-color)
+  );
+  --editor-subtle-text-color: color-mix(
+    in srgb,
+    var(--editor-text-color) 78%,
+    var(--editor-surface-color)
+  );
+  --editor-hover-surface: color-mix(
+    in srgb,
+    var(--editor-black-color) 3%,
+    transparent
+  );
+  --editor-accent-muted-color: color-mix(
+    in srgb,
+    var(--editor-primary-color) 42%,
+    var(--editor-surface-color)
+  );
 }
