@@ -21,7 +21,7 @@ import {
 import styles from "./styles.css?inline";
 
 const DEFAULT_VALUE = {
-  mode: "flex",
+  mode: "block",
   flexDirection: "row",
   gap: "",
   rowHeight: "30px",
@@ -234,6 +234,7 @@ export class EditorAlignmentOptions extends LitElement {
 
   renderModeSelector(value) {
     const options = [
+      { label: "Block", value: "block", icon: AlignLeft, tooltip: "Block" },
       {
         label: "Visual",
         value: "visual",

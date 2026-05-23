@@ -1,0 +1,71 @@
+.button-block {
+  display: grid;
+  gap: 8px;
+}
+
+.button-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.button-preview-wrap {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.site-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--button-font-size, 0.95rem);
+  padding: var(--button-padding-y, 0.58rem) var(--button-padding-x, 1rem);
+  border-radius: var(--button-radius, 12px);
+  border: 1px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.site-button.theme-primary {
+  --button-tone: var(--website-primary-color, #116dff);
+  --button-tone-text: var(--website-text-light-color, #ffffff);
+}
+
+.site-button.theme-secondary {
+  --button-tone: var(--website-secondary-color, #f97316);
+  --button-tone-text: var(--website-text-light-color, #ffffff);
+}
+
+.site-button.theme-light {
+  --button-tone: var(--website-light-color, #f5f5f5);
+  --button-tone-text: var(--website-text-dark-color, #111827);
+}
+
+.site-button.theme-dark {
+  --button-tone: var(--website-dark-color, #111827);
+  --button-tone-text: var(--website-text-light-color, #ffffff);
+}
+
+.site-button.theme-muted {
+  --button-tone: var(--website-muted-color, #6b7280);
+  --button-tone-text: var(--website-text-light-color, #ffffff);
+}
+
+.site-button.variant-filled {
+  background: var(--button-tone);
+  color: var(--button-tone-text, var(--website-text-light-color, #ffffff));
+}
+
+.site-button.variant-border {
+  background: transparent;
+  border-color: var(--button-tone);
+  color: var(--button-tone);
+}
+
+.site-button.variant-ghost {
+  background: color-mix(in srgb, var(--button-tone) 14%, transparent);
+  color: var(--button-tone);
+}

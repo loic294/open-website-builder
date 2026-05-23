@@ -1,5 +1,5 @@
 import { LitElement, html, render, unsafeCSS } from "lit";
-import { X, createElement } from "lucide/dist/cjs/lucide";
+import { ArrowDown, ArrowUp, X, createElement } from "lucide/dist/cjs/lucide";
 import { EditorState } from "@codemirror/state";
 import {
   EditorView,
@@ -296,6 +296,8 @@ export class EditorComponent extends LitElement {
   }
 
   renderCssSettingsTab() {
+    const orderState = this.getNodeOrderState();
+
     return html`
       <div class="settings-css-tab">
         <label class="settings-css-label">CSS</label>
@@ -303,8 +305,178 @@ export class EditorComponent extends LitElement {
         <p class="settings-css-help">
           Styles are scoped to this block. Syntax errors appear in the gutter.
         </p>
+        ${orderState?.isEligible
+          ? html`
+              <div class="settings-node-order">
+                <label class="settings-css-label">Node order</label>
+                <div class="settings-node-order-actions">
+                  <editor-btn
+                    style="light"
+                    ?disabled=${!orderState.canMoveBackward}
+                    @click=${() => this.moveNodeWithinSection("backward")}
+                    >${createElement(ArrowUp)} Backward</editor-btn
+                  >
+                  <editor-btn
+                    style="light"
+                    ?disabled=${!orderState.canMoveForward}
+                    @click=${() => this.moveNodeWithinSection("forward")}
+                    >${createElement(ArrowDown)} Forward</editor-btn
+                  >
+                </div>
+                <p class="settings-css-help">
+                  Moves this block within the current section.
+                </p>
+              </div>
+            `
+          : null}
       </div>
     `;
+  }
+
+  findNodeParentInTree(nodes, targetNodeId, parentNode = null) {
+    if (!Array.isArray(nodes) || !targetNodeId) {
+      return null;
+    }
+
+    for (let index = 0; index < nodes.length; index += 1) {
+      const currentNode = nodes[index];
+      if (!currentNode || typeof currentNode !== "object") {
+        continue;
+      }
+
+      if (currentNode.id === targetNodeId) {
+        return {
+          index,
+          parentNode,
+          siblings: nodes,
+          node: currentNode,
+        };
+      }
+
+      if (Array.isArray(currentNode.content)) {
+        const nested = this.findNodeParentInTree(
+          currentNode.content,
+          targetNodeId,
+          currentNode,
+        );
+        if (nested) {
+          return nested;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  getNodeOrderState() {
+    if (!this.node?.id || !Array.isArray(this.pageConfig?.content)) {
+      return {
+        isEligible: false,
+        canMoveBackward: false,
+        canMoveForward: false,
+      };
+    }
+
+    const found = this.findNodeParentInTree(this.pageConfig.content, this.node.id);
+    if (!found) {
+      return {
+        isEligible: false,
+        canMoveBackward: false,
+        canMoveForward: false,
+      };
+    }
+
+    // Reordering from CSS tab is limited to section child nodes.
+    const isEligible = found.parentNode?.type === "section";
+    if (!isEligible) {
+      return {
+        isEligible: false,
+        canMoveBackward: false,
+        canMoveForward: false,
+      };
+    }
+
+    return {
+      isEligible,
+      canMoveBackward: found.index > 0,
+      canMoveForward: found.index < found.siblings.length - 1,
+    };
+  }
+
+  moveNodeWithinSection(direction) {
+    if (!this.node?.id || !Array.isArray(this.pageConfig?.content)) {
+      return;
+    }
+
+    const found = this.findNodeParentInTree(this.pageConfig.content, this.node.id);
+    if (!found || found.parentNode?.type !== "section") {
+      return;
+    }
+
+    const offset = direction === "forward" ? 1 : -1;
+    const targetIndex = found.index + offset;
+    if (targetIndex < 0 || targetIndex >= found.siblings.length) {
+      return;
+    }
+
+    const moveInContentTree = (nodes, parentId) => {
+      let didChange = false;
+
+      const nextNodes = nodes.map((currentNode) => {
+        if (!currentNode || typeof currentNode !== "object") {
+          return currentNode;
+        }
+
+        if (currentNode.id === parentId && Array.isArray(currentNode.content)) {
+          const reordered = [...currentNode.content];
+          const [movedNode] = reordered.splice(found.index, 1);
+          reordered.splice(targetIndex, 0, movedNode);
+          didChange = true;
+
+          return {
+            ...currentNode,
+            content: reordered,
+          };
+        }
+
+        if (Array.isArray(currentNode.content)) {
+          const nested = moveInContentTree(currentNode.content, parentId);
+          if (nested.didChange) {
+            didChange = true;
+            return {
+              ...currentNode,
+              content: nested.nextNodes,
+            };
+          }
+        }
+
+        return currentNode;
+      });
+
+      return {
+        nextNodes,
+        didChange,
+      };
+    };
+
+    const parentId = found.parentNode?.id;
+    if (!parentId) {
+      return;
+    }
+
+    const update = moveInContentTree(this.pageConfig.content, parentId);
+    if (!update.didChange) {
+      return;
+    }
+
+    const nextPageConfig = {
+      ...this.pageConfig,
+      content: update.nextNodes,
+    };
+
+    this.pageConfig = nextPageConfig;
+    this.dispatchPageConfigUpdated(nextPageConfig);
+    this.renderSettingsOverlay();
   }
 
   closeSettingsEditor() {

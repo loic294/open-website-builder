@@ -1,11 +1,13 @@
 import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { dataLayer } from "../../../editor/data/data-layer.js";
 import {
   ArrowDown,
   ArrowUp,
   Trash,
   Pencil,
   Move,
+  Plus,
   createElement,
 } from "lucide/dist/cjs/lucide";
 import styles from "./styles.css?inline";
@@ -52,6 +54,20 @@ const SECTION_PADDING_PRESETS = {
   },
 };
 
+const BLOCK_INSERT_OPTIONS = [
+  { label: "Text", value: "text" },
+  { label: "Image", value: "image" },
+  { label: "Button", value: "button" },
+  { label: "Embed", value: "embed" },
+  { label: "Social media", value: "social-media" },
+  { label: "Gallery", value: "gallery" },
+  { label: "Shared component", value: "shared" },
+];
+
+function createNodeId(type) {
+  return `${type}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+}
+
 export class SiteSection extends EditorComponent {
   static designColorVariables = [
     "--website-primary-color",
@@ -85,6 +101,7 @@ export class SiteSection extends EditorComponent {
     settingAlignmentMode: { type: String },
     settingGap: { type: String },
     settingRowHeight: { type: String },
+    settingFixedHeight: { type: String },
     settingSizing: { type: String },
     settingPaddingTop: { type: String },
     settingPaddingBottom: { type: String },
@@ -108,6 +125,11 @@ export class SiteSection extends EditorComponent {
     showGridPreviewOverlay: { type: Boolean },
     hoveredGridChildId: { type: String },
     globalGridHandlePosition: { attribute: false },
+    isBlockPickerOpen: { type: Boolean },
+    blockPickerType: { type: String },
+    forceGridOverlayVisible: { type: Boolean },
+    sharedComponentOptions: { type: Array },
+    replaceWithSharedComponentId: { type: String },
   };
 
   static styles = [super.styles, unsafeCSS(styles)];
@@ -122,9 +144,10 @@ export class SiteSection extends EditorComponent {
     this.settingWidthCustomValue = "";
     this.settingBackgroundColor = "";
     this.settingTextColor = "";
-    this.settingAlignmentMode = "visual";
+    this.settingAlignmentMode = "block";
     this.settingGap = "";
     this.settingRowHeight = `${GRID_EDITOR_ROW_SIZE}px`;
+    this.settingFixedHeight = "";
     this.settingSizing = "medium";
     this.settingPaddingTop = "";
     this.settingPaddingBottom = "";
@@ -148,19 +171,32 @@ export class SiteSection extends EditorComponent {
     this.showGridPreviewOverlay = false;
     this.hoveredGridChildId = "";
     this.globalGridHandlePosition = null;
+    this.isBlockPickerOpen = false;
+    this.blockPickerType = "text";
+    this.forceGridOverlayVisible = false;
+    this.sharedComponentOptions = [];
+    this.replaceWithSharedComponentId = "";
+    this.didLoadSharedComponentOptions = false;
     this.activeGridPointerState = null;
+    this.activeSectionResizeState = null;
     this.draftGridPlacements = {};
     this.globalHandleFrame = null;
     this.onGridPointerMove = this.onGridPointerMove.bind(this);
     this.onGridPointerUp = this.onGridPointerUp.bind(this);
+    this.onSectionResizePointerMove =
+      this.onSectionResizePointerMove.bind(this);
+    this.onSectionResizePointerUp = this.onSectionResizePointerUp.bind(this);
   }
 
   closeSettingsEditor() {
     super.closeSettingsEditor();
     this.showGridPreviewOverlay = false;
+    this.forceGridOverlayVisible = false;
     this.hoveredGridChildId = "";
     this.globalGridHandlePosition = null;
+    this.isBlockPickerOpen = false;
     this.cleanupGridPointerInteraction();
+    this.cleanupSectionResizeInteraction();
   }
 
   updated(changedProperties) {
@@ -173,9 +209,10 @@ export class SiteSection extends EditorComponent {
         settingWidthCustomValue: "",
         settingBackgroundColor: "",
         settingTextColor: "",
-        settingAlignmentMode: "visual",
+        settingAlignmentMode: "block",
         settingGap: "",
         settingRowHeight: `${GRID_EDITOR_ROW_SIZE}px`,
+        settingFixedHeight: "",
         settingSizing: "medium",
         settingPaddingTop: "",
         settingPaddingBottom: "",
@@ -213,6 +250,7 @@ export class SiteSection extends EditorComponent {
       this.globalHandleFrame = null;
     }
     this.cleanupGridPointerInteraction();
+    this.cleanupSectionResizeInteraction();
     super.disconnectedCallback();
   }
 
@@ -550,6 +588,7 @@ export class SiteSection extends EditorComponent {
       ...this.draftGridPlacements,
       [childId]: initialPlacement,
     };
+    this.forceGridOverlayVisible = true;
     this.hoveredGridChildId = childId;
     this.requestUpdate();
     this.scheduleGlobalHandleRefresh();
@@ -693,6 +732,7 @@ export class SiteSection extends EditorComponent {
 
   cleanupGridPointerInteraction() {
     this.activeGridPointerState = null;
+    this.forceGridOverlayVisible = false;
     window.removeEventListener("pointermove", this.onGridPointerMove);
     window.removeEventListener("pointerup", this.onGridPointerUp);
     window.removeEventListener("pointercancel", this.onGridPointerUp);
@@ -807,15 +847,326 @@ export class SiteSection extends EditorComponent {
     this.dispatchPageConfigUpdated(nextPageConfig);
   }
 
-  openSectionSettings() {
+  getDefaultChildNode(type) {
+    if (type === "text") {
+      return {
+        id: createNodeId("text"),
+        type: "text",
+        content: "<p>New text block</p>",
+      };
+    }
+
+    if (type === "image") {
+      return {
+        id: createNodeId("image"),
+        type: "image",
+        url: "",
+      };
+    }
+
+    if (type === "button") {
+      return {
+        id: createNodeId("button"),
+        type: "button",
+        content: "Button",
+      };
+    }
+
+    if (type === "embed") {
+      return {
+        id: createNodeId("embed"),
+        type: "embed",
+        html: "",
+      };
+    }
+
+    if (type === "social-media") {
+      return {
+        id: createNodeId("social-media"),
+        type: "social-media",
+        items: [
+          {
+            id: createNodeId("social-item"),
+            name: "Social",
+            link: "",
+            icon: "globe",
+            customIcon: "",
+          },
+        ],
+      };
+    }
+
+    if (type === "shared") {
+      return {
+        id: createNodeId("shared"),
+        type: "shared",
+        settings: {
+          shared_component_id: "",
+        },
+        content: [],
+      };
+    }
+
+    if (type === "gallery") {
+      return {
+        id: createNodeId("gallery"),
+        type: "gallery",
+        images: [],
+      };
+    }
+
+    return {
+      id: createNodeId("text"),
+      type: "text",
+      content: "<p>New block</p>",
+    };
+  }
+
+  updateSectionContent(nextContent) {
+    const pageContent = Array.isArray(this.pageConfig?.content)
+      ? this.pageConfig.content
+      : [];
+
+    const nextPageConfig = {
+      ...this.pageConfig,
+      content: pageContent.map((currentNode) => {
+        if (currentNode?.id !== this.node?.id) {
+          return currentNode;
+        }
+
+        return {
+          ...currentNode,
+          content: nextContent,
+        };
+      }),
+    };
+
+    this.node = {
+      ...this.node,
+      content: nextContent,
+    };
+    this.pageConfig = nextPageConfig;
+    this.dispatchPageConfigUpdated(nextPageConfig);
+  }
+
+  addChildBlock(type) {
+    const childNodes = this.getChildNodes();
+    const nextNode = this.getDefaultChildNode(type);
+    this.updateSectionContent([...childNodes, nextNode]);
+    this.isBlockPickerOpen = false;
+  }
+
+  moveChildBlock(direction) {
+    const childId = this.getTrackedGridChildId();
+    if (!childId) {
+      return;
+    }
+
+    const childNodes = this.getChildNodes();
+    const index = childNodes.findIndex((child) => child?.id === childId);
+    if (index === -1) {
+      return;
+    }
+
+    const targetIndex = direction === "backward" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= childNodes.length) {
+      return;
+    }
+
+    const nextNodes = [...childNodes];
+    const [movedNode] = nextNodes.splice(index, 1);
+    nextNodes.splice(targetIndex, 0, movedNode);
+    this.updateSectionContent(nextNodes);
+    this.hoveredGridChildId = movedNode.id;
+  }
+
+  deleteTrackedChildBlock() {
+    const childId = this.getTrackedGridChildId();
+    if (!childId) {
+      return;
+    }
+
+    const childNodes = this.getChildNodes();
+    const nextNodes = childNodes.filter((child) => child?.id !== childId);
+    if (nextNodes.length === childNodes.length) {
+      return;
+    }
+
+    this.updateSectionContent(nextNodes);
+    this.hoveredGridChildId = "";
+    this.globalGridHandlePosition = null;
+  }
+
+  startSectionResize(event) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const containerEl = this.renderRoot?.querySelector(".container");
+    if (!(containerEl instanceof HTMLElement)) {
+      return;
+    }
+
+    const isVisualMode = this.settingAlignmentMode === "visual";
+    const styles = getComputedStyle(containerEl);
+    const rowSize =
+      Number.parseFloat(styles.getPropertyValue("--section-grid-row-size")) ||
+      GRID_EDITOR_ROW_SIZE;
+    const rowGap = Number.parseFloat(styles.rowGap) || 0;
+    const stepY = Math.max(1, rowSize + rowGap);
+    const startRows = Math.max(
+      1,
+      Number.parseInt(this.settingGridRows, 10) || 1,
+    );
+    const startHeight =
+      Number.parseFloat(String(this.settingFixedHeight || "").trim()) ||
+      containerEl.getBoundingClientRect().height;
+
+    this.activeSectionResizeState = {
+      startY: event.clientY,
+      isVisualMode,
+      stepY,
+      startRows,
+      startHeight,
+    };
+
+    this.forceGridOverlayVisible = isVisualMode;
+    window.addEventListener("pointermove", this.onSectionResizePointerMove);
+    window.addEventListener("pointerup", this.onSectionResizePointerUp);
+    window.addEventListener("pointercancel", this.onSectionResizePointerUp);
+
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  onSectionResizePointerMove(event) {
+    if (!this.activeSectionResizeState) {
+      return;
+    }
+
+    const deltaY = event.clientY - this.activeSectionResizeState.startY;
+
+    if (this.activeSectionResizeState.isVisualMode) {
+      const deltaRows = Math.round(
+        deltaY / this.activeSectionResizeState.stepY,
+      );
+      const nextRows = Math.max(
+        1,
+        this.activeSectionResizeState.startRows + deltaRows,
+      );
+      if (nextRows !== Number.parseInt(this.settingGridRows, 10)) {
+        this.updateSettingsState({
+          settingGridRows: nextRows,
+        });
+      }
+      return;
+    }
+
+    const nextHeight = Math.max(
+      80,
+      Math.round(this.activeSectionResizeState.startHeight + deltaY),
+    );
+    const nextValue = `${nextHeight}px`;
+    if (nextValue !== this.settingFixedHeight) {
+      this.updateSettingsState({
+        settingFixedHeight: nextValue,
+      });
+    }
+  }
+
+  onSectionResizePointerUp() {
+    this.cleanupSectionResizeInteraction();
+  }
+
+  cleanupSectionResizeInteraction() {
+    this.activeSectionResizeState = null;
+    this.forceGridOverlayVisible = false;
+    window.removeEventListener("pointermove", this.onSectionResizePointerMove);
+    window.removeEventListener("pointerup", this.onSectionResizePointerUp);
+    window.removeEventListener("pointercancel", this.onSectionResizePointerUp);
+  }
+
+  async loadSharedComponentOptions() {
+    if (this.didLoadSharedComponentOptions) {
+      return;
+    }
+
+    this.didLoadSharedComponentOptions = true;
+
+    try {
+      const components = await dataLayer.listSharedComponents();
+      this.sharedComponentOptions = Array.isArray(components)
+        ? components
+            .map((component) => ({
+              label: component?.title || component?.id || "Untitled",
+              value: component?.id || "",
+            }))
+            .filter((component) => component.value)
+        : [];
+    } catch (error) {
+      console.error(error);
+      this.sharedComponentOptions = [];
+    }
+
+    if (!this.replaceWithSharedComponentId && this.sharedComponentOptions[0]) {
+      this.replaceWithSharedComponentId = this.sharedComponentOptions[0].value;
+    }
+  }
+
+  replaceCurrentSectionWithSharedComponent() {
+    const sharedComponentId = String(
+      this.replaceWithSharedComponentId || "",
+    ).trim();
+    if (
+      !sharedComponentId ||
+      !Array.isArray(this.pageConfig?.content) ||
+      !this.node?.id
+    ) {
+      return;
+    }
+
+    let didReplace = false;
+    const nextContent = this.pageConfig.content.map((currentNode) => {
+      if (currentNode?.id !== this.node.id) {
+        return currentNode;
+      }
+
+      didReplace = true;
+      return {
+        id: this.node.id,
+        type: "shared",
+        settings: {
+          shared_component_id: sharedComponentId,
+        },
+        content: [],
+      };
+    });
+
+    if (!didReplace) {
+      return;
+    }
+
+    const nextPageConfig = {
+      ...this.pageConfig,
+      content: nextContent,
+    };
+
+    this.dispatchPageConfigUpdated(nextPageConfig);
+    this.closeSettingsEditor();
+  }
+
+  async openSectionSettings() {
+    await this.loadSharedComponentOptions();
+
     this.syncSettingsStateFromNode({
       settingWidth: "normal",
       settingWidthCustomValue: "",
       settingBackgroundColor: "",
       settingTextColor: "",
-      settingAlignmentMode: "visual",
+      settingAlignmentMode: "block",
       settingGap: "",
       settingRowHeight: `${GRID_EDITOR_ROW_SIZE}px`,
+      settingFixedHeight: "",
       settingSizing: "medium",
       settingPaddingTop: "",
       settingPaddingBottom: "",
@@ -899,46 +1250,23 @@ export class SiteSection extends EditorComponent {
 
               ${this.settingSizing === "custom"
                 ? html`
-                    <editor-text-input
-                      label="Top"
-                      placeholder="7rem"
-                      .value=${this.settingPaddingTop}
+                    <editor-padding-input
+                      .value=${{
+                        top: this.settingPaddingTop,
+                        right: this.settingPaddingRight,
+                        bottom: this.settingPaddingBottom,
+                        left: this.settingPaddingLeft,
+                      }}
                       @change=${(e) => {
+                        const paddingValues = e.detail.value || {};
                         this.updateSettingsState({
-                          settingPaddingTop: e.detail.value,
+                          settingPaddingTop: paddingValues.top || "",
+                          settingPaddingRight: paddingValues.right || "",
+                          settingPaddingBottom: paddingValues.bottom || "",
+                          settingPaddingLeft: paddingValues.left || "",
                         });
                       }}
-                    ></editor-text-input>
-                    <editor-text-input
-                      label="Bottom"
-                      placeholder="6rem"
-                      .value=${this.settingPaddingBottom}
-                      @change=${(e) => {
-                        this.updateSettingsState({
-                          settingPaddingBottom: e.detail.value,
-                        });
-                      }}
-                    ></editor-text-input>
-                    <editor-text-input
-                      label="Left"
-                      placeholder="2rem"
-                      .value=${this.settingPaddingLeft}
-                      @change=${(e) => {
-                        this.updateSettingsState({
-                          settingPaddingLeft: e.detail.value,
-                        });
-                      }}
-                    ></editor-text-input>
-                    <editor-text-input
-                      label="Right"
-                      placeholder="2rem"
-                      .value=${this.settingPaddingRight}
-                      @change=${(e) => {
-                        this.updateSettingsState({
-                          settingPaddingRight: e.detail.value,
-                        });
-                      }}
-                    ></editor-text-input>
+                    ></editor-padding-input>
                   `
                 : null}
             </settings-section>
@@ -991,6 +1319,49 @@ export class SiteSection extends EditorComponent {
                   this.showGridPreviewOverlay = Boolean(e.detail?.visible);
                 }}
               ></editor-alignment-options>
+              ${this.settingAlignmentMode !== "visual"
+                ? html`
+                    <editor-text-input
+                      label="Fixed min height"
+                      placeholder="320px"
+                      .value=${this.settingFixedHeight}
+                      @change=${(event) => {
+                        this.updateSettingsState({
+                          settingFixedHeight: event.detail.value,
+                        });
+                      }}
+                    ></editor-text-input>
+                  `
+                : null}
+            </settings-section>
+            <settings-section title="Replace section">
+              <editor-select
+                label="Shared component"
+                .options=${this.sharedComponentOptions.length > 0
+                  ? this.sharedComponentOptions
+                  : [{ label: "No shared components available", value: "" }]}
+                .value=${this.replaceWithSharedComponentId}
+                .disabled=${this.sharedComponentOptions.length === 0}
+                @change=${(event) => {
+                  this.replaceWithSharedComponentId = event.detail.value;
+                }}
+              ></editor-select>
+              <editor-text-input
+                label="Or enter ID"
+                placeholder="navbar"
+                .value=${this.replaceWithSharedComponentId}
+                @change=${(event) => {
+                  this.replaceWithSharedComponentId = event.detail.value;
+                }}
+              ></editor-text-input>
+              <editor-btn
+                style="light"
+                ?disabled=${!String(
+                  this.replaceWithSharedComponentId || "",
+                ).trim()}
+                @click=${() => this.replaceCurrentSectionWithSharedComponent()}
+                >Replace with shared component</editor-btn
+              >
             </settings-section>
           </div>`;
         }
@@ -1084,8 +1455,8 @@ export class SiteSection extends EditorComponent {
     const layoutStyle = layoutStyleParts.join("");
     const previewCellCount = Math.min(previewColumns * previewRows, 2500);
     const shouldRenderGridOverlay =
-      this.isSettingsEditorOpen &&
-      this.showGridPreviewOverlay &&
+      ((this.isSettingsEditorOpen && this.showGridPreviewOverlay) ||
+        this.forceGridOverlayVisible) &&
       (this.settingAlignmentMode === "grid" ||
         this.settingAlignmentMode === "visual");
     const rowHeight = this.getSanitizedRowHeightValue();
@@ -1094,6 +1465,13 @@ export class SiteSection extends EditorComponent {
     const trackedGridChildNode = childNodes.find(
       (child) => child?.id === trackedGridChildId,
     );
+    const trackedGridChildIndex = childNodes.findIndex(
+      (child) => child?.id === trackedGridChildId,
+    );
+    const canMoveTrackedChildBackward = trackedGridChildIndex > 0;
+    const canMoveTrackedChildForward =
+      trackedGridChildIndex !== -1 &&
+      trackedGridChildIndex < childNodes.length - 1;
     const trackedImageSizeMode =
       trackedGridChildNode?.type === "image"
         ? String(trackedGridChildNode?.settings?.imageSizeMode || "contained")
@@ -1107,6 +1485,10 @@ export class SiteSection extends EditorComponent {
     const gridEditingStyle = isGridChildEditingEnabled
       ? `--section-grid-columns: ${previewColumns}; --section-grid-rows: ${previewRows}; --section-grid-gap: ${this.settingGap || "0px"}; --section-grid-row-size: ${rowHeight};`
       : "";
+    const fixedHeightStyle =
+      this.settingAlignmentMode === "visual" || !this.settingFixedHeight
+        ? ""
+        : `min-height: ${this.settingFixedHeight};`;
     const sectionPaddingStyle = `--section-padding-top: ${sectionPadding.top}; --section-padding-right: ${sectionPadding.right}; --section-padding-bottom: ${sectionPadding.bottom}; --section-padding-left: ${sectionPadding.left};`;
 
     return html`<div>
@@ -1128,35 +1510,57 @@ export class SiteSection extends EditorComponent {
             .settingWidth}-width ${isGridChildEditingEnabled
             ? `is-grid-child-editing is-${this.settingAlignmentMode}-mode`
             : ""}"
-          style="${widthStyle}${layoutStyle}${sectionPaddingStyle}${gridEditingStyle}"
+          style="${widthStyle}${layoutStyle}${sectionPaddingStyle}${gridEditingStyle}${fixedHeightStyle}"
         >
-          ${isGridChildEditingEnabled
+          ${childNodes.length === 0
             ? html`
-                ${childNodes.map((child, index) => {
-                  const childId = typeof child?.id === "string" ? child.id : "";
-                  const placement = this.getGridPlacementForChild(
-                    child,
-                    index,
-                    previewColumns,
-                    previewRows,
-                  );
-                  const isInteracting =
-                    this.activeGridPointerState?.childId === childId;
-
-                  return this.renderNodeFn(
-                    child,
-                    this.pageConfig,
-                    this.onPageConfigUpdated,
-                    this.renderNodeFn,
-                    {
-                      hostClass: `section-grid-item ${isInteracting ? "is-interacting" : ""}`,
-                      hostStyle: `grid-column: ${placement.columnStart} / span ${placement.columnSpan}; grid-row: ${placement.rowStart} / span ${placement.rowSpan};`,
-                      hostDataGridChildId: childId,
-                    },
-                  );
-                })}
+                <div class="section-empty-state">
+                  <p>This section is empty.</p>
+                  <div class="section-empty-state-actions">
+                    <editor-btn
+                      style="primary"
+                      @click=${() => {
+                        this.blockPickerType = "text";
+                        this.isBlockPickerOpen = true;
+                      }}
+                      >Add first block</editor-btn
+                    >
+                    <editor-btn
+                      style="light"
+                      @click=${() => this.addChildBlock("shared")}
+                      >Use shared component</editor-btn
+                    >
+                  </div>
+                </div>
               `
-            : html`${childNodes.map((child) => this.renderChildNode(child))}`}
+            : isGridChildEditingEnabled
+              ? html`
+                  ${childNodes.map((child, index) => {
+                    const childId =
+                      typeof child?.id === "string" ? child.id : "";
+                    const placement = this.getGridPlacementForChild(
+                      child,
+                      index,
+                      previewColumns,
+                      previewRows,
+                    );
+                    const isInteracting =
+                      this.activeGridPointerState?.childId === childId;
+
+                    return this.renderNodeFn(
+                      child,
+                      this.pageConfig,
+                      this.onPageConfigUpdated,
+                      this.renderNodeFn,
+                      {
+                        hostClass: `section-grid-item ${isInteracting ? "is-interacting" : ""}`,
+                        hostStyle: `grid-column: ${placement.columnStart} / span ${placement.columnSpan}; grid-row: ${placement.rowStart} / span ${placement.rowSpan};`,
+                        hostDataGridChildId: childId,
+                      },
+                    );
+                  })}
+                `
+              : html`${childNodes.map((child) => this.renderChildNode(child))}`}
           ${shouldRenderGridOverlay
             ? html`
                 <div
@@ -1264,10 +1668,38 @@ export class SiteSection extends EditorComponent {
                       ></button>
                     `
                   : null}
+
+                <div class="grid-item-action-stack">
+                  <editor-btn
+                    style="light"
+                    ?disabled=${!canMoveTrackedChildBackward}
+                    @click=${() => this.moveChildBlock("backward")}
+                    >${createElement(ArrowUp)} Backward</editor-btn
+                  >
+                  <editor-btn
+                    style="light"
+                    ?disabled=${!canMoveTrackedChildForward}
+                    @click=${() => this.moveChildBlock("forward")}
+                    >${createElement(ArrowDown)} Forward</editor-btn
+                  >
+                  <editor-btn
+                    style="light text-danger"
+                    @click=${() => this.deleteTrackedChildBlock()}
+                    >${createElement(Trash)} Delete block</editor-btn
+                  >
+                </div>
               </div>
             `
           : null}
         <div class="section-controls">
+          <editor-btn
+            style="light"
+            title="Add block"
+            @click=${() => {
+              this.isBlockPickerOpen = !this.isBlockPickerOpen;
+            }}
+            >${createElement(Plus)} Add block</editor-btn
+          >
           <editor-btn
             style="light"
             title="Move section up"
@@ -1290,6 +1722,40 @@ export class SiteSection extends EditorComponent {
             >${createElement(Trash)}</editor-btn
           >
         </div>
+        ${this.isBlockPickerOpen
+          ? html`
+              <div class="section-block-picker">
+                <editor-select
+                  label="Block type"
+                  .options=${BLOCK_INSERT_OPTIONS}
+                  .value=${this.blockPickerType}
+                  @change=${(event) => {
+                    this.blockPickerType = event.detail.value;
+                  }}
+                ></editor-select>
+                <div class="section-block-picker-actions">
+                  <editor-btn
+                    style="primary"
+                    @click=${() => this.addChildBlock(this.blockPickerType)}
+                    >Insert block</editor-btn
+                  >
+                  <editor-btn
+                    style="light"
+                    @click=${() => {
+                      this.isBlockPickerOpen = false;
+                    }}
+                    >Cancel</editor-btn
+                  >
+                </div>
+              </div>
+            `
+          : null}
+        <button
+          class="section-resize-handle"
+          type="button"
+          title="Resize section"
+          @pointerdown=${(event) => this.startSectionResize(event)}
+        ></button>
         <editor-btn
           style="primary"
           class="add-section-button bottom"
@@ -1367,13 +1833,7 @@ export function addSectionAfter(pageConfig, node, position = "after") {
   const nextSection = {
     id: `section-${timestamp}`,
     type: "section",
-    content: [
-      {
-        id: `text-${timestamp}`,
-        type: "text",
-        content: `New section ${timestamp}`,
-      },
-    ],
+    content: [],
   };
 
   const nextContent = [...content];

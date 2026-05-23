@@ -23,7 +23,8 @@
     "@tiptap/pm": "^3.23.5",
     "@tiptap/starter-kit": "^3.23.5",
     "lit": "^3.1.0",
-    "lucide": "^1.16.0"
+    "lucide": "^1.16.0",
+    "simple-icons": "^16.20.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"

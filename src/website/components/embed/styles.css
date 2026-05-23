@@ -1,0 +1,48 @@
+.embed-block {
+  display: grid;
+  gap: 8px;
+}
+
+.embed-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.embed-placeholder {
+  border: 1px dashed var(--editor-border-color, #d1d5db);
+  background: #fff;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+.embed-preview {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  padding: 10px;
+  overflow: auto;
+}
+
+.embed-textarea {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 6px;
+  padding: 8px;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.embed-help {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}

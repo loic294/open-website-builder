@@ -1,5 +1,7 @@
 import { LitElement, html, unsafeCSS } from "lit";
+import { Pencil, createElement } from "lucide/dist/cjs/lucide";
 import { dataLayer } from "../../../editor/data/data-layer.js";
+import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import styles from "./styles.css?inline";
 
 export const defaultSharedConfig = {
@@ -7,13 +9,15 @@ export const defaultSharedConfig = {
   content: [],
 };
 
-class SharedComponent extends LitElement {
+class SharedComponent extends EditorComponent {
   static properties = {
     node: { type: Object },
+    pageConfig: { type: Object },
     renderNode: { type: Object },
     componentConfig: { state: true },
     loading: { state: true },
     error: { state: true },
+    sharedComponentOptions: { state: true },
   };
 
   static styles = unsafeCSS(styles);
@@ -21,16 +25,19 @@ class SharedComponent extends LitElement {
   constructor() {
     super();
     this.node = null;
+    this.pageConfig = null;
     this.renderNode = null;
     this.componentConfig = null;
     this.loading = false;
     this.error = "";
     this.loadedComponentId = "";
+    this.sharedComponentOptions = [];
   }
 
   connectedCallback() {
     super.connectedCallback();
     this.loadComponentIfNeeded();
+    void this.loadSharedComponentOptions();
   }
 
   updated(changedProperties) {
@@ -58,6 +65,62 @@ class SharedComponent extends LitElement {
 
     this.loadedComponentId = componentId;
     void this.loadComponent(componentId);
+  }
+
+  async loadSharedComponentOptions() {
+    try {
+      const items = await dataLayer.listSharedComponents();
+      this.sharedComponentOptions = Array.isArray(items)
+        ? items.map((item) => ({
+            label: item?.title || item?.id || "Untitled",
+            value: item?.id || "",
+          }))
+        : [];
+    } catch (error) {
+      console.error(error);
+      this.sharedComponentOptions = [];
+    }
+  }
+
+  get currentSharedComponentId() {
+    return String(this.node?.settings?.shared_component_id || "").trim();
+  }
+
+  openSharedSettings() {
+    const currentId = this.currentSharedComponentId;
+    const options = this.sharedComponentOptions;
+    const hasCurrent = options.some((option) => option.value === currentId);
+    const baseOptions = hasCurrent
+      ? options
+      : [
+          ...options,
+          ...(currentId
+            ? [{ label: `Current (${currentId})`, value: currentId }]
+            : []),
+        ];
+    const selectOptions = [
+      { label: "Select one...", value: "" },
+      ...baseOptions,
+    ];
+
+    this.openSettingsEditor({
+      tabs: [{ id: "general", label: "General" }],
+      content: () => html`
+        <settings-section title="Shared component">
+          <editor-select
+            label="Component"
+            .value=${currentId}
+            .options=${selectOptions}
+            @change=${(event) => {
+              this.updateSettingsState({
+                shared_component_id: event.detail.value,
+              });
+              this.loadComponentIfNeeded();
+            }}
+          ></editor-select>
+        </settings-section>
+      `,
+    });
   }
 
   async loadComponent(componentId) {
@@ -121,15 +184,34 @@ class SharedComponent extends LitElement {
 
   render() {
     if (this.loading) {
-      return html`<div class="shared-placeholder">
-        Loading shared content...
-      </div>`;
+      return html`
+        <div class="shared-toolbar">
+          <editor-btn style="light" @click=${() => this.openSharedSettings()}
+            >${createElement(Pencil)} Shared settings</editor-btn
+          >
+        </div>
+        <div class="shared-placeholder">Loading shared content...</div>
+      `;
     }
 
     if (this.error) {
-      return html`<div class="shared-placeholder shared-error">
-        ${this.error}
-      </div>`;
+      return html`
+        <div class="shared-toolbar">
+          <editor-btn style="light" @click=${() => this.openSharedSettings()}
+            >${createElement(Pencil)} Shared settings</editor-btn
+          >
+        </div>
+        <div class="shared-placeholder shared-error">
+          ${this.error}
+          <div class="shared-placeholder-actions">
+            <editor-btn
+              style="primary"
+              @click=${() => this.openSharedSettings()}
+              >Select shared component</editor-btn
+            >
+          </div>
+        </div>
+      `;
     }
 
     const content = Array.isArray(this.componentConfig?.content)
@@ -137,9 +219,23 @@ class SharedComponent extends LitElement {
       : [];
 
     if (content.length === 0) {
-      return html`<div class="shared-placeholder">
-        No shared content found.
-      </div>`;
+      return html`
+        <div class="shared-toolbar">
+          <editor-btn style="light" @click=${() => this.openSharedSettings()}
+            >${createElement(Pencil)} Shared settings</editor-btn
+          >
+        </div>
+        <div class="shared-placeholder">
+          No shared content found.
+          <div class="shared-placeholder-actions">
+            <editor-btn
+              style="primary"
+              @click=${() => this.openSharedSettings()}
+              >Select shared component</editor-btn
+            >
+          </div>
+        </div>
+      `;
     }
 
     const renderNode = this.renderNode;
@@ -149,14 +245,21 @@ class SharedComponent extends LitElement {
       </div>`;
     }
 
-    return html`${content.map((child) =>
-      renderNode(
-        child,
-        this.componentConfig,
-        this.onSharedConfigUpdated,
-        renderNode,
-      ),
-    )}`;
+    return html`
+      <div class="shared-toolbar">
+        <editor-btn style="light" @click=${() => this.openSharedSettings()}
+          >${createElement(Pencil)} Shared settings</editor-btn
+        >
+      </div>
+      ${content.map((child) =>
+        renderNode(
+          child,
+          this.componentConfig,
+          this.onSharedConfigUpdated,
+          renderNode,
+        ),
+      )}
+    `;
   }
 }
 
@@ -172,7 +275,9 @@ export const editorRenderShared = (
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
+    .pageConfig=${pageConfig}
     .renderNode=${renderNode}
+    @page-config-updated=${onPageConfigUpdated}
   ></site-shared>`;
 };
 

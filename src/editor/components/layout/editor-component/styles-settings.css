@@ -89,6 +89,7 @@
 
 .settings-overlay-body {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   background: #ffffff;
 }
@@ -156,4 +157,20 @@
 
 .settings-css-error {
   color: #b42318;
+}
+
+.settings-node-order {
+  display: grid;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.settings-node-order-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-node-order-actions editor-btn {
+  flex: 1;
 }

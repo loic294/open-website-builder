@@ -7,6 +7,10 @@ import { dataLayer } from "../../../data/data-layer.js";
 import "../../../../website/components/site-section/site-section.js";
 import "../../../../website/components/text/text.js";
 import "../../../../website/components/image/image.js";
+import "../../../../website/components/button/button.js";
+import "../../../../website/components/embed/embed.js";
+import "../../../../website/components/social-media/social-media.js";
+import "../../../../website/components/gallery/gallery.js";
 
 import baseStyle from "../../../../website/styles/base.css?inline";
 import styles from "./website-editor-styles.css?inline";

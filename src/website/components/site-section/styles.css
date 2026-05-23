@@ -134,6 +134,16 @@ section .container {
   cursor: not-allowed;
 }
 
+.grid-item-action-stack {
+  position: absolute;
+  left: var(--grid-handle-right, 0px);
+  top: var(--grid-handle-top, 0px);
+  transform: translate(8px, -36px);
+  display: flex;
+  gap: 4px;
+  pointer-events: auto;
+}
+
 .grid-preview-overlay {
   padding: var(--section-padding-top, 7rem) var(--section-padding-right, 2rem)
     var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);
@@ -212,4 +222,66 @@ section:hover .add-section-button {
 
 section:hover .section-controls {
   display: flex;
+}
+
+.section-block-picker {
+  position: absolute;
+  top: 58px;
+  right: 16px;
+  width: min(320px, calc(100% - 32px));
+  border-radius: var(--editor-border-radius, 8px);
+  background: var(--editor-background, #fff);
+  box-shadow: var(--editor-box-shadow);
+  padding: 10px;
+  z-index: 5;
+}
+
+.section-block-picker-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.section-empty-state {
+  min-height: 140px;
+  border: 1px dashed color-mix(in srgb, #ffc700 65%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, #ffc700 8%, transparent);
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  text-align: center;
+  color: #4e4738;
+}
+
+.section-empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.section-empty-state-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.section-resize-handle {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ffc700 50%, transparent);
+  cursor: ns-resize;
+  opacity: 0;
+  z-index: 3;
+}
+
+section:hover .section-resize-handle,
+section.is-settings-open .section-resize-handle {
+  opacity: 1;
 }
