@@ -316,6 +316,52 @@ export function createJsonDataResolvers({ contentRoot }) {
     return componentPayload;
   }
 
+  async function listImageFiles(directoryPath) {
+    const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+    try {
+      const entries = await readdir(directoryPath, { withFileTypes: true });
+      const imageFiles = entries
+        .filter((entry) => {
+          if (!entry.isFile()) {
+            return false;
+          }
+          const ext = entry.name
+            .toLowerCase()
+            .slice(entry.name.lastIndexOf("."));
+          return imageExtensions.includes(ext);
+        })
+        .map((entry) => entry.name);
+      return imageFiles;
+    } catch {
+      return [];
+    }
+  }
+
+  async function getImageUrls(imagePath) {
+    // Normalize the path (remove leading/trailing slashes, prevent directory traversal)
+    const normalizedPath = String(imagePath || "")
+      .split("/")
+      .filter(Boolean)
+      .join("/");
+
+    if (!normalizedPath) {
+      throw new Error("Image path is required");
+    }
+
+    // Resolve the path within the content root
+    const imageDir = resolve(contentRoot, normalizedPath);
+
+    // Prevent directory traversal attacks
+    if (!imageDir.startsWith(contentRoot)) {
+      throw new Error("Invalid image path");
+    }
+
+    const imageFiles = await listImageFiles(imageDir);
+    const urls = imageFiles.map((fileName) => `/${normalizedPath}/${fileName}`);
+
+    return { urls };
+  }
+
   return {
     listPages,
     getPageConfig,
@@ -330,5 +376,6 @@ export function createJsonDataResolvers({ contentRoot }) {
     getComponentConfig,
     saveComponentConfig,
     createComponentConfig,
+    getImageUrls,
   };
 }

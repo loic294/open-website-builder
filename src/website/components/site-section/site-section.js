@@ -62,7 +62,7 @@ export class SiteSection extends EditorComponent {
     showGridPreviewOverlay: { type: Boolean },
   };
 
-  static styles = unsafeCSS(styles);
+  static styles = [super.styles, unsafeCSS(styles)];
 
   constructor() {
     super();

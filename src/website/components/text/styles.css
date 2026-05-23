@@ -56,6 +56,10 @@
   box-sizing: border-box;
 }
 
+.ProseMirror:focus {
+  outline: none;
+}
+
 .ProseMirror p,
 .ProseMirror h1,
 .ProseMirror h2,

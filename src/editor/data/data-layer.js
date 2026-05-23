@@ -99,6 +99,9 @@ export function createDataLayer(transport = createHttpTransport()) {
     async createComponentConfig(component) {
       return await transport.post("/shared-components", component);
     },
+    async getImageUrls(imagePath) {
+      return await transport.get(`/images/${encodeURIComponent(imagePath)}`);
+    },
   };
 }
 

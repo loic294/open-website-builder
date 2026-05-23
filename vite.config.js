@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createJsonDataResolvers } from "./server/data/json-data-resolvers.js";
 import { createDataApiMiddleware } from "./server/data/data-api-middleware.js";
+import { createImagesMiddleware } from "./server/data/images-middleware.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contentRoot = resolve(__dirname, "../my-personal-website");
@@ -12,6 +13,7 @@ export default defineConfig({
     {
       name: "data-api",
       configureServer(server) {
+        server.middlewares.use(createImagesMiddleware({ contentRoot }));
         const resolvers = createJsonDataResolvers({ contentRoot });
         server.middlewares.use(createDataApiMiddleware(resolvers));
       },

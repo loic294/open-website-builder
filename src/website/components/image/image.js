@@ -19,7 +19,7 @@ class SiteImage extends EditorComponent {
     imageUrl: { type: String },
   };
 
-  static styles = unsafeCSS(styles);
+  static styles = [super.styles, unsafeCSS(styles)];
 
   constructor() {
     super();
@@ -109,6 +109,7 @@ class SiteImage extends EditorComponent {
   render() {
     return html`
       <div
+        data-editor-block
         class="image-block ${this.isSettingsEditorOpen
           ? "is-settings-open"
           : ""}"

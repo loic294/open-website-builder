@@ -186,6 +186,12 @@ export function createDataApiMiddleware(resolvers) {
         return;
       }
 
+      if (method === "GET" && parts.length >= 1 && parts[0] === "images") {
+        const imagePath = parts.slice(1).map(decodePathPart).join("/");
+        sendJson(response, 200, await resolvers.getImageUrls(imagePath));
+        return;
+      }
+
       sendJson(response, 404, {
         ok: false,
         message: `Unknown data route: ${method} ${url.pathname}`,

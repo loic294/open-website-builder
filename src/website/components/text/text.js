@@ -26,6 +26,7 @@ import {
   Undo2,
   createElement,
 } from "lucide/dist/cjs/lucide";
+import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 
 import styles from "./styles.css?inline";
 
@@ -80,14 +81,14 @@ const FontSize = Extension.create({
   },
 });
 
-class Text extends LitElement {
+class Text extends EditorComponent {
   static properties = {
     content: { type: String },
     node: { type: Object },
     pageConfig: { type: Object },
   };
 
-  static styles = unsafeCSS(styles);
+  static styles = [super.styles, unsafeCSS(styles)];
 
   constructor() {
     super();
@@ -301,7 +302,7 @@ class Text extends LitElement {
   }
 
   render() {
-    return html`<div>
+    return html`<div data-editor-block>
       <div data-editor></div>
       <div class="menu menu-${this.node.id}">
         <editor-btn

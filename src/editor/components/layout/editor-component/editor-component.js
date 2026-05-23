@@ -1,6 +1,7 @@
-import { LitElement, html, render } from "lit";
+import { LitElement, html, render, unsafeCSS } from "lit";
 import { X, createElement } from "lucide/dist/cjs/lucide";
-import overlayStyles from "./styles.css?inline";
+import overlayStyles from "./styles-settings.css?inline";
+import blocksStyles from "./styles-blocks.css?inline";
 
 export class EditorComponent extends LitElement {
   static overlayWidth = 340;
@@ -10,6 +11,8 @@ export class EditorComponent extends LitElement {
   static properties = {
     isSettingsEditorOpen: { type: Boolean },
   };
+
+  static styles = unsafeCSS(blocksStyles);
 
   constructor() {
     super();
