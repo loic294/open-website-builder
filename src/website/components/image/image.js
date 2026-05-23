@@ -1,10 +1,7 @@
-import { html, unsafeCSS } from "lit";
-import {
-  Pencil,
-  Image as ImageIcon,
-  createElement,
-} from "lucide/dist/cjs/lucide";
+import { LitElement, html, unsafeCSS } from "lit";
+import { Pencil, Image as ImageIcon, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
 
 export const defaultImageConfig = {
@@ -12,7 +9,24 @@ export const defaultImageConfig = {
   url: "",
 };
 
-class SiteImage extends EditorComponent {
+function getImageMode(value) {
+  const mode = String(value || "contained");
+  return mode === "full-width" || mode === "contained" || mode === "cover"
+    ? mode
+    : "contained";
+}
+
+function renderImageFrame(url, mode) {
+  if (!url) {
+    return html`<div class="image-frame size-${mode}"></div>`;
+  }
+
+  return html`<div class="image-frame size-${mode}">
+    <img src=${url} alt="" loading="lazy" />
+  </div>`;
+}
+
+class SiteImage extends withVariantConfig(EditorComponent) {
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
@@ -42,12 +56,7 @@ class SiteImage extends EditorComponent {
   }
 
   updateImageSizeMode(nextMode) {
-    const normalizedMode =
-      nextMode === "full-width" ||
-      nextMode === "contained" ||
-      nextMode === "cover"
-        ? nextMode
-        : "contained";
+    const normalizedMode = getImageMode(nextMode);
 
     const nextState = {
       imageSizeMode: normalizedMode,
@@ -191,4 +200,29 @@ export const editorRenderImage = (
   ></site-image>`;
 };
 
-customElements.define("site-image", SiteImage);
+class OwbImage extends withVariantConfig(LitElement) {
+  static styles = unsafeCSS(styles);
+
+  render() {
+    const { url = "", settings = {} } = this.config;
+    const mode = getImageMode(settings?.imageSizeMode || "contained");
+    const customCss = String(settings?.customCss || "").trim();
+
+    return html`
+      ${customCss
+        ? html`<style>
+            ${customCss}
+          </style>`
+        : null}
+      <div class="image-block size-${mode}">${renderImageFrame(url, mode)}</div>
+    `;
+  }
+}
+
+if (!customElements.get("site-image")) {
+  customElements.define("site-image", SiteImage);
+}
+
+if (!customElements.get("owb-image")) {
+  customElements.define("owb-image", OwbImage);
+}

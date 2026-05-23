@@ -1,0 +1,181 @@
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { copyFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { generatePageHtml } from "./html-generator.js";
+
+async function readJson(filePath) {
+  const content = await readFile(filePath, "utf8");
+  return JSON.parse(content);
+}
+
+function toBaseName(fileName) {
+  return fileName.replace(/\.json$/i, "");
+}
+
+function stripViteClientScript(html) {
+  return String(html || "").replace(
+    /<script\s+type=["']module["']\s+src=["']\/?@vite\/client["']><\/script>\s*/g,
+    "",
+  );
+}
+
+async function copyDirectoryRecursive(sourceDir, targetDir) {
+  let sourceStats;
+  try {
+    sourceStats = await stat(sourceDir);
+  } catch {
+    return;
+  }
+
+  if (!sourceStats.isDirectory()) {
+    return;
+  }
+
+  await mkdir(targetDir, { recursive: true });
+  const entries = await readdir(sourceDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const sourcePath = resolve(sourceDir, entry.name);
+    const targetPath = resolve(targetDir, entry.name);
+
+    if (entry.isDirectory()) {
+      await copyDirectoryRecursive(sourcePath, targetPath);
+      continue;
+    }
+
+    if (entry.isFile()) {
+      await copyFile(sourcePath, targetPath);
+    }
+  }
+}
+
+async function buildPublishedComponentStyles(appRoot) {
+  const stylePaths = [
+    resolve(appRoot, "src/website/components/text/styles.css"),
+    resolve(appRoot, "src/website/components/image/styles.css"),
+    resolve(appRoot, "src/website/components/button/styles.css"),
+    resolve(appRoot, "src/website/components/embed/styles.css"),
+    resolve(appRoot, "src/website/components/social-media/styles.css"),
+    resolve(appRoot, "src/website/components/gallery/styles.css"),
+  ];
+
+  const chunks = [];
+  for (const filePath of stylePaths) {
+    try {
+      chunks.push(await readFile(filePath, "utf8"));
+    } catch {
+      // Missing style files are optional in published output.
+    }
+  }
+
+  chunks.push(`
+:host {
+  display: block;
+}
+`);
+
+  return chunks.join("\n\n");
+}
+
+export async function publishSite({ contentRoot, outputDir, appRoot }) {
+  const pagesDir = resolve(contentRoot, "pages");
+  const sharedDir = resolve(contentRoot, "shared");
+
+  const sharedCache = new Map();
+
+  async function loadSharedComponent(componentId) {
+    const normalized = String(componentId || "").trim();
+    if (!normalized) {
+      return null;
+    }
+
+    if (sharedCache.has(normalized)) {
+      return sharedCache.get(normalized);
+    }
+
+    const filePath = resolve(sharedDir, `${normalized}.json`);
+    try {
+      const config = await readJson(filePath);
+      sharedCache.set(normalized, config);
+      return config;
+    } catch {
+      sharedCache.set(normalized, null);
+      return null;
+    }
+  }
+
+  const pageFiles = (await readdir(pagesDir, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  await mkdir(outputDir, { recursive: true });
+
+  if (appRoot) {
+    for (const name of ["theme.css", "base.css"]) {
+      try {
+        await copyFile(
+          resolve(appRoot, "src/website/styles", name),
+          resolve(outputDir, name),
+        );
+      } catch {
+        /* optional */
+      }
+    }
+
+    try {
+      await copyFile(
+        resolve(appRoot, "server/publish/publish-runtime.js"),
+        resolve(outputDir, "publish-runtime.js"),
+      );
+    } catch {
+      /* optional */
+    }
+
+    try {
+      const css = await buildPublishedComponentStyles(appRoot);
+      await writeFile(resolve(outputDir, "owb-components.css"), css, "utf8");
+    } catch {
+      /* optional */
+    }
+  }
+
+  await copyDirectoryRecursive(
+    resolve(contentRoot, "images"),
+    resolve(outputDir, "images"),
+  );
+
+  const published = [];
+  const warnings = [];
+
+  for (const pageFileName of pageFiles) {
+    const pagePath = resolve(pagesDir, pageFileName);
+    const pageConfig = await readJson(pagePath);
+    const fileBaseName = toBaseName(pageFileName);
+    const outputPath = resolve(outputDir, `${fileBaseName}.html`);
+
+    const { html, warnings: pageWarnings } = await generatePageHtml({
+      pageConfig,
+      loadSharedComponent,
+    });
+
+    await writeFile(outputPath, stripViteClientScript(html), "utf8");
+
+    published.push({
+      pageId: pageConfig?.id || fileBaseName,
+      fileName: `${fileBaseName}.html`,
+      outputPath,
+    });
+
+    for (const warning of pageWarnings) {
+      warnings.push(`[${fileBaseName}] ${warning}`);
+    }
+  }
+
+  return {
+    ok: true,
+    outputDir,
+    pages: published,
+    warnings,
+  };
+}

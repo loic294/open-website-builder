@@ -57,6 +57,9 @@ export function createDataLayer(transport = createHttpTransport()) {
     async createPage(page) {
       return await transport.post("/pages", page);
     },
+    async publishSite() {
+      return await transport.post("/publish", {});
+    },
 
     async listCollections() {
       return await transport.get("/collections");

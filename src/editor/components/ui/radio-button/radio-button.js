@@ -1,5 +1,5 @@
 import { LitElement, html, unsafeCSS } from "lit";
-import { createElement } from "lucide/dist/cjs/lucide";
+import { createElement } from "lucide";
 import styles from "./styles.css?inline";
 
 export class EditorRadioButton extends LitElement {

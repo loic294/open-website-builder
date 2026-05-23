@@ -1,6 +1,7 @@
-import { html, unsafeCSS } from "lit";
+import { LitElement, html, css, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { dataLayer } from "../../../editor/data/data-layer.js";
+import { withVariantConfig } from "../variant-component-base.js";
 import {
   ArrowDown,
   ArrowUp,
@@ -9,7 +10,7 @@ import {
   Move,
   Plus,
   createElement,
-} from "lucide/dist/cjs/lucide";
+} from "lucide";
 import styles from "./styles.css?inline";
 
 export const defaultSectionConfig = {
@@ -64,11 +65,112 @@ const BLOCK_INSERT_OPTIONS = [
   { label: "Shared component", value: "shared" },
 ];
 
+function getSectionPadding(settings = {}) {
+  const preset = SECTION_PADDING_PRESETS[settings.settingSizing];
+  if (preset) {
+    return preset;
+  }
+
+  const fallback = SECTION_PADDING_PRESETS.medium;
+  return {
+    top: String(settings.settingPaddingTop || fallback.top),
+    right: String(settings.settingPaddingRight || fallback.right),
+    bottom: String(settings.settingPaddingBottom || fallback.bottom),
+    left: String(settings.settingPaddingLeft || fallback.left),
+  };
+}
+
+function getPublishedSectionStyle(settings = {}) {
+  const parts = [];
+
+  if (settings.settingBackgroundColor) {
+    parts.push(`background-color: var(${settings.settingBackgroundColor})`);
+  }
+
+  if (settings.settingTextColor) {
+    parts.push(`color: var(${settings.settingTextColor})`);
+  }
+
+  return parts.join("; ");
+}
+
+function getPublishedContainerStyle(settings = {}) {
+  const parts = [];
+  const mode = String(settings.settingAlignmentMode || "block");
+  const width = String(settings.settingWidth || "normal");
+  const customWidth = String(settings.settingWidthCustomValue || "").trim();
+
+  if (width === "custom" && customWidth) {
+    parts.push(`max-width: ${customWidth}`);
+  }
+
+  if (mode === "flex") {
+    parts.push("display: flex");
+    parts.push(
+      `flex-direction: ${String(settings.settingFlexDirection || "row")}`,
+    );
+    parts.push(
+      `justify-content: ${String(settings.settingFlexJustifyContent || "flex-start")}`,
+    );
+    parts.push(
+      `align-items: ${String(settings.settingFlexAlignItems || "flex-start")}`,
+    );
+    if (settings.settingGap) {
+      parts.push(`gap: ${String(settings.settingGap)}`);
+    }
+  }
+
+  if (mode === "grid" || mode === "visual") {
+    const columns = Math.max(
+      1,
+      Number.parseInt(settings.settingGridColumns, 10) || 2,
+    );
+    const rows = Math.max(
+      1,
+      Number.parseInt(settings.settingGridRows, 10) || 2,
+    );
+    parts.push("display: grid");
+    parts.push(`grid-template-columns: repeat(${columns}, minmax(0, 1fr))`);
+
+    if (mode === "visual") {
+      const rowSize = String(settings.settingRowHeight || "30px").trim();
+      parts.push(`grid-template-rows: repeat(${rows}, ${rowSize})`);
+    } else {
+      parts.push(`grid-template-rows: repeat(${rows}, auto)`);
+    }
+
+    if (settings.settingGap) {
+      parts.push(`gap: ${String(settings.settingGap)}`);
+    }
+    if (settings.settingGridJustifyContent) {
+      parts.push(`justify-content: ${settings.settingGridJustifyContent}`);
+    }
+    if (settings.settingGridAlignItems) {
+      parts.push(`align-items: ${settings.settingGridAlignItems}`);
+    }
+    if (settings.settingGridAlignContent) {
+      parts.push(`align-content: ${settings.settingGridAlignContent}`);
+    }
+  }
+
+  const padding = getSectionPadding(settings);
+  parts.push(`padding-top: ${padding.top}`);
+  parts.push(`padding-right: ${padding.right}`);
+  parts.push(`padding-bottom: ${padding.bottom}`);
+  parts.push(`padding-left: ${padding.left}`);
+
+  if (settings.settingFixedHeight && mode !== "visual") {
+    parts.push(`min-height: ${String(settings.settingFixedHeight)}`);
+  }
+
+  return parts.join("; ");
+}
+
 function createNodeId(type) {
   return `${type}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }
 
-export class SiteSection extends EditorComponent {
+export class SiteSection extends withVariantConfig(EditorComponent) {
   static designColorVariables = [
     "--website-primary-color",
     "--website-secondary-color",
@@ -1884,6 +1986,60 @@ export function removeSection(pageConfig, node) {
   };
 }
 
+class OwbSection extends withVariantConfig(LitElement) {
+  static styles = [
+    css`
+      :host {
+        display: block;
+      }
+
+      section .container {
+        position: relative;
+        padding: var(--section-padding-top, 7rem)
+          var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem)
+          var(--section-padding-left, 2rem);
+        margin: 0 auto;
+      }
+
+      section .container.is-normal-width {
+        max-width: 960px;
+      }
+
+      section .container.is-full-width {
+        max-width: 100%;
+      }
+    `,
+  ];
+
+  render() {
+    const settings = this.config;
+    const customCss = String(settings.customCss || "").trim();
+    const width = String(settings.settingWidth || "normal");
+    const widthClass =
+      width === "full"
+        ? "is-full-width"
+        : width === "custom"
+          ? ""
+          : "is-normal-width";
+
+    return html`
+      ${customCss
+        ? html`<style>
+            ${customCss}
+          </style>`
+        : null}
+      <section style="${getPublishedSectionStyle(settings)}">
+        <div
+          class="container ${widthClass}"
+          style="${getPublishedContainerStyle(settings)}"
+        >
+          <slot></slot>
+        </div>
+      </section>
+    `;
+  }
+}
+
 export const editorRenderSiteSection = (
   node,
   pageConfig,
@@ -1904,3 +2060,7 @@ export const editorRenderSiteSection = (
 };
 
 customElements.define("site-section", SiteSection);
+
+if (!customElements.get("owb-section")) {
+  customElements.define("owb-section", OwbSection);
+}

@@ -1,4 +1,4 @@
-import { html, unsafeCSS } from "lit";
+import { LitElement, html, css, unsafeCSS } from "lit";
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,8 +6,9 @@ import {
   Pencil,
   X,
   createElement,
-} from "lucide/dist/cjs/lucide";
+} from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
 
 export const defaultGalleryConfig = {
@@ -25,7 +26,7 @@ const FORMAT_OPTIONS = [
   { label: "9x16", value: "9 / 16" },
 ];
 
-class SiteGallery extends EditorComponent {
+class SiteGallery extends withVariantConfig(EditorComponent) {
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
@@ -333,4 +334,205 @@ export const editorRenderGallery = (
   ></site-gallery>`;
 };
 
-customElements.define("site-gallery", SiteGallery);
+class OwbGallery extends withVariantConfig(LitElement) {
+  static styles = [
+    unsafeCSS(styles),
+    css`
+      :host {
+        display: block;
+      }
+
+      .lightbox {
+        border: none;
+        padding: 0;
+        background: rgba(17, 24, 39, 0.95);
+        max-width: 100vw;
+        max-height: 100dvh;
+        width: 100vw;
+        height: 100dvh;
+      }
+
+      .lightbox::backdrop {
+        background: rgba(0, 0, 0, 0.72);
+      }
+
+      .lightbox-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 24px;
+        box-sizing: border-box;
+        position: relative;
+      }
+
+      .lightbox img {
+        max-width: min(92vw, 1200px);
+        max-height: 90dvh;
+        object-fit: contain;
+        display: block;
+      }
+
+      .lightbox-close,
+      .lightbox-nav {
+        position: absolute;
+        border: 0;
+        border-radius: 999px;
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .lightbox-close {
+        top: 16px;
+        right: 16px;
+      }
+
+      .lightbox-nav.is-prev {
+        left: 16px;
+      }
+
+      .lightbox-nav.is-next {
+        right: 16px;
+      }
+    `,
+  ];
+
+  static properties = {
+    lightboxIndex: { state: true },
+  };
+
+  constructor() {
+    super();
+    this.lightboxIndex = -1;
+    this._onKeydown = this._onKeydown.bind(this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this._onKeydown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this._onKeydown);
+    super.disconnectedCallback();
+  }
+
+  _onKeydown(event) {
+    if (this.lightboxIndex < 0) return;
+    if (event.key === "Escape") this.closeLightbox();
+    if (event.key === "ArrowRight") this.navigate(1);
+    if (event.key === "ArrowLeft") this.navigate(-1);
+  }
+
+  openLightbox(index) {
+    const { images = [] } = this.config;
+    if (index < 0 || index >= images.length) return;
+    this.lightboxIndex = index;
+    this.updateComplete.then(() => {
+      this.renderRoot.querySelector("dialog")?.showModal();
+    });
+  }
+
+  closeLightbox() {
+    this.renderRoot.querySelector("dialog")?.close();
+    this.lightboxIndex = -1;
+  }
+
+  navigate(delta) {
+    const { images = [] } = this.config;
+    if (!images.length || this.lightboxIndex < 0) return;
+    this.lightboxIndex =
+      (this.lightboxIndex + delta + images.length) % images.length;
+  }
+
+  render() {
+    const {
+      images = [],
+      columns = 3,
+      format = "1 / 1",
+      gap = "8px",
+    } = this.config;
+
+    const cols = Math.max(1, Number.parseInt(columns, 10) || 3);
+    const activeImage =
+      this.lightboxIndex >= 0 ? images[this.lightboxIndex] : "";
+
+    if (images.length === 0) {
+      return html`<div class="gallery-empty">
+        No gallery images configured
+      </div>`;
+    }
+
+    return html`
+      <div
+        class="gallery-grid"
+        style="--gallery-columns: ${cols}; --gallery-gap: ${gap}; --gallery-ratio: ${format};"
+      >
+        ${images.map(
+          (url, index) => html`
+            <button
+              type="button"
+              class="gallery-thumb"
+              @click=${() => this.openLightbox(index)}
+            >
+              <img src="${url}" alt="" loading="lazy" />
+            </button>
+          `,
+        )}
+      </div>
+
+      <dialog
+        class="lightbox"
+        @click=${(event) => {
+          if (event.target === event.currentTarget) this.closeLightbox();
+        }}
+      >
+        <div class="lightbox-inner">
+          <img src="${activeImage}" alt="" />
+          <button
+            class="lightbox-close"
+            type="button"
+            @click=${() => this.closeLightbox()}
+          >
+            X
+          </button>
+          ${images.length > 1
+            ? html`
+                <button
+                  class="lightbox-nav is-prev"
+                  type="button"
+                  @click=${() => this.navigate(-1)}
+                >
+                  &#8249;
+                </button>
+                <button
+                  class="lightbox-nav is-next"
+                  type="button"
+                  @click=${() => this.navigate(1)}
+                >
+                  &#8250;
+                </button>
+              `
+            : null}
+        </div>
+      </dialog>
+    `;
+  }
+}
+
+if (!customElements.get("site-gallery")) {
+  customElements.define("site-gallery", SiteGallery);
+}
+
+if (!customElements.get("owb-gallery")) {
+  customElements.define("owb-gallery", OwbGallery);
+}

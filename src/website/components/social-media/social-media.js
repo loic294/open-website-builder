@@ -1,14 +1,9 @@
-import { html, unsafeCSS } from "lit";
+import { LitElement, html, unsafeCSS } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import * as simpleIcons from "simple-icons";
-import {
-  Globe,
-  Pencil,
-  Plus,
-  Trash,
-  createElement,
-} from "lucide/dist/cjs/lucide";
+import { Globe, Pencil, Plus, Trash, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
 
 export const defaultSocialMediaConfig = {
@@ -105,7 +100,19 @@ function normalizeIconSlug(value) {
   return raw;
 }
 
-class SiteSocialMedia extends EditorComponent {
+function getSocialButtonShapeRadius(shape, customRadius) {
+  if (shape === "rounded") {
+    return "9999px";
+  }
+
+  if (shape === "square") {
+    return "0px";
+  }
+
+  return customRadius || "12px";
+}
+
+class SiteSocialMedia extends withVariantConfig(EditorComponent) {
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
@@ -374,15 +381,10 @@ class SiteSocialMedia extends EditorComponent {
   }
 
   getButtonShapeRadius() {
-    if (this.socialButtonShape === "rounded") {
-      return "9999px";
-    }
-
-    if (this.socialButtonShape === "square") {
-      return "0px";
-    }
-
-    return this.socialButtonRadiusCustom || "12px";
+    return getSocialButtonShapeRadius(
+      this.socialButtonShape,
+      this.socialButtonRadiusCustom,
+    );
   }
 
   renderOverlayScopedStyles() {
@@ -661,4 +663,77 @@ export const editorRenderSocialMedia = (
   ></site-social-media>`;
 };
 
-customElements.define("site-social-media", SiteSocialMedia);
+class OwbSocialMedia extends withVariantConfig(LitElement) {
+  static styles = unsafeCSS(styles);
+
+  renderButton(item, settings) {
+    const iconSlug = normalizeIconSlug(item?.icon);
+    const icon = iconSlug ? SIMPLE_ICON_MAP.get(iconSlug) : null;
+    const size = String(settings.socialButtonSize || "medium");
+    const theme = String(settings.socialButtonTheme || "primary");
+    const variant = String(settings.socialButtonVariant || "filled");
+    const shape = String(settings.socialButtonShape || "rounded");
+    const customRadius = String(settings.socialButtonRadiusCustom || "9999px");
+    const displayMode = String(settings.socialDisplayMode || "icon-text");
+    const iconColorMode = String(settings.socialIconColorMode || "brand");
+    const showIcon = displayMode !== "text";
+    const showText = displayMode !== "icon";
+    const radius = getSocialButtonShapeRadius(shape, customRadius);
+
+    const iconEl =
+      showIcon && icon
+        ? html`<span class="social-icon"
+            >${unsafeHTML(
+              iconColorMode === "brand"
+                ? icon.svg.replace(
+                    "<svg",
+                    `<svg style="fill:#${icon.hex ?? "000"}"`,
+                  )
+                : icon.svg,
+            )}</span
+          >`
+        : null;
+
+    const label = showText
+      ? html`<span>${item?.name || icon?.title || "Social"}</span>`
+      : null;
+
+    const href = String(item?.link || "").trim();
+
+    return html`
+      <a
+        class="social-button size-${size} theme-${theme} variant-${variant}"
+        href="${href || "#"}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="--social-button-radius: ${radius};"
+      >
+        ${iconEl}${label}
+      </a>
+    `;
+  }
+
+  render() {
+    const { items = [], settings = {} } = this.config;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return html`<div class="social-empty">No social links configured</div>`;
+    }
+
+    return html`
+      <div class="social-block">
+        <div class="social-buttons-grid">
+          ${items.map((item) => this.renderButton(item, settings))}
+        </div>
+      </div>
+    `;
+  }
+}
+
+if (!customElements.get("site-social-media")) {
+  customElements.define("site-social-media", SiteSocialMedia);
+}
+
+if (!customElements.get("owb-social-media")) {
+  customElements.define("owb-social-media", OwbSocialMedia);
+}

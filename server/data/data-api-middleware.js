@@ -67,6 +67,11 @@ export function createDataApiMiddleware(resolvers) {
         return;
       }
 
+      if (method === "POST" && parts.length === 1 && parts[0] === "publish") {
+        sendJson(response, 200, await resolvers.publishSite());
+        return;
+      }
+
       if (
         method === "GET" &&
         parts.length === 1 &&

@@ -6,7 +6,7 @@ import {
   Trash,
   X,
   createElement,
-} from "lucide/dist/cjs/lucide";
+} from "lucide";
 import { EditorState } from "@codemirror/state";
 import {
   EditorView,

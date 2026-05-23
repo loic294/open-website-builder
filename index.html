@@ -3,21 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Open Website Builder - Lit</title>
-    <link rel="stylesheet" href="https://use.typekit.net/fsb3crk.css">
+    <title>Open Website Builder</title>
+    <link rel="stylesheet" href="https://use.typekit.net/fsb3crk.css" />
+    <link rel="stylesheet" href="/src/website/styles/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        font-family: "aktiv-grotesk", sans-serif;
+        background: #f8f8f5;
+        color: #1a1a1a;
+      }
 
-    <link rel="stylesheet" href="./src/editor/styles/theme.css" />
-    <link rel="stylesheet" href="./src/editor/styles/base.css" />
-    
+      .shell {
+        max-width: 720px;
+        margin: 10vh auto;
+        padding: 24px;
+      }
 
-    <link rel="stylesheet" href="./src/website/styles/theme.css" />
-    
+      a {
+        color: inherit;
+      }
+    </style>
   </head>
   <body>
-    <main>
-      <editor-menu></editor-menu>
-      <website-editor></website-editor>
+    <main class="shell">
+      <h1>Open Website Builder</h1>
+      <p>
+        Development preview for <strong>/</strong> is served from the last
+        generated publish output in <code>dist-publish</code>.
+      </p>
+      <p>
+        Open the editor at <a href="/editor">/editor</a>, then run publish to
+        refresh the website preview.
+      </p>
     </main>
-    <script type="module" src="./src/main.js"></script>
   </body>
 </html>

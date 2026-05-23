@@ -1,5 +1,5 @@
 import { LitElement, html, unsafeCSS } from "lit";
-import { ChevronDown, createElement } from "lucide/dist/cjs/lucide";
+import { ChevronDown, createElement } from "lucide";
 import styles from "./styles.css?inline";
 
 export class SettingsCollapsable extends LitElement {

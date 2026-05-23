@@ -17,7 +17,7 @@ import {
   Grip,
   Ellipsis,
   MousePointerClick,
-} from "lucide/dist/cjs/lucide";
+} from "lucide";
 import styles from "./styles.css?inline";
 
 const DEFAULT_VALUE = {

@@ -9,7 +9,7 @@ import {
   PanelLeftOpen,
   Proportions,
   createElement,
-} from "lucide/dist/cjs/lucide";
+} from "lucide";
 import { dataLayer } from "../../../data/data-layer.js";
 import styles from "./styles.css?inline";
 

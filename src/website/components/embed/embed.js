@@ -1,7 +1,8 @@
-import { html, unsafeCSS } from "lit";
+import { LitElement, html, unsafeCSS } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { Code2, Pencil, createElement } from "lucide/dist/cjs/lucide";
+import { Code2, Pencil, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
 
 export const defaultEmbedConfig = {
@@ -47,7 +48,11 @@ function sanitizeEmbedHtmlForEditor(rawHtml) {
   return documentNode.body.innerHTML;
 }
 
-class SiteEmbed extends EditorComponent {
+function sanitizeEmbedHtml(rawHtml) {
+  return sanitizeEmbedHtmlForEditor(rawHtml);
+}
+
+class SiteEmbed extends withVariantConfig(EditorComponent) {
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
@@ -182,4 +187,25 @@ export const editorRenderEmbed = (
   ></site-embed>`;
 };
 
-customElements.define("site-embed", SiteEmbed);
+class OwbEmbed extends withVariantConfig(LitElement) {
+  static styles = unsafeCSS(styles);
+
+  render() {
+    const { html: rawHtml = "" } = this.config;
+    const safeHtml = sanitizeEmbedHtml(rawHtml);
+
+    if (!safeHtml.trim()) {
+      return html`<div class="embed-placeholder">No embed content</div>`;
+    }
+
+    return html`<div class="embed-preview">${unsafeHTML(safeHtml)}</div>`;
+  }
+}
+
+if (!customElements.get("site-embed")) {
+  customElements.define("site-embed", SiteEmbed);
+}
+
+if (!customElements.get("owb-embed")) {
+  customElements.define("owb-embed", OwbEmbed);
+}

@@ -12,9 +12,12 @@
   display: grid;
   grid-template-columns: repeat(var(--gallery-columns, 3), minmax(0, 1fr));
   gap: var(--gallery-gap, 8px);
+  align-items: stretch;
 }
 
 .gallery-thumb {
+  display: block;
+  width: 100%;
   position: relative;
   padding: 0;
   border: 0;
@@ -53,7 +56,12 @@
   padding: 24px;
 }
 
+.gallery-lightbox[hidden] {
+  display: none !important;
+}
+
 .gallery-lightbox-image {
+  display: block;
   max-width: min(92vw, 1200px);
   max-height: 90vh;
   object-fit: contain;
@@ -72,6 +80,11 @@
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
   cursor: pointer;
+}
+
+.gallery-lightbox-nav {
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .gallery-lightbox-close {

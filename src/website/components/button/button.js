@@ -1,6 +1,7 @@
-import { html, unsafeCSS } from "lit";
-import { Pencil, createElement } from "lucide/dist/cjs/lucide";
+import { LitElement, html, unsafeCSS } from "lit";
+import { Pencil, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
 
 export const defaultButtonConfig = {
@@ -17,7 +18,70 @@ const SIZE_OPTIONS = [
   { label: "Custom", value: "custom" },
 ];
 
-class SiteButton extends EditorComponent {
+function getButtonSizeStyle(size, settings = {}) {
+  if (size === "xs") {
+    return "--button-padding-y: 0.28rem; --button-padding-x: 0.65rem; --button-font-size: 0.78rem;";
+  }
+
+  if (size === "sm") {
+    return "--button-padding-y: 0.4rem; --button-padding-x: 0.8rem; --button-font-size: 0.85rem;";
+  }
+
+  if (size === "m") {
+    return "--button-padding-y: 0.58rem; --button-padding-x: 1rem; --button-font-size: 0.95rem;";
+  }
+
+  if (size === "l") {
+    return "--button-padding-y: 0.72rem; --button-padding-x: 1.25rem; --button-font-size: 1.05rem;";
+  }
+
+  if (size === "xl") {
+    return "--button-padding-y: 0.9rem; --button-padding-x: 1.5rem; --button-font-size: 1.15rem;";
+  }
+
+  const top = settings.buttonPaddingTop || "0.58rem";
+  const right = settings.buttonPaddingRight || "1rem";
+  const bottom = settings.buttonPaddingBottom || "0.58rem";
+  const left = settings.buttonPaddingLeft || "1rem";
+
+  return `--button-padding-y: ${top}; --button-padding-x: ${right}; --button-font-size: 0.95rem; padding: ${top} ${right} ${bottom} ${left};`;
+}
+
+function getButtonShapeRadius(shape, customRadius) {
+  if (shape === "rounded") {
+    return "9999px";
+  }
+
+  if (shape === "square") {
+    return "0px";
+  }
+
+  return customRadius || "12px";
+}
+
+function renderButtonPreview({
+  content,
+  link,
+  theme,
+  variant,
+  sizeStyle,
+  radius,
+  preventEmptyLink = false,
+}) {
+  return html`<a
+    class="site-button theme-${theme} variant-${variant}"
+    href=${link || "#"}
+    style=${`${sizeStyle} --button-radius: ${radius};`}
+    @click=${(event) => {
+      if (preventEmptyLink && !link) {
+        event.preventDefault();
+      }
+    }}
+    >${content || "Button"}</a
+  >`;
+}
+
+class SiteButton extends withVariantConfig(EditorComponent) {
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
@@ -265,44 +329,16 @@ class SiteButton extends EditorComponent {
   }
 
   getSizeStyle() {
-    if (this.buttonSize === "xs") {
-      return "--button-padding-y: 0.28rem; --button-padding-x: 0.65rem; --button-font-size: 0.78rem;";
-    }
-
-    if (this.buttonSize === "sm") {
-      return "--button-padding-y: 0.4rem; --button-padding-x: 0.8rem; --button-font-size: 0.85rem;";
-    }
-
-    if (this.buttonSize === "m") {
-      return "--button-padding-y: 0.58rem; --button-padding-x: 1rem; --button-font-size: 0.95rem;";
-    }
-
-    if (this.buttonSize === "l") {
-      return "--button-padding-y: 0.72rem; --button-padding-x: 1.25rem; --button-font-size: 1.05rem;";
-    }
-
-    if (this.buttonSize === "xl") {
-      return "--button-padding-y: 0.9rem; --button-padding-x: 1.5rem; --button-font-size: 1.15rem;";
-    }
-
-    const top = this.buttonPaddingTop || "0.58rem";
-    const right = this.buttonPaddingRight || "1rem";
-    const bottom = this.buttonPaddingBottom || "0.58rem";
-    const left = this.buttonPaddingLeft || "1rem";
-
-    return `--button-padding-y: ${top}; --button-padding-x: ${right}; --button-font-size: 0.95rem; padding: ${top} ${right} ${bottom} ${left};`;
+    return getButtonSizeStyle(this.buttonSize, {
+      buttonPaddingTop: this.buttonPaddingTop,
+      buttonPaddingRight: this.buttonPaddingRight,
+      buttonPaddingBottom: this.buttonPaddingBottom,
+      buttonPaddingLeft: this.buttonPaddingLeft,
+    });
   }
 
   getShapeRadius() {
-    if (this.buttonShape === "rounded") {
-      return "9999px";
-    }
-
-    if (this.buttonShape === "square") {
-      return "0px";
-    }
-
-    return this.buttonRadiusCustom || "12px";
+    return getButtonShapeRadius(this.buttonShape, this.buttonRadiusCustom);
   }
 
   render() {
@@ -324,17 +360,15 @@ class SiteButton extends EditorComponent {
           >
         </div>
         <div class="button-preview-wrap">
-          <a
-            class="site-button ${themeClass} ${variantClass}"
-            href=${this.buttonLink || "#"}
-            style=${`${sizeStyle} --button-radius: ${shapeRadius};`}
-            @click=${(event) => {
-              if (!this.buttonLink) {
-                event.preventDefault();
-              }
-            }}
-            >${this.buttonText || "Button"}</a
-          >
+          ${renderButtonPreview({
+            content: this.buttonText,
+            link: this.buttonLink,
+            theme: this.buttonTheme,
+            variant: this.buttonVariant,
+            sizeStyle,
+            radius: shapeRadius,
+            preventEmptyLink: true,
+          })}
         </div>
       </div>
     `;
@@ -358,4 +392,41 @@ export const editorRenderButton = (
   ></site-button>`;
 };
 
-customElements.define("site-button", SiteButton);
+class OwbButton extends withVariantConfig(LitElement) {
+  static styles = unsafeCSS(styles);
+
+  render() {
+    const { content = "Button", settings = {} } = this.config;
+    const link = String(settings.buttonLink || "").trim();
+    const size = String(settings.buttonSize || "m");
+    const theme = String(settings.buttonTheme || "primary");
+    const variant = String(settings.buttonVariant || "filled");
+    const shape = String(settings.buttonShape || "rounded");
+    const customRadius = String(settings.buttonRadiusCustom || "12px");
+    const sizeStyle = getButtonSizeStyle(size, settings);
+    const radius = getButtonShapeRadius(shape, customRadius);
+
+    return html`
+      <div class="button-block">
+        <div class="button-preview-wrap">
+          ${renderButtonPreview({
+            content,
+            link,
+            theme,
+            variant,
+            sizeStyle,
+            radius,
+          })}
+        </div>
+      </div>
+    `;
+  }
+}
+
+if (!customElements.get("site-button")) {
+  customElements.define("site-button", SiteButton);
+}
+
+if (!customElements.get("owb-button")) {
+  customElements.define("owb-button", OwbButton);
+}

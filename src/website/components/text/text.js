@@ -1,4 +1,5 @@
 import { LitElement, html, css, unsafeCSS } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { Editor, Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import BubbleMenu from "@tiptap/extension-bubble-menu";
@@ -26,8 +27,9 @@ import {
   Underline as UnderlineIcon,
   Undo2,
   createElement,
-} from "lucide/dist/cjs/lucide";
+} from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { withVariantConfig } from "../variant-component-base.js";
 
 import styles from "./styles.css?inline";
 
@@ -84,7 +86,7 @@ const FontSize = Extension.create({
   },
 });
 
-class Text extends EditorComponent {
+class Text extends withVariantConfig(EditorComponent) {
   static properties = {
     content: { type: String },
     node: { type: Object },
@@ -862,4 +864,35 @@ export const editorRenderText = (
   ></site-text>`;
 };
 
-customElements.define("site-text", Text);
+class OwbText extends withVariantConfig(LitElement) {
+  static styles = [
+    unsafeCSS(styles),
+    css`
+      :host {
+        display: block;
+      }
+    `,
+  ];
+
+  render() {
+    const { content = "", settings = {} } = this.config;
+    const customCss = String(settings?.customCss || "").trim();
+
+    return html`
+      ${customCss
+        ? html`<style>
+            ${customCss}
+          </style>`
+        : null}
+      <div class="text-block ProseMirror">${unsafeHTML(content)}</div>
+    `;
+  }
+}
+
+if (!customElements.get("site-text")) {
+  customElements.define("site-text", Text);
+}
+
+if (!customElements.get("owb-text")) {
+  customElements.define("owb-text", OwbText);
+}

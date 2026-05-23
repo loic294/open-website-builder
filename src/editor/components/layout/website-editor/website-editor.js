@@ -18,6 +18,7 @@ import styles from "./website-editor-styles.css?inline";
 class WebsiteEditor extends LitElement {
   static properties = {
     pageConfig: { state: true },
+    publishStatus: { state: true },
   };
 
   static styles = [unsafeCSS(baseStyle), unsafeCSS(styles), css``];
@@ -26,6 +27,7 @@ class WebsiteEditor extends LitElement {
     super();
     this.pageConfig = null;
     this.didLoadConfig = false;
+    this.publishStatus = "";
   }
 
   async connectedCallback() {
@@ -62,6 +64,21 @@ class WebsiteEditor extends LitElement {
     }
   };
 
+  onPublishClick = async () => {
+    this.publishStatus = "Publishing...";
+    try {
+      const result = await dataLayer.publishSite();
+      const pagesCount = Array.isArray(result?.pages) ? result.pages.length : 0;
+      this.publishStatus = `Published ${pagesCount} page(s)`;
+    } catch (error) {
+      console.error(error);
+      this.publishStatus =
+        error instanceof Error
+          ? `Publish failed: ${error.message}`
+          : "Publish failed";
+    }
+  };
+
   render() {
     if (!this.pageConfig) {
       return html``;
@@ -77,7 +94,15 @@ class WebsiteEditor extends LitElement {
           <span class="page-title">Home</span>
           <span class="page-path">/index</span>
         </div>
-        <editor-btn>Publish</editor-btn>
+        <div>
+          <editor-btn @click=${this.onPublishClick}>Publish</editor-btn>
+          ${this.publishStatus
+            ? html`<span
+                style="margin-left: 10px; font-size: 12px; opacity: 0.8;"
+                >${this.publishStatus}</span
+              >`
+            : null}
+        </div>
       </div>
       <div class="website website-container">
         ${content.map((node) =>

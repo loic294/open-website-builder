@@ -1,5 +1,5 @@
 import { LitElement, html, unsafeCSS } from "lit";
-import { Pencil, createElement } from "lucide/dist/cjs/lucide";
+import { Pencil, createElement } from "lucide";
 import { dataLayer } from "../../../editor/data/data-layer.js";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import styles from "./styles.css?inline";
