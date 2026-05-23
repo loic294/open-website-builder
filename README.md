@@ -22,6 +22,20 @@ npm run dev
 npm run build
 ```
 
+## Publishing Rules
+
+`dist-publish/` is generated output.
+
+- Never edit files in `dist-publish/` directly.
+- Always update source files in `src/website/` or `server/publish/`.
+- Regenerate published output with:
+
+```
+npm run publish
+```
+
+The publish pipeline now rewrites `dist-publish/` on each run and adds a generated-file warning header to published assets.
+
 ## Project Structure
 
 - `index.html`: Main HTML file
