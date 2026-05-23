@@ -18,7 +18,9 @@ body {
 .website {
   font-size: 24px;
   font-family: var(--website-body-font-family);
-  font-variation-settings: "wght" 300;
+  font-weight: 400;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
   color: var(--website-text-color);
   background: var(--website-background-color);
   line-height: 1.2;

@@ -52,8 +52,16 @@
   color: #5c5547;
   font: inherit;
   font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.settings-overlay-tab svg {
+  width: 12px;
+  height: 12px;
 }
 
 .settings-overlay-tab.is-active {
@@ -173,4 +181,10 @@
 
 .settings-node-order-actions editor-btn {
   flex: 1;
+}
+
+.settings-more-tab {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
 }

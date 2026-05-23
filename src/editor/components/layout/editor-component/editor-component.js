@@ -1,5 +1,12 @@
 import { LitElement, html, render, unsafeCSS } from "lit";
-import { ArrowDown, ArrowUp, X, createElement } from "lucide/dist/cjs/lucide";
+import {
+  ArrowDown,
+  ArrowUp,
+  Ellipsis,
+  Trash,
+  X,
+  createElement,
+} from "lucide/dist/cjs/lucide";
 import { EditorState } from "@codemirror/state";
 import {
   EditorView,
@@ -48,6 +55,8 @@ export class EditorComponent extends LitElement {
   static overlayWidth = 340;
 
   static overlayHeight = 480;
+
+  static activeSettingsOwner = null;
 
   static properties = {
     isSettingsEditorOpen: { type: Boolean },
@@ -123,17 +132,34 @@ export class EditorComponent extends LitElement {
   }
 
   openSettingsEditor(options = html`<p>No settings available.</p>`) {
+    const activeOwner = EditorComponent.activeSettingsOwner;
+    if (activeOwner && activeOwner !== this) {
+      activeOwner.closeSettingsEditor();
+    }
+
+    EditorComponent.activeSettingsOwner = this;
     this.ensureOverlayContainer();
     this.isSettingsEditorOpen = true;
 
     const cssTab = { id: "css", label: "CSS" };
+    const moreTab = {
+      id: "more",
+      label: html`${createElement(Ellipsis)} More`,
+    };
 
-    const withCssTab = (tabs) => {
+    const withUtilityTabs = (tabs) => {
       const safeTabs = Array.isArray(tabs) && tabs.length ? tabs : [];
-      if (safeTabs.some((tab) => tab?.id === "css")) {
-        return safeTabs;
+      const nextTabs = [...safeTabs];
+
+      if (!nextTabs.some((tab) => tab?.id === "css")) {
+        nextTabs.push(cssTab);
       }
-      return [...safeTabs, cssTab];
+
+      if (!nextTabs.some((tab) => tab?.id === "more")) {
+        nextTabs.push(moreTab);
+      }
+
+      return nextTabs;
     };
 
     if (options && typeof options === "object" && "content" in options) {
@@ -142,10 +168,14 @@ export class EditorComponent extends LitElement {
         Array.isArray(options.tabs) && options.tabs.length
           ? options.tabs
           : [{ id: "settings", label: "Settings" }];
-      this.settingsOverlayTabs = withCssTab(baseTabs);
+      this.settingsOverlayTabs = withUtilityTabs(baseTabs);
       this.settingsOverlayContent = (activeTab) => {
         if (activeTab === "css") {
           return this.renderCssSettingsTab();
+        }
+
+        if (activeTab === "more") {
+          return this.renderMoreSettingsTab();
         }
 
         if (typeof originalContent === "function") {
@@ -158,12 +188,16 @@ export class EditorComponent extends LitElement {
         options.activeTab ?? this.settingsOverlayTabs[0].id;
     } else {
       const originalContent = options;
-      this.settingsOverlayTabs = withCssTab([
+      this.settingsOverlayTabs = withUtilityTabs([
         { id: "settings", label: "Settings" },
       ]);
       this.settingsOverlayContent = (activeTab) => {
         if (activeTab === "css") {
           return this.renderCssSettingsTab();
+        }
+
+        if (activeTab === "more") {
+          return this.renderMoreSettingsTab();
         }
 
         return originalContent;
@@ -333,6 +367,95 @@ export class EditorComponent extends LitElement {
     `;
   }
 
+  renderMoreSettingsTab() {
+    return html`
+      <div class="settings-more-tab">
+        <settings-section title="Node actions">
+          <editor-btn
+            style="light text-danger"
+            ?disabled=${!this.node?.id ||
+            !Array.isArray(this.pageConfig?.content)}
+            @click=${() => this.deleteCurrentNode()}
+            >${createElement(Trash)} Delete node</editor-btn
+          >
+          <p class="settings-css-help">
+            Permanently removes this node from the page.
+          </p>
+        </settings-section>
+      </div>
+    `;
+  }
+
+  removeNodeByIdFromTree(nodes, targetNodeId) {
+    let didRemove = false;
+
+    const nextNodes = nodes
+      .filter((currentNode) => {
+        if (!currentNode || typeof currentNode !== "object") {
+          return true;
+        }
+
+        if (currentNode.id === targetNodeId) {
+          didRemove = true;
+          return false;
+        }
+
+        return true;
+      })
+      .map((currentNode) => {
+        if (!currentNode || typeof currentNode !== "object") {
+          return currentNode;
+        }
+
+        if (!Array.isArray(currentNode.content)) {
+          return currentNode;
+        }
+
+        const nested = this.removeNodeByIdFromTree(
+          currentNode.content,
+          targetNodeId,
+        );
+
+        if (!nested.didRemove) {
+          return currentNode;
+        }
+
+        didRemove = true;
+        return {
+          ...currentNode,
+          content: nested.nextNodes,
+        };
+      });
+
+    return {
+      nextNodes,
+      didRemove,
+    };
+  }
+
+  deleteCurrentNode() {
+    if (!this.node?.id || !Array.isArray(this.pageConfig?.content)) {
+      return;
+    }
+
+    const result = this.removeNodeByIdFromTree(
+      this.pageConfig.content,
+      this.node.id,
+    );
+    if (!result.didRemove) {
+      return;
+    }
+
+    const nextPageConfig = {
+      ...this.pageConfig,
+      content: result.nextNodes,
+    };
+
+    this.pageConfig = nextPageConfig;
+    this.dispatchPageConfigUpdated(nextPageConfig);
+    this.closeSettingsEditor();
+  }
+
   findNodeParentInTree(nodes, targetNodeId, parentNode = null) {
     if (!Array.isArray(nodes) || !targetNodeId) {
       return null;
@@ -377,7 +500,10 @@ export class EditorComponent extends LitElement {
       };
     }
 
-    const found = this.findNodeParentInTree(this.pageConfig.content, this.node.id);
+    const found = this.findNodeParentInTree(
+      this.pageConfig.content,
+      this.node.id,
+    );
     if (!found) {
       return {
         isEligible: false,
@@ -408,7 +534,10 @@ export class EditorComponent extends LitElement {
       return;
     }
 
-    const found = this.findNodeParentInTree(this.pageConfig.content, this.node.id);
+    const found = this.findNodeParentInTree(
+      this.pageConfig.content,
+      this.node.id,
+    );
     if (!found || found.parentNode?.type !== "section") {
       return;
     }
@@ -483,6 +612,11 @@ export class EditorComponent extends LitElement {
     this.isSettingsEditorOpen = false;
     this.settingsOverlayContent = null;
     this.dragState = null;
+
+    if (EditorComponent.activeSettingsOwner === this) {
+      EditorComponent.activeSettingsOwner = null;
+    }
+
     this.renderSettingsOverlay();
     window.removeEventListener("keydown", this.onOverlayKeydown);
     window.removeEventListener("pointermove", this.onOverlayPointerMove);

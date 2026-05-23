@@ -20,6 +20,7 @@ import {
   Pilcrow,
   Quote,
   Redo2,
+  RotateCcw,
   Strikethrough,
   TypeOutline,
   Underline as UnderlineIcon,
@@ -99,6 +100,45 @@ class Text extends EditorComponent {
     this.pageConfig = null;
     this.editor = null;
     this.autoGrowFrame = null;
+    this.lastSelectionRange = null;
+  }
+
+  captureSelectionRange() {
+    if (!this.editor) {
+      this.lastSelectionRange = null;
+      return;
+    }
+
+    const selection = this.editor.state?.selection;
+    if (!selection) {
+      this.lastSelectionRange = null;
+      return;
+    }
+
+    this.lastSelectionRange = {
+      from: selection.from,
+      to: selection.to,
+    };
+  }
+
+  runEditorCommand(buildChain) {
+    if (!this.editor || typeof buildChain !== "function") {
+      return;
+    }
+
+    let chain = this.editor.chain().focus();
+
+    if (
+      this.lastSelectionRange &&
+      Number.isFinite(this.lastSelectionRange.from) &&
+      Number.isFinite(this.lastSelectionRange.to)
+    ) {
+      chain = chain.setTextSelection(this.lastSelectionRange);
+    }
+
+    buildChain(chain).run();
+    this.captureSelectionRange();
+    this.requestUpdate();
   }
 
   requestAutoGrowGridRowSpan() {
@@ -260,7 +300,13 @@ class Text extends EditorComponent {
       ],
       content: this.content,
       onSelectionUpdate: () => {
+        this.captureSelectionRange();
+        this.openTextSettingsIfNeeded();
         this.requestUpdate();
+      },
+      onFocus: () => {
+        this.captureSelectionRange();
+        this.openTextSettingsIfNeeded();
       },
       onUpdate: ({ editor }) => {
         const nextContent = editor.getHTML();
@@ -270,6 +316,7 @@ class Text extends EditorComponent {
       onBlur: ({ editor }) => {
         const nextContent = editor.getHTML();
         this.commitEditorContent(nextContent);
+        this.captureSelectionRange();
       },
     });
   }
@@ -280,7 +327,7 @@ class Text extends EditorComponent {
     }
 
     if (this.editor.isActive("link")) {
-      this.editor.chain().focus().unsetLink().run();
+      this.runEditorCommand((chain) => chain.unsetLink());
       return;
     }
 
@@ -291,12 +338,9 @@ class Text extends EditorComponent {
       return;
     }
 
-    this.editor
-      .chain()
-      .focus()
-      .extendMarkRange("link")
-      .setLink({ href: url })
-      .run();
+    this.runEditorCommand((chain) =>
+      chain.extendMarkRange("link").setLink({ href: url }),
+    );
   }
 
   toggleTextStyle() {
@@ -305,29 +349,245 @@ class Text extends EditorComponent {
     }
 
     if (this.editor.isActive("textStyle")) {
-      this.editor.chain().focus().unsetMark("textStyle").run();
+      this.runEditorCommand((chain) => chain.unsetMark("textStyle"));
       return;
     }
 
-    this.editor
-      .chain()
-      .focus()
-      .setMark("textStyle", { color: "inherit" })
-      .run();
+    this.runEditorCommand((chain) =>
+      chain.setMark("textStyle", { color: "inherit" }),
+    );
   }
 
-  setFontSize(event) {
+  openTextSettingsIfNeeded() {
+    if (this.isSettingsEditorOpen) {
+      return;
+    }
+
+    this.openTextSettings();
+  }
+
+  renderGlobalTextToolButtons() {
+    return html`
+      <editor-btn
+        style="light icon"
+        title="Bold"
+        @click=${() => this.runEditorCommand((chain) => chain.toggleBold())}
+      >
+        ${createElement(Bold)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Italic"
+        @click=${() => this.runEditorCommand((chain) => chain.toggleItalic())}
+      >
+        ${createElement(Italic)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Underline"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.toggleUnderline())}
+      >
+        ${createElement(UnderlineIcon)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Link"
+        @click=${() => this.toggleLink()}
+      >
+        ${createElement(Link2)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Text style"
+        @click=${() => this.toggleTextStyle()}
+      >
+        ${createElement(TypeOutline)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Strike"
+        @click=${() => this.runEditorCommand((chain) => chain.toggleStrike())}
+      >
+        ${createElement(Strikethrough)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Bullet list"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.toggleBulletList())}
+      >
+        ${createElement(List)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Blockquote"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.toggleBlockquote())}
+      >
+        ${createElement(Quote)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Code block"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.toggleCodeBlock())}
+      >
+        ${createElement(Code2)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Heading"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.toggleHeading({ level: 2 }))}
+      >
+        ${createElement(Heading2)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="List item"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.splitListItem("listItem"))}
+      >
+        ${createElement(ListPlus)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Ordered list"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.toggleOrderedList())}
+      >
+        ${createElement(ListOrdered)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Paragraph"
+        @click=${() => this.runEditorCommand((chain) => chain.setParagraph())}
+      >
+        ${createElement(Pilcrow)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Align left"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.setTextAlign("left"))}
+      >
+        ${createElement(AlignLeft)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Align center"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.setTextAlign("center"))}
+      >
+        ${createElement(AlignCenter)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Align right"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.setTextAlign("right"))}
+      >
+        ${createElement(AlignRight)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Justify"
+        @click=${() =>
+          this.runEditorCommand((chain) => chain.setTextAlign("justify"))}
+      >
+        ${createElement(AlignJustify)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Undo"
+        @click=${() => this.runEditorCommand((chain) => chain.undo())}
+      >
+        ${createElement(Undo2)}
+      </editor-btn>
+      <editor-btn
+        style="light icon"
+        title="Redo"
+        @click=${() => this.runEditorCommand((chain) => chain.redo())}
+      >
+        ${createElement(Redo2)}
+      </editor-btn>
+    `;
+  }
+
+  openTextSettings() {
+    this.openSettingsEditor({
+      tabs: [{ id: "format", label: "Format" }],
+      content: (tab) => {
+        if (tab !== "format") {
+          return html``;
+        }
+
+        return html`
+          <div style="display: grid; gap: 8px; padding: 10px;">
+            <settings-section title="Text tools">
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                ${this.renderGlobalTextToolButtons()}
+              </div>
+            </settings-section>
+            <settings-section title="Typography">
+              <editor-select
+                label="Font size"
+                .value=${this.getCurrentFontSize()}
+                .options=${[
+                  { label: "Default", value: "" },
+                  { label: "12", value: "12px" },
+                  { label: "14", value: "14px" },
+                  { label: "16", value: "16px" },
+                  { label: "18", value: "18px" },
+                  { label: "20", value: "20px" },
+                  { label: "24", value: "24px" },
+                  { label: "32", value: "32px" },
+                ]}
+                @change=${(event) => this.setFontSizeValue(event.detail.value)}
+              ></editor-select>
+              <editor-select
+                label="Heading style"
+                .value=${this.getCurrentHeadingStyle()}
+                .options=${[
+                  { label: "Paragraph", value: "paragraph" },
+                  { label: "H1", value: "1" },
+                  { label: "H2", value: "2" },
+                  { label: "H3", value: "3" },
+                  { label: "H4", value: "4" },
+                  { label: "H5", value: "5" },
+                  { label: "H6", value: "6" },
+                ]}
+                @change=${(event) =>
+                  this.setHeadingStyleValue(event.detail.value)}
+              ></editor-select>
+            </settings-section>
+            <settings-section title="Style reset">
+              <editor-btn style="light" @click=${() => this.resetTextStyle()}
+                >${createElement(RotateCcw)} Reset style</editor-btn
+              >
+            </settings-section>
+          </div>
+        `;
+      },
+    });
+  }
+
+  setFontSizeValue(nextSize) {
     if (!this.editor) {
       return;
     }
 
-    const nextSize = event.target.value;
     if (!nextSize) {
-      this.editor.chain().focus().unsetFontSize().run();
+      this.runEditorCommand((chain) => chain.unsetFontSize());
       return;
     }
 
-    this.editor.chain().focus().setFontSize(nextSize).run();
+    this.runEditorCommand((chain) => chain.setFontSize(nextSize));
+  }
+
+  setFontSize(event) {
+    this.setFontSizeValue(event.target.value);
   }
 
   getCurrentFontSize() {
@@ -338,22 +598,34 @@ class Text extends EditorComponent {
     return this.editor.getAttributes("textStyle")?.fontSize || "";
   }
 
-  setHeadingStyle(event) {
+  setHeadingStyleValue(nextHeading) {
     if (!this.editor) {
       return;
     }
 
-    const nextHeading = event.target.value;
-
     if (nextHeading === "paragraph") {
-      this.editor.chain().focus().setParagraph().run();
+      this.runEditorCommand((chain) => chain.setParagraph());
       return;
     }
 
     const level = Number.parseInt(nextHeading, 10);
     if (!Number.isNaN(level) && level >= 1 && level <= 6) {
-      this.editor.chain().focus().setHeading({ level }).run();
+      this.runEditorCommand((chain) => chain.setHeading({ level }));
     }
+  }
+
+  setHeadingStyle(event) {
+    this.setHeadingStyleValue(event.target.value);
+  }
+
+  resetTextStyle() {
+    if (!this.editor) {
+      return;
+    }
+
+    this.runEditorCommand((chain) =>
+      chain.unsetAllMarks().clearNodes().unsetFontSize().setTextAlign("left"),
+    );
   }
 
   getCurrentHeadingStyle() {
@@ -394,7 +666,10 @@ class Text extends EditorComponent {
   }
 
   render() {
-    return html`<div class="text-block">
+    return html`<div
+      class="text-block"
+      @pointerdown=${() => this.openTextSettingsIfNeeded()}
+    >
       <div data-editor data-editor-block></div>
       <div class="menu menu-${this.node.id}">
         <editor-btn
