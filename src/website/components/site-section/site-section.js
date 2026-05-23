@@ -25,6 +25,33 @@ const GRID_SETTINGS_KEYS = {
 const GRID_EDITOR_ROW_SIZE = 30;
 const GRID_HANDLE_HOVER_PADDING = 16;
 
+const SECTION_PADDING_PRESETS = {
+  none: {
+    top: "0",
+    right: "0",
+    bottom: "0",
+    left: "0",
+  },
+  small: {
+    top: "2rem",
+    right: "2rem",
+    bottom: "2rem",
+    left: "2rem",
+  },
+  medium: {
+    top: "5rem",
+    right: "2rem",
+    bottom: "5rem",
+    left: "2rem",
+  },
+  large: {
+    top: "8rem",
+    right: "2rem",
+    bottom: "8rem",
+    left: "2rem",
+  },
+};
+
 export class SiteSection extends EditorComponent {
   static designColorVariables = [
     "--website-primary-color",
@@ -58,6 +85,11 @@ export class SiteSection extends EditorComponent {
     settingAlignmentMode: { type: String },
     settingGap: { type: String },
     settingRowHeight: { type: String },
+    settingSizing: { type: String },
+    settingPaddingTop: { type: String },
+    settingPaddingBottom: { type: String },
+    settingPaddingLeft: { type: String },
+    settingPaddingRight: { type: String },
     settingFlexDirection: { type: String },
     settingFlexHorizontal: { type: String },
     settingFlexVertical: { type: String },
@@ -93,6 +125,11 @@ export class SiteSection extends EditorComponent {
     this.settingAlignmentMode = "visual";
     this.settingGap = "";
     this.settingRowHeight = `${GRID_EDITOR_ROW_SIZE}px`;
+    this.settingSizing = "medium";
+    this.settingPaddingTop = "";
+    this.settingPaddingBottom = "";
+    this.settingPaddingLeft = "";
+    this.settingPaddingRight = "";
     this.settingFlexDirection = "row";
     this.settingFlexHorizontal = "start";
     this.settingFlexVertical = "start";
@@ -139,6 +176,11 @@ export class SiteSection extends EditorComponent {
         settingAlignmentMode: "visual",
         settingGap: "",
         settingRowHeight: `${GRID_EDITOR_ROW_SIZE}px`,
+        settingSizing: "medium",
+        settingPaddingTop: "",
+        settingPaddingBottom: "",
+        settingPaddingLeft: "",
+        settingPaddingRight: "",
         settingFlexDirection: "row",
         settingFlexHorizontal: "start",
         settingFlexVertical: "start",
@@ -443,6 +485,26 @@ export class SiteSection extends EditorComponent {
     }
 
     return raw;
+  }
+
+  getSectionPaddingValues() {
+    const preset = SECTION_PADDING_PRESETS[this.settingSizing];
+    if (preset) {
+      return preset;
+    }
+
+    const fallback = SECTION_PADDING_PRESETS.medium;
+    const sanitize = (value, fallbackValue) => {
+      const raw = String(value || "").trim();
+      return raw || fallbackValue;
+    };
+
+    return {
+      top: sanitize(this.settingPaddingTop, fallback.top),
+      right: sanitize(this.settingPaddingRight, fallback.right),
+      bottom: sanitize(this.settingPaddingBottom, fallback.bottom),
+      left: sanitize(this.settingPaddingLeft, fallback.left),
+    };
   }
 
   startGridPointerInteraction(
@@ -754,6 +816,11 @@ export class SiteSection extends EditorComponent {
       settingAlignmentMode: "visual",
       settingGap: "",
       settingRowHeight: `${GRID_EDITOR_ROW_SIZE}px`,
+      settingSizing: "medium",
+      settingPaddingTop: "",
+      settingPaddingBottom: "",
+      settingPaddingLeft: "",
+      settingPaddingRight: "",
       settingFlexDirection: "row",
       settingFlexHorizontal: "start",
       settingFlexVertical: "start",
@@ -811,6 +878,68 @@ export class SiteSection extends EditorComponent {
                       });
                     }}
                   ></editor-text-input>`
+                : null}
+            </settings-section>
+            <settings-section title="Sizing">
+              <editor-radio-button
+                .options=${[
+                  { label: "None", value: "none" },
+                  { label: "Small", value: "small" },
+                  { label: "Medium", value: "medium" },
+                  { label: "Large", value: "large" },
+                  { label: "Custom", value: "custom" },
+                ]}
+                .value=${this.settingSizing}
+                @change=${(e) => {
+                  this.updateSettingsState({
+                    settingSizing: e.detail.value,
+                  });
+                }}
+              ></editor-radio-button>
+
+              ${this.settingSizing === "custom"
+                ? html`
+                    <editor-text-input
+                      label="Top"
+                      placeholder="7rem"
+                      .value=${this.settingPaddingTop}
+                      @change=${(e) => {
+                        this.updateSettingsState({
+                          settingPaddingTop: e.detail.value,
+                        });
+                      }}
+                    ></editor-text-input>
+                    <editor-text-input
+                      label="Bottom"
+                      placeholder="6rem"
+                      .value=${this.settingPaddingBottom}
+                      @change=${(e) => {
+                        this.updateSettingsState({
+                          settingPaddingBottom: e.detail.value,
+                        });
+                      }}
+                    ></editor-text-input>
+                    <editor-text-input
+                      label="Left"
+                      placeholder="2rem"
+                      .value=${this.settingPaddingLeft}
+                      @change=${(e) => {
+                        this.updateSettingsState({
+                          settingPaddingLeft: e.detail.value,
+                        });
+                      }}
+                    ></editor-text-input>
+                    <editor-text-input
+                      label="Right"
+                      placeholder="2rem"
+                      .value=${this.settingPaddingRight}
+                      @change=${(e) => {
+                        this.updateSettingsState({
+                          settingPaddingRight: e.detail.value,
+                        });
+                      }}
+                    ></editor-text-input>
+                  `
                 : null}
             </settings-section>
             <settings-section title="Alignment">
@@ -960,6 +1089,7 @@ export class SiteSection extends EditorComponent {
       (this.settingAlignmentMode === "grid" ||
         this.settingAlignmentMode === "visual");
     const rowHeight = this.getSanitizedRowHeightValue();
+    const sectionPadding = this.getSectionPaddingValues();
     const trackedGridChildId = this.getTrackedGridChildId();
     const trackedGridChildNode = childNodes.find(
       (child) => child?.id === trackedGridChildId,
@@ -977,6 +1107,7 @@ export class SiteSection extends EditorComponent {
     const gridEditingStyle = isGridChildEditingEnabled
       ? `--section-grid-columns: ${previewColumns}; --section-grid-rows: ${previewRows}; --section-grid-gap: ${this.settingGap || "0px"}; --section-grid-row-size: ${rowHeight};`
       : "";
+    const sectionPaddingStyle = `--section-padding-top: ${sectionPadding.top}; --section-padding-right: ${sectionPadding.right}; --section-padding-bottom: ${sectionPadding.bottom}; --section-padding-left: ${sectionPadding.left};`;
 
     return html`<div>
       <section
@@ -997,7 +1128,7 @@ export class SiteSection extends EditorComponent {
             .settingWidth}-width ${isGridChildEditingEnabled
             ? `is-grid-child-editing is-${this.settingAlignmentMode}-mode`
             : ""}"
-          style="${widthStyle}${layoutStyle}${gridEditingStyle}"
+          style="${widthStyle}${layoutStyle}${sectionPaddingStyle}${gridEditingStyle}"
         >
           ${isGridChildEditingEnabled
             ? html`

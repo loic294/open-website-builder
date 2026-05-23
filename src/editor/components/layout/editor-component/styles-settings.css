@@ -92,3 +92,68 @@
   overflow: auto;
   background: #ffffff;
 }
+
+.settings-css-tab {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.settings-css-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3d372d;
+}
+
+.settings-css-editor {
+  width: 100%;
+  min-height: 280px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 6px;
+  background: #fbfbfb;
+  color: #1e1b16;
+  overflow: hidden;
+}
+
+.settings-css-editor:focus-within {
+  outline: 2px solid
+    color-mix(in srgb, var(--editor-primary-color, #ffc700) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.settings-css-editor .cm-editor {
+  height: 280px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+.settings-css-editor .cm-scroller {
+  overflow: auto;
+}
+
+.settings-css-editor .cm-gutters {
+  background: #f4f2ef;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.settings-css-editor .cm-activeLine,
+.settings-css-editor .cm-activeLineGutter {
+  background: rgba(255, 199, 0, 0.08);
+}
+
+.settings-css-help,
+.settings-css-error {
+  margin: 0;
+  font-size: 12px;
+}
+
+.settings-css-help {
+  color: #6f675d;
+}
+
+.settings-css-error {
+  color: #b42318;
+}

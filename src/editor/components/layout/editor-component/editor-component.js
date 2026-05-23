@@ -1,7 +1,48 @@
 import { LitElement, html, render, unsafeCSS } from "lit";
 import { X, createElement } from "lucide/dist/cjs/lucide";
+import { EditorState } from "@codemirror/state";
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+} from "@codemirror/view";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { css } from "@codemirror/lang-css";
+import { syntaxTree } from "@codemirror/language";
+import { linter, lintGutter } from "@codemirror/lint";
 import overlayStyles from "./styles-settings.css?inline";
 import blocksStyles from "./styles-blocks.css?inline";
+
+const cssSyntaxLinter = linter((view) => {
+  const diagnostics = [];
+  const cursor = syntaxTree(view.state).cursor();
+  const seen = new Set();
+
+  do {
+    if (!cursor.type.isError) {
+      continue;
+    }
+
+    const from = cursor.from;
+    const to = Math.max(cursor.to, from + 1);
+    const key = `${from}:${to}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    diagnostics.push({
+      from,
+      to,
+      severity: "error",
+      message: "Invalid CSS syntax",
+    });
+  } while (cursor.next());
+
+  return diagnostics;
+});
 
 export class EditorComponent extends LitElement {
   static overlayWidth = 340;
@@ -10,6 +51,8 @@ export class EditorComponent extends LitElement {
 
   static properties = {
     isSettingsEditorOpen: { type: Boolean },
+    settingCustomCss: { type: String },
+    customCssError: { type: String },
   };
 
   static styles = unsafeCSS(blocksStyles);
@@ -23,10 +66,26 @@ export class EditorComponent extends LitElement {
     this.settingsOverlayTabs = [{ id: "settings", label: "Settings" }];
     this.settingsOverlayActiveTab = "settings";
     this.settingsOverlayPosition = this.getInitialOverlayPosition();
+    this.settingCustomCss = "";
+    this.customCssError = "";
+    this.cssEditorView = null;
+    this.isSyncingCssEditorUpdate = false;
     this.dragState = null;
     this.onOverlayKeydown = this.onOverlayKeydown.bind(this);
     this.onOverlayPointerMove = this.onOverlayPointerMove.bind(this);
     this.onOverlayPointerUp = this.onOverlayPointerUp.bind(this);
+  }
+
+  willUpdate(changedProperties) {
+    if (changedProperties.has("node")) {
+      const cssFromNode = this.getNodeCustomCss();
+      if (this.settingCustomCss !== cssFromNode) {
+        this.settingCustomCss = cssFromNode;
+      }
+      this.validateCustomCss(cssFromNode);
+      this.applyCustomCssToRenderRoot(cssFromNode);
+      this.syncCssEditorValue(cssFromNode);
+    }
   }
 
   getInitialOverlayPosition() {
@@ -67,22 +126,185 @@ export class EditorComponent extends LitElement {
     this.ensureOverlayContainer();
     this.isSettingsEditorOpen = true;
 
+    const cssTab = { id: "css", label: "CSS" };
+
+    const withCssTab = (tabs) => {
+      const safeTabs = Array.isArray(tabs) && tabs.length ? tabs : [];
+      if (safeTabs.some((tab) => tab?.id === "css")) {
+        return safeTabs;
+      }
+      return [...safeTabs, cssTab];
+    };
+
     if (options && typeof options === "object" && "content" in options) {
-      this.settingsOverlayContent = options.content;
-      this.settingsOverlayTabs =
+      const originalContent = options.content;
+      const baseTabs =
         Array.isArray(options.tabs) && options.tabs.length
           ? options.tabs
           : [{ id: "settings", label: "Settings" }];
+      this.settingsOverlayTabs = withCssTab(baseTabs);
+      this.settingsOverlayContent = (activeTab) => {
+        if (activeTab === "css") {
+          return this.renderCssSettingsTab();
+        }
+
+        if (typeof originalContent === "function") {
+          return originalContent(activeTab);
+        }
+
+        return originalContent;
+      };
       this.settingsOverlayActiveTab =
         options.activeTab ?? this.settingsOverlayTabs[0].id;
     } else {
-      this.settingsOverlayContent = options;
-      this.settingsOverlayTabs = [{ id: "settings", label: "Settings" }];
+      const originalContent = options;
+      this.settingsOverlayTabs = withCssTab([
+        { id: "settings", label: "Settings" },
+      ]);
+      this.settingsOverlayContent = (activeTab) => {
+        if (activeTab === "css") {
+          return this.renderCssSettingsTab();
+        }
+
+        return originalContent;
+      };
       this.settingsOverlayActiveTab = "settings";
     }
 
+    this.validateCustomCss(this.settingCustomCss);
+
     this.renderSettingsOverlay();
     window.addEventListener("keydown", this.onOverlayKeydown);
+  }
+
+  getNodeCustomCss() {
+    const css = this.node?.settings?.customCss;
+    return typeof css === "string" ? css : "";
+  }
+
+  ensureCssEditorMounted() {
+    const host = this.settingsOverlayContainer?.querySelector(
+      "[data-css-code-editor]",
+    );
+
+    if (!(host instanceof HTMLElement)) {
+      this.destroyCssEditor();
+      return;
+    }
+
+    if (this.cssEditorView && this.cssEditorView.dom.parentElement === host) {
+      return;
+    }
+
+    this.destroyCssEditor();
+
+    const state = EditorState.create({
+      doc: this.settingCustomCss,
+      extensions: [
+        lineNumbers(),
+        highlightActiveLine(),
+        highlightActiveLineGutter(),
+        history(),
+        keymap.of([...defaultKeymap, ...historyKeymap]),
+        css(),
+        cssSyntaxLinter,
+        lintGutter(),
+        EditorView.lineWrapping,
+        EditorView.updateListener.of((update) => {
+          if (!update.docChanged || this.isSyncingCssEditorUpdate) {
+            return;
+          }
+
+          const nextCss = update.state.doc.toString();
+          this.validateCustomCss(nextCss);
+          this.applyCustomCssToRenderRoot(nextCss);
+          this.updateSettingsState({
+            settingCustomCss: nextCss,
+          });
+        }),
+      ],
+    });
+
+    this.cssEditorView = new EditorView({
+      state,
+      parent: host,
+    });
+  }
+
+  syncCssEditorValue(nextCss) {
+    if (!this.cssEditorView) {
+      return;
+    }
+
+    const currentCss = this.cssEditorView.state.doc.toString();
+    if (currentCss === nextCss) {
+      return;
+    }
+
+    this.isSyncingCssEditorUpdate = true;
+    this.cssEditorView.dispatch({
+      changes: {
+        from: 0,
+        to: this.cssEditorView.state.doc.length,
+        insert: nextCss,
+      },
+    });
+    this.isSyncingCssEditorUpdate = false;
+  }
+
+  destroyCssEditor() {
+    if (!this.cssEditorView) {
+      return;
+    }
+
+    this.cssEditorView.destroy();
+    this.cssEditorView = null;
+  }
+
+  applyCustomCssToRenderRoot(cssText) {
+    if (!(this.renderRoot instanceof ShadowRoot)) {
+      return;
+    }
+
+    let styleEl = this.renderRoot.querySelector("style[data-custom-css]");
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.setAttribute("data-custom-css", "true");
+      this.renderRoot.appendChild(styleEl);
+    }
+
+    styleEl.textContent = String(cssText || "");
+  }
+
+  validateCustomCss(cssText) {
+    const nextCss = String(cssText || "").trim();
+    if (!nextCss) {
+      this.customCssError = "";
+      return;
+    }
+
+    try {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(nextCss);
+      this.customCssError = "";
+    } catch (error) {
+      this.customCssError =
+        error && typeof error.message === "string"
+          ? error.message
+          : "Invalid CSS";
+    }
+  }
+
+  renderCssSettingsTab() {
+    return html`
+      <div class="settings-css-tab">
+        <label class="settings-css-label">CSS</label>
+        <div class="settings-css-editor" data-css-code-editor></div>
+        <p class="settings-css-help">
+          Styles are scoped to this block. Syntax errors appear in the gutter.
+        </p>
+      </div>
+    `;
   }
 
   closeSettingsEditor() {
@@ -93,6 +315,7 @@ export class EditorComponent extends LitElement {
     window.removeEventListener("keydown", this.onOverlayKeydown);
     window.removeEventListener("pointermove", this.onOverlayPointerMove);
     window.removeEventListener("pointerup", this.onOverlayPointerUp);
+    this.destroyCssEditor();
   }
 
   onOverlayKeydown(event) {
@@ -152,22 +375,40 @@ export class EditorComponent extends LitElement {
   }
 
   syncSettingsStateFromNode(defaultState = {}) {
-    this.settingsDefaultState = { ...defaultState };
+    this.settingsDefaultState = {
+      customCss: "",
+      ...defaultState,
+    };
 
     const nodeSettings =
       this.node && typeof this.node.settings === "object" && this.node.settings
         ? this.node.settings
         : {};
 
-    for (const [key, fallbackValue] of Object.entries(defaultState)) {
-      this[key] =
+    for (const [key, fallbackValue] of Object.entries(
+      this.settingsDefaultState,
+    )) {
+      const stateKey = key === "customCss" ? "settingCustomCss" : key;
+      this[stateKey] =
         key in nodeSettings && nodeSettings[key] !== undefined
           ? nodeSettings[key]
           : fallbackValue;
     }
+
+    this.validateCustomCss(this.settingCustomCss);
+    this.applyCustomCssToRenderRoot(this.settingCustomCss);
   }
 
   getPersistedSettings(nextState) {
+    const normalizedState = {
+      ...nextState,
+    };
+
+    if ("settingCustomCss" in normalizedState) {
+      normalizedState.customCss = normalizedState.settingCustomCss;
+      delete normalizedState.settingCustomCss;
+    }
+
     const currentSettings =
       this.node && typeof this.node.settings === "object" && this.node.settings
         ? this.node.settings
@@ -175,7 +416,7 @@ export class EditorComponent extends LitElement {
 
     const nextPersistedSettings = {
       ...currentSettings,
-      ...nextState,
+      ...normalizedState,
     };
 
     const defaults =
@@ -280,7 +521,10 @@ export class EditorComponent extends LitElement {
       }
     }
 
-    if (this.isSettingsEditorOpen) {
+    const isOnlyCssUpdate =
+      Object.keys(nextState).length === 1 && "settingCustomCss" in nextState;
+
+    if (this.isSettingsEditorOpen && !isOnlyCssUpdate) {
       this.renderSettingsOverlay();
     }
   }
@@ -288,6 +532,7 @@ export class EditorComponent extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.closeSettingsEditor();
+    this.destroyCssEditor();
 
     if (this.settingsOverlayContainer) {
       this.settingsOverlayContainer.remove();
@@ -305,6 +550,7 @@ export class EditorComponent extends LitElement {
 
     if (!this.settingsOverlayContent) {
       render(html``, this.settingsOverlayContainer);
+      this.destroyCssEditor();
       return;
     }
 
@@ -358,5 +604,13 @@ export class EditorComponent extends LitElement {
       `,
       this.settingsOverlayContainer,
     );
+
+    if (this.settingsOverlayActiveTab === "css") {
+      this.ensureCssEditorMounted();
+      this.syncCssEditorValue(this.settingCustomCss);
+      return;
+    }
+
+    this.destroyCssEditor();
   }
 }

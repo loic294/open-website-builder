@@ -35,6 +35,8 @@ export const defaultTextConfig = {
   content: "<p>This is a default text</p>",
 };
 
+const GRID_DEFAULT_ROW_SIZE = 30;
+
 const FontSize = Extension.create({
   name: "fontSize",
 
@@ -96,6 +98,81 @@ class Text extends EditorComponent {
     this.node = null;
     this.pageConfig = null;
     this.editor = null;
+    this.autoGrowFrame = null;
+  }
+
+  requestAutoGrowGridRowSpan() {
+    if (this.autoGrowFrame) {
+      return;
+    }
+
+    this.autoGrowFrame = requestAnimationFrame(() => {
+      this.autoGrowFrame = null;
+      this.autoGrowGridRowSpanForText();
+    });
+  }
+
+  autoGrowGridRowSpanForText() {
+    const editorBlockEl = this.renderRoot?.querySelector("[data-editor-block]");
+    if (!(editorBlockEl instanceof HTMLElement)) {
+      return;
+    }
+
+    const gridContainerEl = this.closest(".container.is-grid-child-editing");
+    if (!(gridContainerEl instanceof HTMLElement)) {
+      return;
+    }
+
+    const currentHeight = editorBlockEl.clientHeight;
+    const contentHeight = editorBlockEl.scrollHeight;
+    if (!currentHeight || contentHeight <= currentHeight + 1) {
+      return;
+    }
+
+    const containerStyles = getComputedStyle(gridContainerEl);
+    const rowSize =
+      Number.parseFloat(
+        containerStyles.getPropertyValue("--section-grid-row-size"),
+      ) || GRID_DEFAULT_ROW_SIZE;
+    const rowGap = Number.parseFloat(containerStyles.rowGap) || 0;
+    const gridStep = rowSize + rowGap;
+    if (gridStep <= 0) {
+      return;
+    }
+
+    const settings =
+      this.node && typeof this.node.settings === "object" && this.node.settings
+        ? this.node.settings
+        : {};
+    const currentRowSpan = Math.max(
+      1,
+      Number.parseInt(settings.gridRowSpan, 10) || 1,
+    );
+    const rowStart = Math.max(
+      1,
+      Number.parseInt(settings.gridRowStart, 10) || 1,
+    );
+    const requiredRowSpan = Math.max(
+      1,
+      Math.ceil((contentHeight + rowGap) / gridStep),
+    );
+
+    const configuredRows = Number.parseInt(
+      containerStyles.getPropertyValue("--section-grid-rows"),
+      10,
+    );
+    const maxAvailableSpan = Number.isNaN(configuredRows)
+      ? requiredRowSpan
+      : Math.max(1, configuredRows - rowStart + 1);
+    const nextRowSpan = Math.min(requiredRowSpan, maxAvailableSpan);
+
+    if (nextRowSpan <= currentRowSpan) {
+      return;
+    }
+
+    this.updateSettingsState({
+      gridRowSpan: nextRowSpan,
+    });
   }
 
   dispatchPageConfigUpdated(nextPageConfig) {
@@ -132,6 +209,29 @@ class Text extends EditorComponent {
     });
   }
 
+  commitEditorContent(nextContent) {
+    this.content = nextContent;
+
+    if (!this.pageConfig || !this.node?.id) {
+      return;
+    }
+
+    if (this.node?.content === nextContent) {
+      return;
+    }
+
+    const nextPageConfig = {
+      ...this.pageConfig,
+      content: this.updateNodeContent(
+        Array.isArray(this.pageConfig.content) ? this.pageConfig.content : [],
+        this.node.id,
+        nextContent,
+      ),
+    };
+
+    this.dispatchPageConfigUpdated(nextPageConfig);
+  }
+
   firstUpdated() {
     const menuEl = this.renderRoot.querySelector(".menu");
     this.editor = new Editor({
@@ -162,26 +262,14 @@ class Text extends EditorComponent {
       onSelectionUpdate: () => {
         this.requestUpdate();
       },
+      onUpdate: ({ editor }) => {
+        const nextContent = editor.getHTML();
+        this.commitEditorContent(nextContent);
+        this.requestAutoGrowGridRowSpan();
+      },
       onBlur: ({ editor }) => {
         const nextContent = editor.getHTML();
-        this.content = nextContent;
-
-        if (!this.pageConfig || !this.node?.id) {
-          return;
-        }
-
-        const nextPageConfig = {
-          ...this.pageConfig,
-          content: this.updateNodeContent(
-            Array.isArray(this.pageConfig.content)
-              ? this.pageConfig.content
-              : [],
-            this.node.id,
-            nextContent,
-          ),
-        };
-
-        this.dispatchPageConfigUpdated(nextPageConfig);
+        this.commitEditorContent(nextContent);
       },
     });
   }
@@ -296,6 +384,10 @@ class Text extends EditorComponent {
   }
 
   disconnectedCallback() {
+    if (this.autoGrowFrame) {
+      cancelAnimationFrame(this.autoGrowFrame);
+      this.autoGrowFrame = null;
+    }
     this.editor?.destroy();
     this.editor = null;
     super.disconnectedCallback();
