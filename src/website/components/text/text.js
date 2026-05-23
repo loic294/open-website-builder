@@ -302,8 +302,8 @@ class Text extends EditorComponent {
   }
 
   render() {
-    return html`<div data-editor-block>
-      <div data-editor></div>
+    return html`<div class="text-block">
+      <div data-editor data-editor-block></div>
       <div class="menu menu-${this.node.id}">
         <editor-btn
           style="light icon"
@@ -482,8 +482,12 @@ export const editorRenderText = (
   pageConfig,
   onPageConfigUpdated,
   renderNode,
+  renderOptions = {},
 ) => {
   return html`<site-text
+    class=${renderOptions.hostClass || ""}
+    style=${renderOptions.hostStyle || ""}
+    data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
     .pageConfig=${pageConfig}
     .content=${String(node.content ?? "")}

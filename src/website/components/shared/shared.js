@@ -165,8 +165,12 @@ export const editorRenderShared = (
   pageConfig,
   onPageConfigUpdated,
   renderNode,
+  renderOptions = {},
 ) => {
   return html`<site-shared
+    class=${renderOptions.hostClass || ""}
+    style=${renderOptions.hostStyle || ""}
+    data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
     .renderNode=${renderNode}
   ></site-shared>`;

@@ -17,6 +17,7 @@ class SiteImage extends EditorComponent {
     node: { type: Object },
     pageConfig: { type: Object },
     imageUrl: { type: String },
+    imageSizeMode: { type: String },
   };
 
   static styles = [super.styles, unsafeCSS(styles)];
@@ -26,13 +27,37 @@ class SiteImage extends EditorComponent {
     this.node = null;
     this.pageConfig = null;
     this.imageUrl = "";
+    this.imageSizeMode = "contained";
   }
 
   updated(changedProperties) {
     if (changedProperties.has("node")) {
       this.imageUrl =
         this.node && typeof this.node.url === "string" ? this.node.url : "";
+
+      this.syncSettingsStateFromNode({
+        imageSizeMode: "contained",
+      });
     }
+  }
+
+  updateImageSizeMode(nextMode) {
+    const normalizedMode =
+      nextMode === "full-width" ||
+      nextMode === "contained" ||
+      nextMode === "cover"
+        ? nextMode
+        : "contained";
+
+    const nextState = {
+      imageSizeMode: normalizedMode,
+    };
+
+    if (normalizedMode === "full-width") {
+      nextState.gridRowSpan = 1;
+    }
+
+    this.updateSettingsState(nextState);
   }
 
   updateNodeUrl(nodes, targetNodeId, nextUrl) {
@@ -88,6 +113,10 @@ class SiteImage extends EditorComponent {
   }
 
   openImageSettings() {
+    this.syncSettingsStateFromNode({
+      imageSizeMode: "contained",
+    });
+
     this.openSettingsEditor({
       tabs: [{ id: "general", label: "General" }],
       content: () => html`
@@ -100,6 +129,16 @@ class SiteImage extends EditorComponent {
               @input=${(e) => this.previewImageUrl(e.detail.value)}
               @change=${(e) => this.updateImageUrl(e.detail.value)}
             ></editor-text-input>
+
+            <editor-radio-button
+              .options=${[
+                { label: "Full width", value: "full-width" },
+                { label: "Contained", value: "contained" },
+                { label: "Cover", value: "cover" },
+              ]}
+              .value=${this.imageSizeMode}
+              @change=${(e) => this.updateImageSizeMode(e.detail.value)}
+            ></editor-radio-button>
           </settings-section>
         </div>
       `,
@@ -110,7 +149,8 @@ class SiteImage extends EditorComponent {
     return html`
       <div
         data-editor-block
-        class="image-block ${this.isSettingsEditorOpen
+        class="image-block size-${this.imageSizeMode} ${this
+          .isSettingsEditorOpen
           ? "is-settings-open"
           : ""}"
       >
@@ -119,7 +159,7 @@ class SiteImage extends EditorComponent {
             >${createElement(Pencil)} Edit image</editor-btn
           >
         </div>
-        <div class="image-frame">
+        <div class="image-frame size-${this.imageSizeMode}">
           ${this.imageUrl
             ? html`<img src=${this.imageUrl} alt="" loading="lazy" />`
             : html`
@@ -139,8 +179,12 @@ export const editorRenderImage = (
   pageConfig,
   onPageConfigUpdated,
   renderNode,
+  renderOptions = {},
 ) => {
   return html`<site-image
+    class=${renderOptions.hostClass || ""}
+    style=${renderOptions.hostStyle || ""}
+    data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
     .pageConfig=${pageConfig}
     @page-config-updated=${onPageConfigUpdated}

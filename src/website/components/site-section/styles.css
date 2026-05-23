@@ -4,12 +4,137 @@ section {
 
 section .container {
   position: relative;
-  padding: 6rem 2rem;
+  padding: 7rem 2rem 6rem;
   margin: 0 auto;
 }
 
+.container.is-grid-child-editing.is-visual-mode {
+  --section-grid-columns: 1;
+  --section-grid-rows: 1;
+  --section-grid-gap: 0px;
+  --section-grid-row-size: 30px;
+  display: grid;
+  grid-template-columns: repeat(var(--section-grid-columns), minmax(0, 1fr));
+  grid-template-rows: repeat(
+    var(--section-grid-rows),
+    var(--section-grid-row-size)
+  );
+  gap: var(--section-grid-gap);
+  min-height: calc(
+    var(--section-grid-rows) * var(--section-grid-row-size) +
+      (var(--section-grid-rows) - 1) * var(--section-grid-gap)
+  );
+}
+
+.global-grid-handles {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.grid-item-highlight-outline {
+  position: absolute;
+  left: var(--grid-handle-left, 0px);
+  top: var(--grid-handle-top, 0px);
+  width: calc(
+    var(--grid-handle-right, 0px) - var(--grid-handle-left, 0px) - 8px
+  );
+  height: calc(
+    var(--grid-handle-bottom, 0px) - var(--grid-handle-top, 0px) - 8px
+  );
+  border: 4px solid var(--editor-primary-color, #ccc);
+  pointer-events: none;
+}
+
+.grid-item-move-handle {
+  position: absolute;
+  left: var(--grid-handle-left, 0px);
+  top: var(--grid-handle-top, 0px);
+  transform: translate(0px, -32px);
+  border: 0;
+  border-radius: 6px;
+  background: var(--editor-primary-color, #ffc700);
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.grid-item-move-handle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.grid-item-move-handle:active {
+  cursor: grabbing;
+}
+
+.grid-item-resize-bar {
+  position: absolute;
+  padding: 0;
+  min-width: 0px;
+  min-height: 0px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--editor-primary-color, #ffc700);
+  opacity: 0.9;
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.grid-item-resize-bar.is-top {
+  left: calc(
+    (var(--grid-handle-left, 0px) + var(--grid-handle-right, 0px)) / 2
+  );
+  top: var(--grid-handle-top, 0px);
+  width: 40px;
+  height: 6px;
+  transform: translate(-50%, -12px);
+  cursor: ns-resize;
+}
+
+.grid-item-resize-bar.is-right {
+  left: var(--grid-handle-right, 0px);
+  top: calc((var(--grid-handle-top, 0px) + var(--grid-handle-bottom, 0px)) / 2);
+  width: 6px;
+  height: 28px;
+  transform: translate(6px, -50%);
+  cursor: ew-resize;
+}
+
+.grid-item-resize-bar.is-bottom {
+  left: calc(
+    (var(--grid-handle-left, 0px) + var(--grid-handle-right, 0px)) / 2
+  );
+  top: var(--grid-handle-bottom, 0px);
+  width: 40px;
+  height: 6px;
+  transform: translate(-50%, 6px);
+  cursor: ns-resize;
+}
+
+.grid-item-resize-bar.is-left {
+  left: var(--grid-handle-left, 0px);
+  top: calc((var(--grid-handle-top, 0px) + var(--grid-handle-bottom, 0px)) / 2);
+  width: 6px;
+  height: 28px;
+  transform: translate(-12px, -50%);
+  cursor: ew-resize;
+}
+
+.grid-item-move-handle:disabled,
+.grid-item-resize-bar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .grid-preview-overlay {
-  padding: 6rem 2rem;
+  padding: 7rem 2rem 6rem;
   position: absolute;
   top: 0;
   left: 0;

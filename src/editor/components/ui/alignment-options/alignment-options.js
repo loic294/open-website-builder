@@ -24,6 +24,7 @@ const DEFAULT_VALUE = {
   mode: "flex",
   flexDirection: "row",
   gap: "",
+  rowHeight: "30px",
   flexHorizontal: "start",
   flexVertical: "start",
   flexJustifyContent: "flex-start",
@@ -254,14 +255,24 @@ export class EditorAlignmentOptions extends LitElement {
   }
 
   renderVisualOptions(value) {
-    return html`<editor-text-input
-        label="Gap"
-        placeholder="16px"
-        .value=${String(value.gap || "")}
-        @change=${(e) => this.emitChange({ gap: e.detail.value })}
-        @editor-focus=${() => this.onGridPreviewFieldFocus()}
-        @editor-blur=${() => this.onGridPreviewFieldBlur()}
-      ></editor-text-input>
+    return html`<div class="gap-row">
+        <editor-text-input
+          label="Gap"
+          placeholder="16px"
+          .value=${String(value.gap || "")}
+          @change=${(e) => this.emitChange({ gap: e.detail.value })}
+          @editor-focus=${() => this.onGridPreviewFieldFocus()}
+          @editor-blur=${() => this.onGridPreviewFieldBlur()}
+        ></editor-text-input>
+        <editor-text-input
+          label="Row height"
+          placeholder="30px"
+          .value=${String(value.rowHeight || "")}
+          @change=${(e) => this.emitChange({ rowHeight: e.detail.value })}
+          @editor-focus=${() => this.onGridPreviewFieldFocus()}
+          @editor-blur=${() => this.onGridPreviewFieldBlur()}
+        ></editor-text-input>
+      </div>
       <div class="grid-size-row">
         <editor-text-input
           type="number"
@@ -406,12 +417,20 @@ export class EditorAlignmentOptions extends LitElement {
     ];
 
     return html`
-      <editor-text-input
-        label="Gap"
-        placeholder="16px"
-        .value=${String(value.gap || "")}
-        @change=${(e) => this.emitChange({ gap: e.detail.value })}
-      ></editor-text-input>
+      <div class="gap-row">
+        <editor-text-input
+          label="Gap"
+          placeholder="16px"
+          .value=${String(value.gap || "")}
+          @change=${(e) => this.emitChange({ gap: e.detail.value })}
+        ></editor-text-input>
+        <editor-text-input
+          label="Row height"
+          placeholder="30px"
+          .value=${String(value.rowHeight || "")}
+          @change=${(e) => this.emitChange({ rowHeight: e.detail.value })}
+        ></editor-text-input>
+      </div>
       <settings-collapsable title="More options">
         ${this.renderOptionGroup(
           "Direction",
@@ -586,14 +605,24 @@ export class EditorAlignmentOptions extends LitElement {
     ];
 
     return html`
-      <editor-text-input
-        label="Gap"
-        placeholder="16px"
-        .value=${String(value.gap || "")}
-        @change=${(e) => this.emitChange({ gap: e.detail.value })}
-        @editor-focus=${() => this.onGridPreviewFieldFocus()}
-        @editor-blur=${() => this.onGridPreviewFieldBlur()}
-      ></editor-text-input>
+      <div class="gap-row">
+        <editor-text-input
+          label="Gap"
+          placeholder="16px"
+          .value=${String(value.gap || "")}
+          @change=${(e) => this.emitChange({ gap: e.detail.value })}
+          @editor-focus=${() => this.onGridPreviewFieldFocus()}
+          @editor-blur=${() => this.onGridPreviewFieldBlur()}
+        ></editor-text-input>
+        <editor-text-input
+          label="Row height"
+          placeholder="30px"
+          .value=${String(value.rowHeight || "")}
+          @change=${(e) => this.emitChange({ rowHeight: e.detail.value })}
+          @editor-focus=${() => this.onGridPreviewFieldFocus()}
+          @editor-blur=${() => this.onGridPreviewFieldBlur()}
+        ></editor-text-input>
+      </div>
       <div class="grid-size-row">
         <editor-text-input
           type="number"
