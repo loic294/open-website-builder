@@ -1,5 +1,4 @@
 import { LitElement, html, unsafeCSS } from "lit";
-import { Pencil, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
@@ -328,6 +327,14 @@ class SiteButton extends withVariantConfig(EditorComponent) {
     });
   }
 
+  openButtonSettingsIfNeeded() {
+    if (this.isSettingsEditorOpen) {
+      return;
+    }
+
+    this.openButtonSettings();
+  }
+
   getSizeStyle() {
     return getButtonSizeStyle(this.buttonSize, {
       buttonPaddingTop: this.buttonPaddingTop,
@@ -350,15 +357,11 @@ class SiteButton extends withVariantConfig(EditorComponent) {
     return html`
       <div
         data-editor-block
+        @pointerdown=${() => this.openButtonSettingsIfNeeded()}
         class="button-block ${this.isSettingsEditorOpen
           ? "is-settings-open"
           : ""}"
       >
-        <div class="button-toolbar">
-          <editor-btn style="light" @click=${() => this.openButtonSettings()}
-            >${createElement(Pencil)} Edit button</editor-btn
-          >
-        </div>
         <div class="button-preview-wrap">
           ${renderButtonPreview({
             content: this.buttonText,

@@ -1,12 +1,5 @@
 import { LitElement, html, css, unsafeCSS } from "lit";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Image,
-  Pencil,
-  X,
-  createElement,
-} from "lucide";
+import { ChevronLeft, ChevronRight, Image, X, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
@@ -205,6 +198,14 @@ class SiteGallery extends withVariantConfig(EditorComponent) {
     });
   }
 
+  openGallerySettingsIfNeeded() {
+    if (this.isSettingsEditorOpen) {
+      return;
+    }
+
+    this.openGallerySettings();
+  }
+
   openLightbox(index) {
     if (index < 0 || index >= this.galleryImages.length) {
       return;
@@ -237,15 +238,11 @@ class SiteGallery extends withVariantConfig(EditorComponent) {
     return html`
       <div
         data-editor-block
+        @pointerdown=${() => this.openGallerySettingsIfNeeded()}
         class="gallery-block ${this.isSettingsEditorOpen
           ? "is-settings-open"
           : ""}"
       >
-        <div class="gallery-toolbar">
-          <editor-btn style="light" @click=${() => this.openGallerySettings()}
-            >${createElement(Pencil)} Edit gallery</editor-btn
-          >
-        </div>
         ${this.galleryImages.length > 0
           ? html`
               <div

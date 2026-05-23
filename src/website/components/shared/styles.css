@@ -2,14 +2,12 @@
   display: block;
 }
 
-.shared-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
+.shared-block {
+  position: relative;
 }
 
 .shared-placeholder {
-  padding: 12px;
+  padding: 36px 12px 12px;
   border: 1px dashed var(--editor-border-color, #d1d5db);
   border-radius: 6px;
   color: var(--editor-muted-text-color, #6b7280);
@@ -23,9 +21,4 @@
 
 .shared-error {
   color: var(--editor-danger-color, #b91c1c);
-}
-
-.shared-placeholder-actions {
-  display: flex;
-  justify-content: center;
 }

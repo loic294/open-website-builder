@@ -8,12 +8,14 @@ export class EditorRadioButton extends LitElement {
   static properties = {
     value: { type: String },
     options: { type: Array },
+    disabledTooltip: { type: Boolean },
   };
 
   constructor() {
     super();
     this.value = "";
     this.options = [];
+    this.disabledTooltip = false;
   }
 
   handleOptionClick(optionValue) {
@@ -59,9 +61,11 @@ export class EditorRadioButton extends LitElement {
                     aria-label=${tooltip}
                   >
                     ${option.icon ? createElement(option.icon) : html``}
-                    <span class="radio-option-tooltip" role="tooltip"
-                      >${tooltip}</span
-                    >
+                    ${this.disabledTooltip
+                      ? ""
+                      : html`<span class="radio-option-tooltip" role="tooltip"
+                          >${tooltip}</span
+                        >`}
                     ${hasIcon
                       ? html`<span class="sr-only">${option.label}</span>`
                       : option.label}

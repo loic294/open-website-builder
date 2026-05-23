@@ -1,5 +1,5 @@
 import { LitElement, html, unsafeCSS } from "lit";
-import { Pencil, Image as ImageIcon, createElement } from "lucide";
+import { Image as ImageIcon, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
@@ -154,20 +154,24 @@ class SiteImage extends withVariantConfig(EditorComponent) {
     });
   }
 
+  openImageSettingsIfNeeded() {
+    if (this.isSettingsEditorOpen) {
+      return;
+    }
+
+    this.openImageSettings();
+  }
+
   render() {
     return html`
       <div
         data-editor-block
+        @pointerdown=${() => this.openImageSettingsIfNeeded()}
         class="image-block size-${this.imageSizeMode} ${this
           .isSettingsEditorOpen
           ? "is-settings-open"
           : ""}"
       >
-        <div class="image-toolbar">
-          <editor-btn style="light" @click=${() => this.openImageSettings()}
-            >${createElement(Pencil)} Edit image</editor-btn
-          >
-        </div>
         <div class="image-frame size-${this.imageSizeMode}">
           ${this.imageUrl
             ? html`<img src=${this.imageUrl} alt="" loading="lazy" />`

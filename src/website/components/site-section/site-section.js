@@ -2,15 +2,7 @@ import { LitElement, html, css, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { dataLayer } from "../../../editor/data/data-layer.js";
 import { withVariantConfig } from "../variant-component-base.js";
-import {
-  ArrowDown,
-  ArrowUp,
-  Trash,
-  Pencil,
-  Move,
-  Plus,
-  createElement,
-} from "lucide";
+import { ArrowDown, ArrowUp, Trash, Move, Plus, createElement } from "lucide";
 import styles from "./styles.css?inline";
 
 export const defaultSectionConfig = {
@@ -1502,6 +1494,37 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
     });
   }
 
+  onSectionPointerDown(event) {
+    if (this.isSettingsEditorOpen) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const shouldIgnore =
+      target.closest("[data-editor-block]") ||
+      target.closest("[data-grid-child-id]") ||
+      target.closest("editor-btn") ||
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("input") ||
+      target.closest("textarea") ||
+      target.closest("select") ||
+      target.closest(".global-grid-handles") ||
+      target.closest(".section-block-picker") ||
+      target.closest(".section-empty-state-actions") ||
+      target.closest(".section-resize-handle");
+
+    if (shouldIgnore) {
+      return;
+    }
+
+    void this.openSectionSettings();
+  }
+
   render() {
     const childNodes = this.getChildNodes();
     const isGridChildEditingEnabled = this.isGridChildEditingEnabled();
@@ -1567,13 +1590,6 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
     const trackedGridChildNode = childNodes.find(
       (child) => child?.id === trackedGridChildId,
     );
-    const trackedGridChildIndex = childNodes.findIndex(
-      (child) => child?.id === trackedGridChildId,
-    );
-    const canMoveTrackedChildBackward = trackedGridChildIndex > 0;
-    const canMoveTrackedChildForward =
-      trackedGridChildIndex !== -1 &&
-      trackedGridChildIndex < childNodes.length - 1;
     const trackedImageSizeMode =
       trackedGridChildNode?.type === "image"
         ? String(trackedGridChildNode?.settings?.imageSizeMode || "contained")
@@ -1597,6 +1613,7 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       <section
         class="${this.isSettingsEditorOpen ? "is-settings-open" : ""}"
         style="${backgroundColorStyle}${textColorStyle}"
+        @pointerdown=${(event) => this.onSectionPointerDown(event)}
         @pointermove=${(event) => this.onGridContainerPointerMove(event)}
         @pointerleave=${() => this.onSectionPointerLeave()}
       >
@@ -1607,6 +1624,9 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
         >
           Add section
         </editor-btn>
+        ${this.node?.type === "shared"
+          ? html`<span class="shared-badge">Shared Component</span>`
+          : ""}
         <div
           class="container is-${this
             .settingWidth}-width ${isGridChildEditingEnabled
@@ -1770,37 +1790,17 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
                       ></button>
                     `
                   : null}
-
-                <div class="grid-item-action-stack">
-                  <editor-btn
-                    style="light"
-                    ?disabled=${!canMoveTrackedChildBackward}
-                    @click=${() => this.moveChildBlock("backward")}
-                    >${createElement(ArrowUp)} Backward</editor-btn
-                  >
-                  <editor-btn
-                    style="light"
-                    ?disabled=${!canMoveTrackedChildForward}
-                    @click=${() => this.moveChildBlock("forward")}
-                    >${createElement(ArrowDown)} Forward</editor-btn
-                  >
-                  <editor-btn
-                    style="light text-danger"
-                    @click=${() => this.deleteTrackedChildBlock()}
-                    >${createElement(Trash)} Delete block</editor-btn
-                  >
-                </div>
               </div>
             `
           : null}
         <div class="section-controls">
           <editor-btn
             style="light"
-            title="Add block"
+            title="Add element"
             @click=${() => {
               this.isBlockPickerOpen = !this.isBlockPickerOpen;
             }}
-            >${createElement(Plus)} Add block</editor-btn
+            >${createElement(Plus)} Add element</editor-btn
           >
           <editor-btn
             style="light"
@@ -1813,9 +1813,6 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
             title="Move section down"
             @click=${() => this.moveSection("down")}
             >${createElement(ArrowDown)}</editor-btn
-          >
-          <editor-btn style="light" @click=${() => this.openSectionSettings()}
-            >${createElement(Pencil)} Edit</editor-btn
           >
           <editor-btn
             style="light text-danger"

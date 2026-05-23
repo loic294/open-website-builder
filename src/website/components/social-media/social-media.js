@@ -1,7 +1,7 @@
 import { LitElement, html, unsafeCSS } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import * as simpleIcons from "simple-icons";
-import { Globe, Pencil, Plus, Trash, createElement } from "lucide";
+import { Globe, Plus, Trash, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
@@ -584,6 +584,14 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
     });
   }
 
+  openSocialSettingsIfNeeded() {
+    if (this.isSettingsEditorOpen) {
+      return;
+    }
+
+    this.openSocialSettings();
+  }
+
   renderSocialButton(item) {
     const icon = this.getSocialIcon(item);
     const showIcon = this.socialDisplayMode !== "text";
@@ -621,15 +629,11 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
     return html`
       <div
         data-editor-block
+        @pointerdown=${() => this.openSocialSettingsIfNeeded()}
         class="social-block ${this.isSettingsEditorOpen
           ? "is-settings-open"
           : ""}"
       >
-        <div class="social-toolbar">
-          <editor-btn style="light" @click=${() => this.openSocialSettings()}
-            >${createElement(Pencil)} Edit social media</editor-btn
-          >
-        </div>
         ${this.socialItems.length > 0
           ? html`
               <div class="social-buttons-grid">

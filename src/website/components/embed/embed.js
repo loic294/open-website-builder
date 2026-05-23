@@ -1,6 +1,6 @@
 import { LitElement, html, unsafeCSS } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { Code2, Pencil, createElement } from "lucide";
+import { Code2, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
@@ -142,21 +142,25 @@ class SiteEmbed extends withVariantConfig(EditorComponent) {
     });
   }
 
+  openEmbedSettingsIfNeeded() {
+    if (this.isSettingsEditorOpen) {
+      return;
+    }
+
+    this.openEmbedSettings();
+  }
+
   render() {
     const sanitizedHtml = sanitizeEmbedHtmlForEditor(this.embedHtml);
 
     return html`
       <div
         data-editor-block
+        @pointerdown=${() => this.openEmbedSettingsIfNeeded()}
         class="embed-block ${this.isSettingsEditorOpen
           ? "is-settings-open"
           : ""}"
       >
-        <div class="embed-toolbar">
-          <editor-btn style="light" @click=${() => this.openEmbedSettings()}
-            >${createElement(Pencil)} Edit embed</editor-btn
-          >
-        </div>
         ${sanitizedHtml.trim()
           ? html`<div class="embed-preview">${unsafeHTML(sanitizedHtml)}</div>`
           : html`

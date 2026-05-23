@@ -285,3 +285,20 @@ section:hover .section-resize-handle,
 section.is-settings-open .section-resize-handle {
   opacity: 1;
 }
+
+.shared-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  background: #facc15;
+  color: #111111;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+}

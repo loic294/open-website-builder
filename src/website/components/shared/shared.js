@@ -1,5 +1,4 @@
 import { LitElement, html, unsafeCSS } from "lit";
-import { Pencil, createElement } from "lucide";
 import { dataLayer } from "../../../editor/data/data-layer.js";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import styles from "./styles.css?inline";
@@ -123,6 +122,14 @@ class SharedComponent extends EditorComponent {
     });
   }
 
+  openSharedSettingsIfNeeded() {
+    if (this.isSettingsEditorOpen) {
+      return;
+    }
+
+    this.openSharedSettings();
+  }
+
   async loadComponent(componentId) {
     this.loading = true;
     this.error = "";
@@ -183,82 +190,58 @@ class SharedComponent extends EditorComponent {
   };
 
   render() {
-    if (this.loading) {
+    const sharedContent = (() => {
+      if (this.loading) {
+        return html`
+          <div class="shared-placeholder">Loading shared content...</div>
+        `;
+      }
+
+      if (this.error) {
+        return html`
+          <div class="shared-placeholder shared-error">${this.error}</div>
+        `;
+      }
+
+      const content = Array.isArray(this.componentConfig?.content)
+        ? this.componentConfig.content
+        : [];
+
+      if (content.length === 0) {
+        return html`
+          <div class="shared-placeholder">No shared content found.</div>
+        `;
+      }
+
+      const renderNode = this.renderNode;
+      if (typeof renderNode !== "function") {
+        return html`<div class="shared-placeholder">
+          Unable to render shared content.
+        </div>`;
+      }
+
       return html`
-        <div class="shared-toolbar">
-          <editor-btn style="light" @click=${() => this.openSharedSettings()}
-            >${createElement(Pencil)} Shared settings</editor-btn
-          >
-        </div>
-        <div class="shared-placeholder">Loading shared content...</div>
+        ${content.map((child) =>
+          renderNode(
+            child,
+            this.componentConfig,
+            this.onSharedConfigUpdated,
+            renderNode,
+          ),
+        )}
       `;
-    }
-
-    if (this.error) {
-      return html`
-        <div class="shared-toolbar">
-          <editor-btn style="light" @click=${() => this.openSharedSettings()}
-            >${createElement(Pencil)} Shared settings</editor-btn
-          >
-        </div>
-        <div class="shared-placeholder shared-error">
-          ${this.error}
-          <div class="shared-placeholder-actions">
-            <editor-btn
-              style="primary"
-              @click=${() => this.openSharedSettings()}
-              >Select shared component</editor-btn
-            >
-          </div>
-        </div>
-      `;
-    }
-
-    const content = Array.isArray(this.componentConfig?.content)
-      ? this.componentConfig.content
-      : [];
-
-    if (content.length === 0) {
-      return html`
-        <div class="shared-toolbar">
-          <editor-btn style="light" @click=${() => this.openSharedSettings()}
-            >${createElement(Pencil)} Shared settings</editor-btn
-          >
-        </div>
-        <div class="shared-placeholder">
-          No shared content found.
-          <div class="shared-placeholder-actions">
-            <editor-btn
-              style="primary"
-              @click=${() => this.openSharedSettings()}
-              >Select shared component</editor-btn
-            >
-          </div>
-        </div>
-      `;
-    }
-
-    const renderNode = this.renderNode;
-    if (typeof renderNode !== "function") {
-      return html`<div class="shared-placeholder">
-        Unable to render shared content.
-      </div>`;
-    }
+    })();
 
     return html`
-      <div class="shared-toolbar">
-        <editor-btn style="light" @click=${() => this.openSharedSettings()}
-          >${createElement(Pencil)} Shared settings</editor-btn
-        >
+      <div
+        data-editor-block
+        class="shared-block ${this.isSettingsEditorOpen
+          ? "is-settings-open"
+          : ""}"
+        @pointerdown=${() => this.openSharedSettingsIfNeeded()}
+      >
+        ${sharedContent}
       </div>
-      ${content.map((child) =>
-        renderNode(
-          child,
-          this.componentConfig,
-          this.onSharedConfigUpdated,
-          renderNode,
-        ),
-      )}
     `;
   }
 }

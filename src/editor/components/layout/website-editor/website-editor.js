@@ -1,6 +1,15 @@
 import { LitElement, html, css, unsafeCSS } from "lit";
+import {
+  Monitor,
+  Tablet,
+  Smartphone,
+  RectangleHorizontal,
+  RectangleVertical,
+  createElement,
+} from "lucide";
 
 import "../../ui/button/button.js";
+import "../../ui/radio-button/radio-button.js";
 import { renderNode } from "../../../core/render-node.js";
 import { dataLayer } from "../../../data/data-layer.js";
 
@@ -19,6 +28,9 @@ class WebsiteEditor extends LitElement {
   static properties = {
     pageConfig: { state: true },
     publishStatus: { state: true },
+    activeView: { state: true },
+    activeSize: { state: true },
+    activeOrientation: { state: true },
   };
 
   static styles = [unsafeCSS(baseStyle), unsafeCSS(styles), css``];
@@ -28,7 +40,33 @@ class WebsiteEditor extends LitElement {
     this.pageConfig = null;
     this.didLoadConfig = false;
     this.publishStatus = "";
+    this.activeView = "editor";
+    this.activeSize = "desktop";
+    this.activeOrientation = "vertical";
   }
+
+  viewOptions = [
+    { label: "Editor", value: "editor" },
+    { label: "Preview", value: "preview" },
+    { label: "Settings", value: "settings" },
+  ];
+
+  sizeOptions = [
+    { label: html`${createElement(Monitor)}`, value: "desktop" },
+    { label: html`${createElement(Tablet)}`, value: "tablet" },
+    { label: html`${createElement(Smartphone)}`, value: "mobile" },
+  ];
+
+  orientationOptions = [
+    {
+      label: html`${createElement(RectangleHorizontal)} Horizontal`,
+      value: "horizontal",
+    },
+    {
+      label: html`${createElement(RectangleVertical)} Vertical`,
+      value: "vertical",
+    },
+  ];
 
   async connectedCallback() {
     super.connectedCallback();
@@ -79,6 +117,32 @@ class WebsiteEditor extends LitElement {
     }
   };
 
+  onActiveViewChange = (event) => {
+    this.activeView = event.detail.value;
+  };
+
+  onActiveSizeChange = (event) => {
+    this.activeSize = event.detail.value;
+  };
+
+  onActiveOrientationChange = (event) => {
+    this.activeOrientation = event.detail.value;
+  };
+
+  renderViewContent(content) {
+    if (this.activeView === "preview") {
+      return html`<div class="view-placeholder">Preview section</div>`;
+    }
+
+    if (this.activeView === "settings") {
+      return html`<div class="view-placeholder">Settings section</div>`;
+    }
+
+    return content.map((node) =>
+      renderNode(node, this.pageConfig, this.onPageConfigUpdated, renderNode),
+    );
+  }
+
   render() {
     if (!this.pageConfig) {
       return html``;
@@ -90,11 +154,31 @@ class WebsiteEditor extends LitElement {
 
     return html`<div class="editor">
       <div class="editor-top-menu">
-        <div class="page-info">
-          <span class="page-title">Home</span>
-          <span class="page-path">/index</span>
+        <div class="left-menu">
+          <div class="page-info">
+            <div class="page-info-main">
+              <span class="page-title">Home</span>
+            </div>
+            <span class="page-path">/index</span>
+          </div>
+          <div class="view-mode-switcher">
+            <editor-radio-button
+              .options=${this.viewOptions}
+              .value=${this.activeView}
+              @change=${this.onActiveViewChange}
+              disabledTooltip=${true}
+            ></editor-radio-button>
+          </div>
         </div>
-        <div>
+        <div class="right-menu">
+          <div class="size-switcher">
+            <editor-radio-button
+              .options=${this.sizeOptions}
+              .value=${this.activeSize}
+              @change=${this.onActiveSizeChange}
+              disabledTooltip=${true}
+            ></editor-radio-button>
+          </div>
           <editor-btn @click=${this.onPublishClick}>Publish</editor-btn>
           ${this.publishStatus
             ? html`<span
@@ -105,14 +189,22 @@ class WebsiteEditor extends LitElement {
         </div>
       </div>
       <div class="website website-container">
-        ${content.map((node) =>
-          renderNode(
-            node,
-            this.pageConfig,
-            this.onPageConfigUpdated,
-            renderNode,
-          ),
-        )}
+        ${this.activeSize !== "desktop"
+          ? html`<div class="orientation-switcher">
+              <editor-radio-button
+                .options=${this.orientationOptions}
+                .value=${this.activeOrientation}
+                @change=${this.onActiveOrientationChange}
+                disabledTooltip=${true}
+              ></editor-radio-button>
+            </div>`
+          : ""}
+        <div
+          class="website-viewport size-${this.activeSize} orientation-${this
+            .activeOrientation}"
+        >
+          ${this.renderViewContent(content)}
+        </div>
       </div>
     </div>`;
   }
