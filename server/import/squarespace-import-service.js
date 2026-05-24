@@ -170,6 +170,7 @@ function makeTextNode(html) {
     id: `text-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     type: "text",
     content: html,
+    settings: {},
   };
 }
 
@@ -224,6 +225,7 @@ function makeEmbedNode(html) {
     id: `embed-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     type: "embed",
     html,
+    settings: {},
   };
 }
 
@@ -243,6 +245,7 @@ function makeGalleryNode(images) {
     id: `gallery-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     type: "gallery",
     images,
+    settings: {},
   };
 }
 
@@ -251,7 +254,13 @@ function makeImageNode(url) {
     id: `image-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     type: "image",
     url,
+    settings: {},
   };
+}
+
+function getElementClassName($, element) {
+  const raw = ($(element).attr("class") || "").trim();
+  return raw || "";
 }
 
 function hasTextContent(html) {
@@ -516,6 +525,7 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
           context: $(element),
         }))
       : [{ context: $.root() }];
+    const sectionElementByIndex = rootSections.length > 0 ? rootSections : [];
   const resultSections = [];
   let textStyleIndex = 0;
 
@@ -542,7 +552,12 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
       }
 
       if (galleryUrls.length > 0) {
-        sectionNodes.push(makeGalleryNode(galleryUrls));
+          const galleryNode = makeGalleryNode(galleryUrls);
+          const galleryClass = getElementClassName($, galleryEl);
+          if (galleryClass) {
+            galleryNode.settings.className = galleryClass;
+          }
+          sectionNodes.push(galleryNode);
       }
     }
 
@@ -552,7 +567,12 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
     for (const embedEl of embedEls) {
       const embedHtml = $.html(embedEl);
       if (embedHtml && embedHtml.trim()) {
-        sectionNodes.push(makeEmbedNode(embedHtml));
+          const embedNode = makeEmbedNode(embedHtml);
+          const embedClass = getElementClassName($, embedEl);
+          if (embedClass) {
+            embedNode.settings.className = embedClass;
+          }
+          sectionNodes.push(embedNode);
       }
     }
 
@@ -562,7 +582,12 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
     for (const buttonEl of buttonEls) {
       const href = $(buttonEl).attr("href") || "";
       const label = $(buttonEl).text().trim();
-      sectionNodes.push(makeButtonNode(label, href));
+        const buttonNode = makeButtonNode(label, href);
+        const buttonClass = getElementClassName($, buttonEl);
+        if (buttonClass) {
+          buttonNode.settings.className = buttonClass;
+        }
+        sectionNodes.push(buttonNode);
     }
 
     const socialRoot = contextRoot
@@ -585,11 +610,13 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
         .filter((item) => item.link);
 
       if (items.length > 0) {
-        sectionNodes.push({
-          id: `social-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          type: "social-media",
-          items,
-        });
+          const socialClass = getElementClassName($, socialRoot[0]);
+          sectionNodes.push({
+            id: `social-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            type: "social-media",
+            items,
+            settings: socialClass ? { className: socialClass } : {},
+          });
       }
     }
 
@@ -618,7 +645,12 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
         report,
       });
       if (localUrl) {
-        sectionNodes.push(makeImageNode(localUrl));
+          const imageNode = makeImageNode(localUrl);
+          const imageClass = getElementClassName($, imageEl);
+          if (imageClass) {
+            imageNode.settings.className = imageClass;
+          }
+          sectionNodes.push(imageNode);
       }
     }
 
@@ -631,6 +663,13 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
       if (hasTextContent(textHtml)) {
         const textNode = extractTextNodeWithStyles($, textEl, textStyleIndex);
         textStyleIndex += 1;
+          const textClass = getElementClassName($, textEl);
+          if (textClass) {
+            if (!textNode.settings) {
+              textNode.settings = {};
+            }
+            textNode.settings.className = textClass;
+          }
         sectionNodes.push(textNode);
       }
     }
@@ -648,7 +687,15 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
     }
 
     if (sectionNodes.length > 0) {
-      resultSections.push(ensureSection(sectionNodes));
+      const sectionEl = sectionElementByIndex[resultSections.length];
+      const section = ensureSection(sectionNodes);
+      if (sectionEl) {
+        const sectionClass = getElementClassName($, sectionEl);
+        if (sectionClass) {
+          section.settings.className = sectionClass;
+        }
+      }
+      resultSections.push(section);
     }
   }
 
