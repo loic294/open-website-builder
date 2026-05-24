@@ -280,6 +280,16 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
     this.onSectionResizePointerMove =
       this.onSectionResizePointerMove.bind(this);
     this.onSectionResizePointerUp = this.onSectionResizePointerUp.bind(this);
+    this.onActiveSettingsOwnerChanged =
+      this.onActiveSettingsOwnerChanged.bind(this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener(
+      "owb-active-settings-owner-changed",
+      this.onActiveSettingsOwnerChanged,
+    );
   }
 
   closeSettingsEditor() {
@@ -343,15 +353,69 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       cancelAnimationFrame(this.globalHandleFrame);
       this.globalHandleFrame = null;
     }
+    window.removeEventListener(
+      "owb-active-settings-owner-changed",
+      this.onActiveSettingsOwnerChanged,
+    );
     this.cleanupGridPointerInteraction();
     this.cleanupSectionResizeInteraction();
     super.disconnectedCallback();
   }
 
+  onActiveSettingsOwnerChanged() {
+    this.requestUpdate();
+    this.scheduleGlobalHandleRefresh();
+  }
+
   getTrackedGridChildId() {
+    if (this.activeGridPointerState?.childId) {
+      return this.activeGridPointerState.childId;
+    }
+
+    const activeSettingsChildId = this.getActiveSettingsChildIdForSection();
+    if (activeSettingsChildId) {
+      return activeSettingsChildId;
+    }
+
+    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    if (activeSettingsOwner && activeSettingsOwner !== this) {
+      return "";
+    }
+
+    return this.hoveredGridChildId || "";
+  }
+
+  getActiveSettingsChildIdForSection() {
+    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    if (!activeSettingsOwner || activeSettingsOwner === this) {
+      return "";
+    }
+
+    const activeOwnerNodeId = String(activeSettingsOwner?.node?.id || "");
+    if (!activeOwnerNodeId) {
+      return "";
+    }
+
+    const childNodes = this.getChildNodes();
+    return childNodes.some((child) => String(child?.id || "") === activeOwnerNodeId)
+      ? activeOwnerNodeId
+      : "";
+  }
+
+  isSettingsOwnedBySection() {
+    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    if (!activeSettingsOwner) {
+      return false;
+    }
+
     return (
-      this.activeGridPointerState?.childId || this.hoveredGridChildId || ""
+      activeSettingsOwner === this ||
+      Boolean(this.getActiveSettingsChildIdForSection())
     );
+  }
+
+  isTrackedChildSettingsOwner() {
+    return Boolean(this.getActiveSettingsChildIdForSection());
   }
 
   onGridItemPointerEnter(childId) {
@@ -365,6 +429,12 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
 
   onGridContainerPointerMove(event) {
     if (!this.isGridChildEditingEnabled() || this.activeGridPointerState) {
+      return;
+    }
+
+    // Disable hover detection if a settings panel is open on a different component
+    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    if (activeSettingsOwner && activeSettingsOwner !== this) {
       return;
     }
 
@@ -400,6 +470,15 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
 
   onSectionPointerLeave() {
     if (this.activeGridPointerState) {
+      return;
+    }
+
+    // Keep the current focused child while this section owns the settings panel.
+    if (
+      this.isSettingsEditorOpen ||
+      this.isSettingsOwnedBySection() ||
+      this.isTrackedChildSettingsOwner()
+    ) {
       return;
     }
 
@@ -1596,6 +1675,7 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
         : "contained";
     const showVerticalResizeHandles = trackedImageSizeMode !== "full-width";
     const showHorizontalResizeHandles = true;
+    const isFocusedHandleStateLocked = this.isSettingsOwnedBySection();
     const shouldRenderGlobalGridHandles =
       isGridChildEditingEnabled &&
       Boolean(trackedGridChildId) &&
@@ -1608,10 +1688,11 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
         ? ""
         : `min-height: ${this.settingFixedHeight};`;
     const sectionPaddingStyle = `--section-padding-top: ${sectionPadding.top}; --section-padding-right: ${sectionPadding.right}; --section-padding-bottom: ${sectionPadding.bottom}; --section-padding-left: ${sectionPadding.left};`;
+    const sectionClassName = `${this.isSettingsEditorOpen ? "is-settings-open" : ""} ${isFocusedHandleStateLocked ? "is-focus-locked" : ""}`.trim();
 
     return html`<div>
       <section
-        class="${this.isSettingsEditorOpen ? "is-settings-open" : ""}"
+        class="${sectionClassName}"
         style="${backgroundColorStyle}${textColorStyle}"
         @pointerdown=${(event) => this.onSectionPointerDown(event)}
         @pointermove=${(event) => this.onGridContainerPointerMove(event)}

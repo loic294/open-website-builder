@@ -282,7 +282,8 @@ section:hover .section-controls {
 }
 
 section:hover .section-resize-handle,
-section.is-settings-open .section-resize-handle {
+section.is-settings-open .section-resize-handle,
+section.is-focus-locked .section-resize-handle {
   opacity: 1;
 }
 

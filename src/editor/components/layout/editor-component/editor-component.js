@@ -58,6 +58,16 @@ export class EditorComponent extends LitElement {
 
   static activeSettingsOwner = null;
 
+  static dispatchActiveSettingsOwnerChanged() {
+    window.dispatchEvent(
+      new CustomEvent("owb-active-settings-owner-changed", {
+        detail: {
+          ownerNodeId: String(EditorComponent.activeSettingsOwner?.node?.id || ""),
+        },
+      }),
+    );
+  }
+
   static properties = {
     isSettingsEditorOpen: { type: Boolean },
     settingCustomCss: { type: String },
@@ -138,6 +148,7 @@ export class EditorComponent extends LitElement {
     }
 
     EditorComponent.activeSettingsOwner = this;
+    EditorComponent.dispatchActiveSettingsOwnerChanged();
     this.ensureOverlayContainer();
     this.isSettingsEditorOpen = true;
 
@@ -615,6 +626,7 @@ export class EditorComponent extends LitElement {
 
     if (EditorComponent.activeSettingsOwner === this) {
       EditorComponent.activeSettingsOwner = null;
+      EditorComponent.dispatchActiveSettingsOwnerChanged();
     }
 
     this.renderSettingsOverlay();
