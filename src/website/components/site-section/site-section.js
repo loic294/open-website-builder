@@ -134,14 +134,22 @@ function getPublishedContainerStyle(settings = {}) {
     if (settings.settingGap) {
       parts.push(`gap: ${String(settings.settingGap)}`);
     }
-    if (settings.settingGridJustifyContent) {
-      parts.push(`justify-content: ${settings.settingGridJustifyContent}`);
-    }
-    if (settings.settingGridAlignItems) {
-      parts.push(`align-items: ${settings.settingGridAlignItems}`);
-    }
-    if (settings.settingGridAlignContent) {
-      parts.push(`align-content: ${settings.settingGridAlignContent}`);
+    if (mode === "visual") {
+      // The editor visual-mode grid always stretches items to their tracks.
+      parts.push("justify-items: stretch");
+      parts.push("align-items: stretch");
+      parts.push("justify-content: stretch");
+      parts.push("align-content: stretch");
+    } else {
+      if (settings.settingGridJustifyContent) {
+        parts.push(`justify-content: ${settings.settingGridJustifyContent}`);
+      }
+      if (settings.settingGridAlignItems) {
+        parts.push(`align-items: ${settings.settingGridAlignItems}`);
+      }
+      if (settings.settingGridAlignContent) {
+        parts.push(`align-content: ${settings.settingGridAlignContent}`);
+      }
     }
   }
 
@@ -397,7 +405,9 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
     }
 
     const childNodes = this.getChildNodes();
-    return childNodes.some((child) => String(child?.id || "") === activeOwnerNodeId)
+    return childNodes.some(
+      (child) => String(child?.id || "") === activeOwnerNodeId,
+    )
       ? activeOwnerNodeId
       : "";
   }
@@ -1688,7 +1698,8 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
         ? ""
         : `min-height: ${this.settingFixedHeight};`;
     const sectionPaddingStyle = `--section-padding-top: ${sectionPadding.top}; --section-padding-right: ${sectionPadding.right}; --section-padding-bottom: ${sectionPadding.bottom}; --section-padding-left: ${sectionPadding.left};`;
-    const sectionClassName = `${this.isSettingsEditorOpen ? "is-settings-open" : ""} ${isFocusedHandleStateLocked ? "is-focus-locked" : ""}`.trim();
+    const sectionClassName =
+      `${this.isSettingsEditorOpen ? "is-settings-open" : ""} ${isFocusedHandleStateLocked ? "is-focus-locked" : ""}`.trim();
 
     return html`<div>
       <section

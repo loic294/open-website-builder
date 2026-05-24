@@ -1,12 +1,5 @@
 import { LitElement, html, render, unsafeCSS } from "lit";
-import {
-  ArrowDown,
-  ArrowUp,
-  Ellipsis,
-  Trash,
-  X,
-  createElement,
-} from "lucide";
+import { ArrowDown, ArrowUp, Ellipsis, Trash, X, createElement } from "lucide";
 import { EditorState } from "@codemirror/state";
 import {
   EditorView,
@@ -62,7 +55,9 @@ export class EditorComponent extends LitElement {
     window.dispatchEvent(
       new CustomEvent("owb-active-settings-owner-changed", {
         detail: {
-          ownerNodeId: String(EditorComponent.activeSettingsOwner?.node?.id || ""),
+          ownerNodeId: String(
+            EditorComponent.activeSettingsOwner?.node?.id || "",
+          ),
         },
       }),
     );

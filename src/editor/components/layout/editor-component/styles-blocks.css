@@ -16,7 +16,6 @@
   right: 0;
   bottom: 0;
   border: 4px solid var(--editor-primary-color, #ccc);
-  pointer-events: none;
 }
 
 :host(.section-grid-item) [data-editor-block]:hover::before,

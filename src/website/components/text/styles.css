@@ -130,3 +130,8 @@
   outline: 1px solid var(--editor-primary-color, #ffc700);
   border-radius: 2px;
 }
+
+a[href] {
+  color: var(--website-link-color);
+  text-decoration: underline;
+}

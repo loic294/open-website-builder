@@ -35,7 +35,7 @@ function getButtonSizeStyle(size, settings = {}) {
   }
 
   if (size === "xl") {
-    return "--button-padding-y: 0.9rem; --button-padding-x: 1.5rem; --button-font-size: 1.15rem;";
+    return "--button-padding-y: 1.6rem; --button-padding-x: 2rem; --button-font-size: 1.5rem;";
   }
 
   const top = settings.buttonPaddingTop || "0.58rem";

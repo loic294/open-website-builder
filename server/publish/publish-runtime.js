@@ -63,6 +63,33 @@ function sanitizeEmbed(rawHtml) {
     .replace(/\ssrcdoc\s*=\s*'[^']*'/gi, "");
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeAttr(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;");
+}
+
+function getSocialButtonShapeRadius(shape, customRadius) {
+  if (shape === "rounded") {
+    return "9999px";
+  }
+
+  if (shape === "square") {
+    return "0px";
+  }
+
+  return customRadius || "12px";
+}
+
 function getSectionPadding(settings) {
   const presets = {
     none: { top: "0", right: "0", bottom: "0", left: "0" },
@@ -142,14 +169,21 @@ function getSectionContainerStyle(settings) {
     if (settings.settingGap) {
       parts.push(`gap: ${String(settings.settingGap)}`);
     }
-    if (settings.settingGridJustifyContent) {
-      parts.push(`justify-content: ${settings.settingGridJustifyContent}`);
-    }
-    if (settings.settingGridAlignItems) {
-      parts.push(`align-items: ${settings.settingGridAlignItems}`);
-    }
-    if (settings.settingGridAlignContent) {
-      parts.push(`align-content: ${settings.settingGridAlignContent}`);
+    if (mode === "visual") {
+      parts.push("justify-items: stretch");
+      parts.push("align-items: stretch");
+      parts.push("justify-content: stretch");
+      parts.push("align-content: stretch");
+    } else {
+      if (settings.settingGridJustifyContent) {
+        parts.push(`justify-content: ${settings.settingGridJustifyContent}`);
+      }
+      if (settings.settingGridAlignItems) {
+        parts.push(`align-items: ${settings.settingGridAlignItems}`);
+      }
+      if (settings.settingGridAlignContent) {
+        parts.push(`align-content: ${settings.settingGridAlignContent}`);
+      }
     }
   }
 
@@ -187,7 +221,7 @@ class OwbImage extends HTMLElement {
       : `<div class="image-block"><div class="image-frame"></div></div>`;
     renderShadow(
       this,
-      `${customCss ? `<style>${customCss}</style>` : ""}${content}`,
+      `<style>:host{display:block;width:100%;height:100%;}</style>${customCss ? `<style>${customCss}</style>` : ""}${content}`,
     );
   }
 }
@@ -273,25 +307,39 @@ class OwbSocialMedia extends HTMLElement {
     const variant = String(settings.socialButtonVariant || "filled");
     const shape = String(settings.socialButtonShape || "rounded");
     const customRadius = String(settings.socialButtonRadiusCustom || "9999px");
+    const alignment = String(settings.socialButtonAlignment || "left");
     const displayMode = String(settings.socialDisplayMode || "icon-text");
+    const iconColorMode = String(settings.socialIconColorMode || "brand");
     const showIcon = displayMode !== "text";
     const showText = displayMode !== "icon";
-    const radius =
-      shape === "square" ? "0" : shape === "custom" ? customRadius : "9999px";
+    const radius = getSocialButtonShapeRadius(shape, customRadius);
 
     const contentHtml = items
       .map((item) => {
-        const label = String(item?.name || "Social");
+        const label = String(
+          item?.name || item?.iconTitle || item?.icon || "Social",
+        );
         const href = String(item?.link || "").trim() || "#";
-        const rawIcon = String(item?.icon || "").trim();
-        const icon = rawIcon ? rawIcon.slice(0, 1).toUpperCase() : "S";
-        return `<a class="social-button size-${size} theme-${theme} variant-${variant}" href="${href}" target="_blank" rel="noopener noreferrer" style="--social-button-radius: ${radius};">${showIcon ? `<span class="social-icon"><span class="social-fallback-icon">${icon}</span></span>` : ""}${showText ? `<span>${label}</span>` : ""}</a>`;
+        const iconSvg = String(item?.iconSvg || "").trim();
+        const iconHex = String(item?.iconHex || "777777").trim();
+        const iconColorClass =
+          iconColorMode === "text" ? " use-text-color" : "";
+
+        const iconMarkup = showIcon
+          ? iconSvg
+            ? `<span class="social-icon"><span class="simple-icon is-button${iconColorClass}" style="--simple-icon-color: #${escapeAttr(iconHex)};">${iconSvg}</span></span>`
+            : `<span class="social-icon"><span class="social-fallback-icon is-button">&#9679;</span></span>`
+          : "";
+
+        const labelMarkup = showText ? `<span>${escapeHtml(label)}</span>` : "";
+
+        return `<a class="social-button size-${size} theme-${theme} variant-${variant}" href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer" style="--social-button-radius: ${escapeAttr(radius)};">${iconMarkup}${labelMarkup}</a>`;
       })
       .join("");
 
     renderShadow(
       this,
-      `<div class="social-block"><div class="social-buttons-grid">${contentHtml}</div></div>`,
+      `<div class="social-block"><div class="social-buttons-grid align-${alignment}">${contentHtml}</div></div>`,
     );
   }
 }

@@ -14,6 +14,18 @@
   gap: 8px;
 }
 
+.social-buttons-grid.align-left {
+  justify-content: flex-start;
+}
+
+.social-buttons-grid.align-center {
+  justify-content: center;
+}
+
+.social-buttons-grid.align-right {
+  justify-content: flex-end;
+}
+
 .social-button {
   display: inline-flex;
   align-items: center;
@@ -52,7 +64,7 @@
 }
 
 .social-button.size-large {
-  --social-button-gap: 10px;
+  --social-button-gap: 14px;
   --social-button-padding-y: 0.42rem;
   --social-button-padding-x: 0.72rem;
   --social-button-font-size: 1.1rem;
@@ -60,11 +72,11 @@
 }
 
 .social-button.size-xxl {
-  --social-button-gap: 10px;
-  --social-button-padding-y: 0.46rem;
-  --social-button-padding-x: 0.78rem;
-  --social-button-font-size: 1rem;
-  --social-button-icon-size: 56px;
+  --social-button-gap: 24px;
+  --social-button-padding-y: 1.4rem;
+  --social-button-padding-x: 1.4rem;
+  --social-button-font-size: 0.6rem;
+  --social-button-icon-size: 36px;
 }
 
 .social-button.theme-primary {

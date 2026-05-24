@@ -121,6 +121,7 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
     socialButtonTheme: { type: String },
     socialButtonVariant: { type: String },
     socialButtonSize: { type: String },
+    socialButtonAlignment: { type: String },
     socialButtonShape: { type: String },
     socialButtonRadiusCustom: { type: String },
     socialIconColorMode: { type: String },
@@ -139,6 +140,7 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
     this.socialButtonTheme = "primary";
     this.socialButtonVariant = "filled";
     this.socialButtonSize = "medium";
+    this.socialButtonAlignment = "left";
     this.socialButtonShape = "rounded";
     this.socialButtonRadiusCustom = "12px";
     this.socialIconColorMode = "brand";
@@ -157,6 +159,7 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
         socialButtonTheme: "primary",
         socialButtonVariant: "filled",
         socialButtonSize: "medium",
+        socialButtonAlignment: "left",
         socialButtonShape: "rounded",
         socialButtonRadiusCustom: "12px",
         socialIconColorMode: "brand",
@@ -399,6 +402,7 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
       socialButtonTheme: "primary",
       socialButtonVariant: "filled",
       socialButtonSize: "medium",
+      socialButtonAlignment: "left",
       socialButtonShape: "rounded",
       socialButtonRadiusCustom: "12px",
       socialIconColorMode: "brand",
@@ -540,6 +544,18 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
               ></editor-radio-button>
               <editor-radio-button
                 .options=${[
+                  { label: "Left", value: "left" },
+                  { label: "Center", value: "center" },
+                  { label: "Right", value: "right" },
+                ]}
+                .value=${this.socialButtonAlignment}
+                @change=${(event) =>
+                  this.updateSettingsState({
+                    socialButtonAlignment: event.detail.value,
+                  })}
+              ></editor-radio-button>
+              <editor-radio-button
+                .options=${[
                   { label: "Brand icon color", value: "brand" },
                   { label: "Text color", value: "text" },
                 ]}
@@ -636,7 +652,9 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
       >
         ${this.socialItems.length > 0
           ? html`
-              <div class="social-buttons-grid">
+              <div
+                class="social-buttons-grid align-${this.socialButtonAlignment}"
+              >
                 ${this.socialItems.map((item) => this.renderSocialButton(item))}
               </div>
             `
@@ -676,6 +694,7 @@ class OwbSocialMedia extends withVariantConfig(LitElement) {
     const size = String(settings.socialButtonSize || "medium");
     const theme = String(settings.socialButtonTheme || "primary");
     const variant = String(settings.socialButtonVariant || "filled");
+    const alignment = String(settings.socialButtonAlignment || "left");
     const shape = String(settings.socialButtonShape || "rounded");
     const customRadius = String(settings.socialButtonRadiusCustom || "9999px");
     const displayMode = String(settings.socialDisplayMode || "icon-text");
@@ -719,6 +738,7 @@ class OwbSocialMedia extends withVariantConfig(LitElement) {
 
   render() {
     const { items = [], settings = {} } = this.config;
+    const alignment = String(settings.socialButtonAlignment || "left");
 
     if (!Array.isArray(items) || items.length === 0) {
       return html`<div class="social-empty">No social links configured</div>`;
@@ -726,7 +746,7 @@ class OwbSocialMedia extends withVariantConfig(LitElement) {
 
     return html`
       <div class="social-block">
-        <div class="social-buttons-grid">
+        <div class="social-buttons-grid align-${alignment}">
           ${items.map((item) => this.renderButton(item, settings))}
         </div>
       </div>

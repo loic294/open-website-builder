@@ -1,13 +1,13 @@
 :root {
-  --website-primary-color: #007bff;
+  --website-primary-color: #ffc700;
   --website-secondary-color: #6c757d;
   --website-light-color: #f8f9fa;
-  --website-dark-color: #343a40;
+  --website-dark-color: #000000;
   --website-muted-color: #6c757d;
   --website-neutral-color: #6c757d;
   --website-background-light-color: #f8f9fa;
-  --website-background-dark-color: #343a40;
-  --website-text-light-color: #212529;
+  --website-background-dark-color: #000000;
+  --website-text-light-color: #ffffff;
   --website-text-dark-color: #343a40;
   --website-text-neutral-color: #6c757d;
   --website-text-muted-color: #6c757d;

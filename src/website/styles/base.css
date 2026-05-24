@@ -35,3 +35,8 @@ body {
   font-family: var(--website-title-font-family);
   margin: 0 0 1rem;
 }
+
+a[href] {
+  color: var(--website-link-color);
+  text-decoration: underline;
+}

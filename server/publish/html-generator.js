@@ -1,7 +1,57 @@
+import * as simpleIcons from "simple-icons";
+
 function escapeAttr(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;");
+}
+
+const LEGACY_ICON_VALUE_MAP = {
+  twitter: "x",
+  linkedin: "linkedin",
+  github: "github",
+  instagram: "instagram",
+  youtube: "youtube",
+  facebook: "facebook",
+  tiktok: "tiktok",
+  globe: "",
+  custom: "",
+};
+
+const SIMPLE_ICON_LIBRARY = Object.values(simpleIcons)
+  .filter(
+    (icon) =>
+      icon &&
+      typeof icon === "object" &&
+      typeof icon.slug === "string" &&
+      typeof icon.title === "string" &&
+      typeof icon.svg === "string",
+  )
+  .map((icon) => ({
+    slug: icon.slug,
+    title: icon.title,
+    svg: icon.svg,
+    hex: icon.hex,
+  }));
+
+const SIMPLE_ICON_MAP = new Map(
+  SIMPLE_ICON_LIBRARY.map((icon) => [icon.slug, icon]),
+);
+
+function normalizeIconSlug(value) {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (!raw) {
+    return "";
+  }
+
+  if (raw in LEGACY_ICON_VALUE_MAP) {
+    return LEGACY_ICON_VALUE_MAP[raw];
+  }
+
+  return raw;
 }
 
 function configScript(obj) {
@@ -25,7 +75,24 @@ function renderEmbed(node) {
 }
 
 function renderSocialMedia(node) {
-  return `<owb-social-media>${configScript({ items: node?.items ?? [], settings: node?.settings ?? {} })}</owb-social-media>`;
+  const items = Array.isArray(node?.items)
+    ? node.items.map((item) => {
+        const normalizedIconSlug = normalizeIconSlug(item?.icon);
+        const icon = normalizedIconSlug
+          ? SIMPLE_ICON_MAP.get(normalizedIconSlug)
+          : null;
+
+        return {
+          ...(item && typeof item === "object" ? item : {}),
+          icon: normalizedIconSlug,
+          iconSvg: icon?.svg || "",
+          iconHex: icon?.hex || "",
+          iconTitle: icon?.title || "",
+        };
+      })
+    : [];
+
+  return `<owb-social-media>${configScript({ items, settings: node?.settings ?? {} })}</owb-social-media>`;
 }
 
 function renderGallery(node) {
@@ -77,7 +144,33 @@ function getGridItemStyle(settings = {}) {
   if (Number.isFinite(rowStart) && Number.isFinite(rowSpan)) {
     parts.push(`grid-row: ${rowStart} / span ${Math.max(1, rowSpan)}`);
   }
+
+  // Keep the wrapper as a proper stacking context target for overlapping grid items.
+  parts.push("position: relative");
+  parts.push("min-width: 0");
+  parts.push("min-height: 0");
+
+  const hostZIndex = getHostZIndexFromCustomCss(settings);
+  if (hostZIndex) {
+    parts.push(`z-index: ${hostZIndex}`);
+  }
+
   return parts.join("; ");
+}
+
+function getHostZIndexFromCustomCss(settings = {}) {
+  const customCss = String(settings.customCss || "");
+  if (!customCss) {
+    return "";
+  }
+
+  const hostRuleMatch = customCss.match(/:host\s*\{([\s\S]*?)\}/i);
+  if (!hostRuleMatch) {
+    return "";
+  }
+
+  const zIndexMatch = hostRuleMatch[1]?.match(/z-index\s*:\s*([^;\n\r}]+)/i);
+  return zIndexMatch?.[1]?.trim() || "";
 }
 
 async function renderSection(node, context) {
@@ -94,9 +187,7 @@ async function renderSection(node, context) {
     if (isGridMode) {
       const style = getGridItemStyle(child?.settings ?? {});
       renderedChildren.push(
-        style
-          ? `<div style="${escapeAttr(style)}">${childHtml}</div>`
-          : childHtml,
+        `<div style="${escapeAttr(style)}">${childHtml}</div>`,
       );
     } else {
       renderedChildren.push(childHtml);

@@ -205,7 +205,16 @@ export const editorRenderImage = (
 };
 
 class OwbImage extends withVariantConfig(LitElement) {
-  static styles = unsafeCSS(styles);
+  static styles = [
+    unsafeCSS(styles),
+    unsafeCSS(`
+      :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    `),
+  ];
 
   render() {
     const { url = "", settings = {} } = this.config;
