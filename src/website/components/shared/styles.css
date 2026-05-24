@@ -10,9 +10,15 @@
   padding: 36px 12px 12px;
   border: 1px dashed var(--editor-border-color, #d1d5db);
   border-radius: 6px;
-  color: var(--editor-muted-text-color, #6b7280);
+  color: var(
+    --owb-section-child-text-color,
+    var(--editor-muted-text-color, #6b7280)
+  );
   font-size: 13px;
-  background: var(--editor-surface-color, #fff);
+  background: var(
+    --owb-section-child-background-color,
+    var(--editor-surface-color, #fff)
+  );
   display: grid;
   gap: 10px;
   justify-items: center;

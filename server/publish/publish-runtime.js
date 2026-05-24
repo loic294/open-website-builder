@@ -116,9 +116,15 @@ function getSectionStyle(settings) {
   const parts = [];
   if (settings.settingBackgroundColor) {
     parts.push(`background-color: var(${settings.settingBackgroundColor})`);
+    parts.push(
+      `--owb-section-child-background-color: var(${settings.settingBackgroundColor})`,
+    );
   }
   if (settings.settingTextColor) {
     parts.push(`color: var(${settings.settingTextColor})`);
+    parts.push(
+      `--owb-section-child-text-color: var(${settings.settingTextColor})`,
+    );
   }
   return parts.join("; ");
 }
@@ -233,6 +239,7 @@ class OwbButton extends HTMLElement {
     const size = String(settings.buttonSize || "m");
     const theme = String(settings.buttonTheme || "primary");
     const variant = String(settings.buttonVariant || "filled");
+    const buttonType = String(settings.buttonType || "link");
     const shape = String(settings.buttonShape || "rounded");
     const customRadius = String(settings.buttonRadiusCustom || "12px");
 
@@ -271,9 +278,14 @@ class OwbButton extends HTMLElement {
       radius = customRadius || "12px";
     }
 
+    const buttonMarkup =
+      buttonType === "submit" || buttonType === "button"
+        ? `<button class="site-button theme-${theme} variant-${variant}" type="${buttonType}" style="${sizeStyle} --button-radius: ${radius};">${content}</button>`
+        : `<a class="site-button theme-${theme} variant-${variant}" href="${link || "#"}" style="${sizeStyle} --button-radius: ${radius};">${content}</a>`;
+
     renderShadow(
       this,
-      `<div class="button-block"><div class="button-preview-wrap"><a class="site-button theme-${theme} variant-${variant}" href="${link || "#"}" style="${sizeStyle} --button-radius: ${radius};">${content}</a></div></div>`,
+      `<div class="button-block"><div class="button-preview-wrap">${buttonMarkup}</div></div>`,
     );
   }
 }
@@ -496,6 +508,184 @@ class OwbSection extends HTMLElement {
   }
 }
 
+class OwbContainer extends HTMLElement {
+  connectedCallback() {
+    const settings = readConfig(this);
+    const width = String(settings.settingWidth || "normal");
+    const widthClass =
+      width === "full"
+        ? "is-full-width"
+        : width === "custom"
+          ? ""
+          : "is-normal-width";
+    const customCss = String(settings.customCss || "").trim();
+
+    renderShadow(
+      this,
+      `<style>:host{display:block;} .container{position:relative;padding:var(--section-padding-top, 7rem) var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);margin:0 auto;} .container.is-normal-width{max-width:960px;} .container.is-full-width{max-width:100%;}</style>${customCss ? `<style>${customCss}</style>` : ""}<div class="container ${widthClass}" style="${getSectionStyle(settings)}; ${getSectionContainerStyle(settings)}"><slot></slot></div>`,
+    );
+  }
+}
+
+class OwbForm extends HTMLElement {
+  connectedCallback() {
+    const settings = readConfig(this);
+    const children = Array.from(this.childNodes).filter(
+      (node) =>
+        !(
+          node instanceof HTMLScriptElement &&
+          node.hasAttribute("data-owb-config")
+        ),
+    );
+    const action = String(settings.formActionUrl || "").trim();
+    const method = String(settings.formMethod || "post").toLowerCase();
+    const submitMode = String(settings.formSubmitMode || "success-message");
+    const successMessage = String(
+      settings.formSuccessMessage || "Thanks! Your form has been submitted.",
+    );
+    const redirectUrl = String(settings.formRedirectUrl || "").trim();
+    const width = String(settings.settingWidth || "normal");
+    const widthClass =
+      width === "full"
+        ? "is-full-width"
+        : width === "custom"
+          ? ""
+          : "is-normal-width";
+
+    this.textContent = "";
+
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `
+      :host { display: block; }
+      .owb-form-container { position: relative; padding: var(--section-padding-top, 7rem) var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem); margin: 0 auto; }
+      .owb-form-container.is-normal-width { max-width: 960px; }
+      .owb-form-container.is-full-width { max-width: 100%; }
+      .owb-form { display: grid; gap: 12px; }
+      .owb-form-success { margin: 10px 0 0; color: var(--website-success-color, #267e3e); font-weight: 600; }
+    `;
+
+    const containerEl = document.createElement("div");
+    containerEl.className = `owb-form-container ${widthClass}`.trim();
+    containerEl.setAttribute(
+      "style",
+      `${getSectionStyle(settings)}; ${getSectionContainerStyle(settings)}`,
+    );
+
+    const formEl = document.createElement("form");
+    formEl.className = "owb-form";
+    formEl.method = method === "get" ? "get" : "post";
+    if (action) {
+      formEl.action = action;
+    }
+
+    const successEl = document.createElement("p");
+    successEl.className = "owb-form-success";
+    successEl.hidden = true;
+    successEl.textContent = successMessage;
+
+    for (const child of children) {
+      formEl.appendChild(child);
+    }
+
+    formEl.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      if (submitMode === "redirect") {
+        if (redirectUrl) {
+          window.location.assign(redirectUrl);
+        }
+        return;
+      }
+
+      successEl.hidden = false;
+    });
+
+    containerEl.append(formEl, successEl);
+    this.append(styleEl, containerEl);
+  }
+}
+
+class OwbInput extends HTMLElement {
+  connectedCallback() {
+    const parsed = readConfig(this);
+    const settings =
+      parsed && typeof parsed.settings === "object" ? parsed.settings : parsed;
+    const fieldType = String(settings.fieldType || "text");
+    const label = String(settings.label || "");
+    const name = String(settings.name || "").trim();
+    const required =
+      settings.required === true || String(settings.required || "") === "true";
+    const placeholder = String(settings.placeholder || "").trim();
+    const min = String(settings.min || "").trim();
+    const max = String(settings.max || "").trim();
+    const step = String(settings.step || "").trim();
+    const rows = Number.parseInt(settings.rows, 10);
+    const minLength = String(settings.minLength || "").trim();
+    const maxLength = String(settings.maxLength || "").trim();
+    const pattern = String(settings.pattern || "").trim();
+
+    this.textContent = "";
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "form-input-block";
+
+    if (label) {
+      const labelEl = document.createElement("label");
+      labelEl.className = "form-input-label";
+      labelEl.textContent = required ? `${label} *` : label;
+      wrapper.appendChild(labelEl);
+    }
+
+    const control =
+      fieldType === "textarea"
+        ? document.createElement("textarea")
+        : document.createElement("input");
+    control.className =
+      control instanceof HTMLTextAreaElement
+        ? "form-input-textarea"
+        : "form-input-field";
+
+    if (control instanceof HTMLInputElement) {
+      control.type = fieldType === "number" ? "number" : "text";
+    }
+
+    if (control instanceof HTMLTextAreaElement) {
+      control.rows = Number.isNaN(rows) || rows < 1 ? 4 : rows;
+    }
+
+    if (name) {
+      control.name = name;
+    }
+    if (required) {
+      control.required = true;
+    }
+    if (placeholder) {
+      control.placeholder = placeholder;
+    }
+    if (min && "min" in control) {
+      control.setAttribute("min", min);
+    }
+    if (max && "max" in control) {
+      control.setAttribute("max", max);
+    }
+    if (step && control instanceof HTMLInputElement) {
+      control.step = step;
+    }
+    if (minLength && "minLength" in control) {
+      control.setAttribute("minlength", minLength);
+    }
+    if (maxLength && "maxLength" in control) {
+      control.setAttribute("maxlength", maxLength);
+    }
+    if (pattern && control instanceof HTMLInputElement) {
+      control.pattern = pattern;
+    }
+
+    wrapper.appendChild(control);
+    this.append(wrapper);
+  }
+}
+
 if (!customElements.get("owb-text")) {
   customElements.define("owb-text", OwbText);
 }
@@ -516,4 +706,13 @@ if (!customElements.get("owb-gallery")) {
 }
 if (!customElements.get("owb-section")) {
   customElements.define("owb-section", OwbSection);
+}
+if (!customElements.get("owb-container")) {
+  customElements.define("owb-container", OwbContainer);
+}
+if (!customElements.get("owb-form")) {
+  customElements.define("owb-form", OwbForm);
+}
+if (!customElements.get("owb-input")) {
+  customElements.define("owb-input", OwbInput);
 }

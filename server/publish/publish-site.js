@@ -88,6 +88,7 @@ async function buildPublishedComponentStyles(appRoot) {
     resolve(appRoot, "src/website/components/text/styles.css"),
     resolve(appRoot, "src/website/components/image/styles.css"),
     resolve(appRoot, "src/website/components/button/styles.css"),
+    resolve(appRoot, "src/website/components/input/styles.css"),
     resolve(appRoot, "src/website/components/embed/styles.css"),
     resolve(appRoot, "src/website/components/social-media/styles.css"),
     resolve(appRoot, "src/website/components/gallery/styles.css"),

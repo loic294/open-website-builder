@@ -44,6 +44,8 @@ const cssSyntaxLinter = linter((view) => {
   return diagnostics;
 });
 
+const REORDERABLE_PARENT_TYPES = new Set(["section", "container", "form"]);
+
 export class EditorComponent extends LitElement {
   static overlayWidth = 340;
 
@@ -518,8 +520,10 @@ export class EditorComponent extends LitElement {
       };
     }
 
-    // Reordering from CSS tab is limited to section child nodes.
-    const isEligible = found.parentNode?.type === "section";
+    // Reordering from CSS tab is limited to direct children of layout containers.
+    const isEligible = REORDERABLE_PARENT_TYPES.has(
+      String(found.parentNode?.type || ""),
+    );
     if (!isEligible) {
       return {
         isEligible: false,
@@ -544,7 +548,8 @@ export class EditorComponent extends LitElement {
       this.pageConfig.content,
       this.node.id,
     );
-    if (!found || found.parentNode?.type !== "section") {
+    const parentType = String(found?.parentNode?.type || "");
+    if (!found || !REORDERABLE_PARENT_TYPES.has(parentType)) {
       return;
     }
 

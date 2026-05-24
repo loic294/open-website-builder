@@ -197,6 +197,58 @@ async function renderSection(node, context) {
   return `<owb-section>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-section>`;
 }
 
+async function renderContainer(node, context) {
+  const settings = node?.settings ?? {};
+  const alignmentMode = String(settings.settingAlignmentMode || "block");
+  const isGridMode = alignmentMode === "grid" || alignmentMode === "visual";
+  const children = Array.isArray(node?.content) ? node.content : [];
+  const renderedChildren = [];
+
+  for (const child of children) {
+    const childHtml = await renderNode(child, context);
+    if (!childHtml) continue;
+
+    if (isGridMode) {
+      const style = getGridItemStyle(child?.settings ?? {});
+      renderedChildren.push(
+        `<div style="${escapeAttr(style)}">${childHtml}</div>`,
+      );
+    } else {
+      renderedChildren.push(childHtml);
+    }
+  }
+
+  return `<owb-container>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-container>`;
+}
+
+async function renderForm(node, context) {
+  const settings = node?.settings ?? {};
+  const alignmentMode = String(settings.settingAlignmentMode || "block");
+  const isGridMode = alignmentMode === "grid" || alignmentMode === "visual";
+  const children = Array.isArray(node?.content) ? node.content : [];
+  const renderedChildren = [];
+
+  for (const child of children) {
+    const childHtml = await renderNode(child, context);
+    if (!childHtml) continue;
+
+    if (isGridMode) {
+      const style = getGridItemStyle(child?.settings ?? {});
+      renderedChildren.push(
+        `<div style="${escapeAttr(style)}">${childHtml}</div>`,
+      );
+    } else {
+      renderedChildren.push(childHtml);
+    }
+  }
+
+  return `<owb-form>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-form>`;
+}
+
+function renderInput(node) {
+  return `<owb-input>${configScript({ settings: node?.settings ?? {} })}</owb-input>`;
+}
+
 async function renderNode(node, context) {
   if (!node || typeof node !== "object") return "";
 
@@ -217,6 +269,12 @@ async function renderNode(node, context) {
       return await renderShared(node, context);
     case "section":
       return await renderSection(node, context);
+    case "container":
+      return await renderContainer(node, context);
+    case "form":
+      return await renderForm(node, context);
+    case "input":
+      return renderInput(node);
     default:
       context.warnings.push(
         `Unsupported node type: ${String(node.type || "unknown")}`,

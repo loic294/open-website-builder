@@ -525,7 +525,7 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
           context: $(element),
         }))
       : [{ context: $.root() }];
-    const sectionElementByIndex = rootSections.length > 0 ? rootSections : [];
+  const sectionElementByIndex = rootSections.length > 0 ? rootSections : [];
   const resultSections = [];
   let textStyleIndex = 0;
 
@@ -552,12 +552,12 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
       }
 
       if (galleryUrls.length > 0) {
-          const galleryNode = makeGalleryNode(galleryUrls);
-          const galleryClass = getElementClassName($, galleryEl);
-          if (galleryClass) {
-            galleryNode.settings.className = galleryClass;
-          }
-          sectionNodes.push(galleryNode);
+        const galleryNode = makeGalleryNode(galleryUrls);
+        const galleryClass = getElementClassName($, galleryEl);
+        if (galleryClass) {
+          galleryNode.settings.className = galleryClass;
+        }
+        sectionNodes.push(galleryNode);
       }
     }
 
@@ -567,12 +567,12 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
     for (const embedEl of embedEls) {
       const embedHtml = $.html(embedEl);
       if (embedHtml && embedHtml.trim()) {
-          const embedNode = makeEmbedNode(embedHtml);
-          const embedClass = getElementClassName($, embedEl);
-          if (embedClass) {
-            embedNode.settings.className = embedClass;
-          }
-          sectionNodes.push(embedNode);
+        const embedNode = makeEmbedNode(embedHtml);
+        const embedClass = getElementClassName($, embedEl);
+        if (embedClass) {
+          embedNode.settings.className = embedClass;
+        }
+        sectionNodes.push(embedNode);
       }
     }
 
@@ -582,12 +582,12 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
     for (const buttonEl of buttonEls) {
       const href = $(buttonEl).attr("href") || "";
       const label = $(buttonEl).text().trim();
-        const buttonNode = makeButtonNode(label, href);
-        const buttonClass = getElementClassName($, buttonEl);
-        if (buttonClass) {
-          buttonNode.settings.className = buttonClass;
-        }
-        sectionNodes.push(buttonNode);
+      const buttonNode = makeButtonNode(label, href);
+      const buttonClass = getElementClassName($, buttonEl);
+      if (buttonClass) {
+        buttonNode.settings.className = buttonClass;
+      }
+      sectionNodes.push(buttonNode);
     }
 
     const socialRoot = contextRoot
@@ -610,13 +610,13 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
         .filter((item) => item.link);
 
       if (items.length > 0) {
-          const socialClass = getElementClassName($, socialRoot[0]);
-          sectionNodes.push({
-            id: `social-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            type: "social-media",
-            items,
-            settings: socialClass ? { className: socialClass } : {},
-          });
+        const socialClass = getElementClassName($, socialRoot[0]);
+        sectionNodes.push({
+          id: `social-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          type: "social-media",
+          items,
+          settings: socialClass ? { className: socialClass } : {},
+        });
       }
     }
 
@@ -645,12 +645,12 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
         report,
       });
       if (localUrl) {
-          const imageNode = makeImageNode(localUrl);
-          const imageClass = getElementClassName($, imageEl);
-          if (imageClass) {
-            imageNode.settings.className = imageClass;
-          }
-          sectionNodes.push(imageNode);
+        const imageNode = makeImageNode(localUrl);
+        const imageClass = getElementClassName($, imageEl);
+        if (imageClass) {
+          imageNode.settings.className = imageClass;
+        }
+        sectionNodes.push(imageNode);
       }
     }
 
@@ -663,13 +663,13 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
       if (hasTextContent(textHtml)) {
         const textNode = extractTextNodeWithStyles($, textEl, textStyleIndex);
         textStyleIndex += 1;
-          const textClass = getElementClassName($, textEl);
-          if (textClass) {
-            if (!textNode.settings) {
-              textNode.settings = {};
-            }
-            textNode.settings.className = textClass;
+        const textClass = getElementClassName($, textEl);
+        if (textClass) {
+          if (!textNode.settings) {
+            textNode.settings = {};
           }
+          textNode.settings.className = textClass;
+        }
         sectionNodes.push(textNode);
       }
     }

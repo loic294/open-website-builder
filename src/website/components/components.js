@@ -1,4 +1,7 @@
 import { editorRenderSiteSection } from "./site-section/site-section";
+import { editorRenderContainer } from "./container/container";
+import { editorRenderForm } from "./form/form";
+import { editorRenderInput } from "./input/input";
 import { editorRenderShared } from "./shared/shared";
 import { editorRenderText } from "./text/text";
 import { editorRenderImage } from "./image/image";
@@ -9,6 +12,9 @@ import { editorRenderGallery } from "./gallery/gallery";
 
 const renderComponents = new Map();
 renderComponents.set("section", editorRenderSiteSection);
+renderComponents.set("container", editorRenderContainer);
+renderComponents.set("form", editorRenderForm);
+renderComponents.set("input", editorRenderInput);
 renderComponents.set("shared", editorRenderShared);
 renderComponents.set("text", editorRenderText);
 renderComponents.set("image", editorRenderImage);

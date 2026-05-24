@@ -51,7 +51,7 @@
   display: grid;
   place-content: center;
   gap: 10px;
-  color: #7f7a73;
+  color: var(--owb-section-child-text-color, #7f7a73);
   text-align: center;
 }
 

@@ -65,8 +65,19 @@ function renderButtonPreview({
   variant,
   sizeStyle,
   radius,
+  buttonType,
   preventEmptyLink = false,
 }) {
+  if (buttonType === "submit" || buttonType === "button") {
+    return html`<button
+      class="site-button theme-${theme} variant-${variant}"
+      type=${buttonType}
+      style=${`${sizeStyle} --button-radius: ${radius};`}
+    >
+      ${content || "Button"}
+    </button>`;
+  }
+
   return html`<a
     class="site-button theme-${theme} variant-${variant}"
     href=${link || "#"}
@@ -89,6 +100,7 @@ class SiteButton extends withVariantConfig(EditorComponent) {
     buttonSize: { type: String },
     buttonTheme: { type: String },
     buttonVariant: { type: String },
+    buttonType: { type: String },
     buttonShape: { type: String },
     buttonRadiusCustom: { type: String },
     buttonPaddingTop: { type: String },
@@ -108,6 +120,7 @@ class SiteButton extends withVariantConfig(EditorComponent) {
     this.buttonSize = "m";
     this.buttonTheme = "primary";
     this.buttonVariant = "filled";
+    this.buttonType = "link";
     this.buttonShape = "rounded";
     this.buttonRadiusCustom = "12px";
     this.buttonPaddingTop = "";
@@ -128,6 +141,7 @@ class SiteButton extends withVariantConfig(EditorComponent) {
         buttonSize: "m",
         buttonTheme: "primary",
         buttonVariant: "filled",
+        buttonType: "link",
         buttonShape: "rounded",
         buttonRadiusCustom: "12px",
         buttonPaddingTop: "",
@@ -192,6 +206,7 @@ class SiteButton extends withVariantConfig(EditorComponent) {
       buttonSize: "m",
       buttonTheme: "primary",
       buttonVariant: "filled",
+      buttonType: "link",
       buttonShape: "rounded",
       buttonRadiusCustom: "12px",
       buttonPaddingTop: "",
@@ -219,11 +234,25 @@ class SiteButton extends withVariantConfig(EditorComponent) {
                 label="Link"
                 placeholder="https://example.com"
                 .value=${this.buttonLink}
+                .disabled=${this.buttonType !== "link"}
                 @change=${(event) =>
                   this.updateSettingsState({
                     buttonLink: event.detail.value,
                   })}
               ></editor-text-input>
+              <editor-select
+                label="Button action"
+                .value=${this.buttonType}
+                .options=${[
+                  { label: "Link", value: "link" },
+                  { label: "Normal button", value: "button" },
+                  { label: "Submit button", value: "submit" },
+                ]}
+                @change=${(event) =>
+                  this.updateSettingsState({
+                    buttonType: event.detail.value,
+                  })}
+              ></editor-select>
             </settings-section>
             <settings-section title="Size">
               <editor-radio-button
@@ -370,6 +399,7 @@ class SiteButton extends withVariantConfig(EditorComponent) {
             variant: this.buttonVariant,
             sizeStyle,
             radius: shapeRadius,
+            buttonType: this.buttonType,
             preventEmptyLink: true,
           })}
         </div>
@@ -404,6 +434,7 @@ class OwbButton extends withVariantConfig(LitElement) {
     const size = String(settings.buttonSize || "m");
     const theme = String(settings.buttonTheme || "primary");
     const variant = String(settings.buttonVariant || "filled");
+    const buttonType = String(settings.buttonType || "link");
     const shape = String(settings.buttonShape || "rounded");
     const customRadius = String(settings.buttonRadiusCustom || "12px");
     const sizeStyle = getButtonSizeStyle(size, settings);
@@ -419,6 +450,7 @@ class OwbButton extends withVariantConfig(LitElement) {
             variant,
             sizeStyle,
             radius,
+            buttonType,
           })}
         </div>
       </div>

@@ -124,7 +124,7 @@
   border: 1px dashed var(--editor-border-color, #d1d5db);
   border-radius: 6px;
   padding: 14px;
-  color: #6b7280;
+  color: var(--owb-section-child-text-color, #6b7280);
 }
 
 .social-settings-list {
@@ -137,7 +137,8 @@
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 6px;
   padding: 10px;
-  background: #fff;
+  background: var(--owb-section-child-background-color, #fff);
+  color: var(--owb-section-child-text-color, inherit);
 }
 
 .social-settings-item-header {
@@ -158,7 +159,7 @@
   height: 42px;
   border: 1px solid rgba(0, 0, 0, 0.16);
   border-radius: 10px;
-  background: #fff;
+  background: var(--owb-section-child-background-color, #fff);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -175,7 +176,7 @@
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 12px;
   padding: 6px;
-  background: #fff;
+  background: var(--owb-section-child-background-color, #fff);
   display: grid;
   gap: 6px;
 }
@@ -196,7 +197,7 @@
 .social-icon-option {
   border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 10px;
-  background: #fff;
+  background: var(--owb-section-child-background-color, #fff);
   width: 100%;
   aspect-ratio: 1;
   min-height: 34px;

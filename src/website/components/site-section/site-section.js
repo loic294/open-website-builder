@@ -49,13 +49,49 @@ const SECTION_PADDING_PRESETS = {
 
 const BLOCK_INSERT_OPTIONS = [
   { label: "Text", value: "text" },
+  { label: "Input", value: "input" },
   { label: "Image", value: "image" },
   { label: "Button", value: "button" },
   { label: "Embed", value: "embed" },
+  { label: "Container", value: "container" },
+  { label: "Form", value: "form" },
   { label: "Social media", value: "social-media" },
   { label: "Gallery", value: "gallery" },
   { label: "Shared component", value: "shared" },
 ];
+
+function getDefaultLayoutSettingsState() {
+  return {
+    settingWidth: "normal",
+    settingWidthCustomValue: "",
+    settingBackgroundColor: "",
+    settingTextColor: "",
+    settingAlignmentMode: "block",
+    settingGap: "",
+    settingRowHeight: `${GRID_EDITOR_ROW_SIZE}px`,
+    settingFixedHeight: "",
+    settingSizing: "medium",
+    settingPaddingTop: "",
+    settingPaddingBottom: "",
+    settingPaddingLeft: "",
+    settingPaddingRight: "",
+    settingFlexDirection: "row",
+    settingFlexHorizontal: "start",
+    settingFlexVertical: "start",
+    settingFlexJustifyContent: "flex-start",
+    settingFlexAlignItems: "flex-start",
+    settingFlexAlignContent: "stretch",
+    settingGridRows: 2,
+    settingGridColumns: 2,
+    settingGridHorizontal: "start",
+    settingGridVertical: "start",
+    settingGridJustifyItems: "start",
+    settingGridAlignItems: "start",
+    settingGridJustifyContent: "start",
+    settingGridAlignContent: "start",
+    settingOtherAlignment: "block",
+  };
+}
 
 function getSectionPadding(settings = {}) {
   const preset = SECTION_PADDING_PRESETS[settings.settingSizing];
@@ -77,10 +113,16 @@ function getPublishedSectionStyle(settings = {}) {
 
   if (settings.settingBackgroundColor) {
     parts.push(`background-color: var(${settings.settingBackgroundColor})`);
+    parts.push(
+      `--owb-section-child-background-color: var(${settings.settingBackgroundColor})`,
+    );
   }
 
   if (settings.settingTextColor) {
     parts.push(`color: var(${settings.settingTextColor})`);
+    parts.push(
+      `--owb-section-child-text-color: var(${settings.settingTextColor})`,
+    );
   }
 
   return parts.join("; ");
@@ -170,7 +212,50 @@ function createNodeId(type) {
   return `${type}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }
 
-export class SiteSection extends withVariantConfig(EditorComponent) {
+function updateNodeContentById(nodes, targetNodeId, nextContent) {
+  let didChange = false;
+
+  const nextNodes = nodes.map((currentNode) => {
+    if (!currentNode || typeof currentNode !== "object") {
+      return currentNode;
+    }
+
+    if (currentNode.id === targetNodeId) {
+      didChange = true;
+      return {
+        ...currentNode,
+        content: nextContent,
+      };
+    }
+
+    if (Array.isArray(currentNode.content)) {
+      const nested = updateNodeContentById(
+        currentNode.content,
+        targetNodeId,
+        nextContent,
+      );
+
+      if (nested.didChange) {
+        didChange = true;
+        return {
+          ...currentNode,
+          content: nested.nextNodes,
+        };
+      }
+    }
+
+    return currentNode;
+  });
+
+  return {
+    nextNodes,
+    didChange,
+  };
+}
+
+export class SiteLayoutContainerBase extends withVariantConfig(
+  EditorComponent,
+) {
   static designColorVariables = [
     "--website-primary-color",
     "--website-secondary-color",
@@ -292,6 +377,34 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       this.onActiveSettingsOwnerChanged.bind(this);
   }
 
+  getDefaultSettingsState() {
+    return getDefaultLayoutSettingsState();
+  }
+
+  getInsertBlockOptions() {
+    return BLOCK_INSERT_OPTIONS;
+  }
+
+  shouldShowAddSectionButtons() {
+    return false;
+  }
+
+  shouldShowSectionReorderButtons() {
+    return false;
+  }
+
+  shouldShowDeleteButton() {
+    return false;
+  }
+
+  supportsReplaceWithSharedComponent() {
+    return false;
+  }
+
+  renderGeneralSettingsExtras() {
+    return html``;
+  }
+
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener(
@@ -316,36 +429,7 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       this.draftGridPlacements = {};
       this.cleanupGridPointerInteraction();
 
-      this.syncSettingsStateFromNode({
-        settingWidth: "normal",
-        settingWidthCustomValue: "",
-        settingBackgroundColor: "",
-        settingTextColor: "",
-        settingAlignmentMode: "block",
-        settingGap: "",
-        settingRowHeight: `${GRID_EDITOR_ROW_SIZE}px`,
-        settingFixedHeight: "",
-        settingSizing: "medium",
-        settingPaddingTop: "",
-        settingPaddingBottom: "",
-        settingPaddingLeft: "",
-        settingPaddingRight: "",
-        settingFlexDirection: "row",
-        settingFlexHorizontal: "start",
-        settingFlexVertical: "start",
-        settingFlexJustifyContent: "flex-start",
-        settingFlexAlignItems: "flex-start",
-        settingFlexAlignContent: "stretch",
-        settingGridRows: 2,
-        settingGridColumns: 2,
-        settingGridHorizontal: "start",
-        settingGridVertical: "start",
-        settingGridJustifyItems: "start",
-        settingGridAlignItems: "start",
-        settingGridJustifyContent: "start",
-        settingGridAlignContent: "start",
-        settingOtherAlignment: "block",
-      });
+      this.syncSettingsStateFromNode(this.getDefaultSettingsState());
     }
 
     if (
@@ -1047,6 +1131,27 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       };
     }
 
+    if (type === "input") {
+      return {
+        id: createNodeId("input"),
+        type: "input",
+        settings: {
+          fieldType: "text",
+          label: "Field label",
+          name: "field",
+          required: false,
+          placeholder: "",
+          min: "",
+          max: "",
+          step: "",
+          rows: "4",
+          minLength: "",
+          maxLength: "",
+          pattern: "",
+        },
+      };
+    }
+
     if (type === "button") {
       return {
         id: createNodeId("button"),
@@ -1090,6 +1195,29 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       };
     }
 
+    if (type === "container") {
+      return {
+        id: createNodeId("container"),
+        type: "container",
+        content: [],
+      };
+    }
+
+    if (type === "form") {
+      return {
+        id: createNodeId("form"),
+        type: "form",
+        content: [],
+        settings: {
+          formActionUrl: "",
+          formMethod: "post",
+          formSubmitMode: "success-message",
+          formSuccessMessage: "Thanks! Your form has been submitted.",
+          formRedirectUrl: "",
+        },
+      };
+    }
+
     if (type === "gallery") {
       return {
         id: createNodeId("gallery"),
@@ -1110,18 +1238,18 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       ? this.pageConfig.content
       : [];
 
+    const contentUpdate = updateNodeContentById(
+      pageContent,
+      this.node?.id,
+      nextContent,
+    );
+    if (!contentUpdate.didChange) {
+      return;
+    }
+
     const nextPageConfig = {
       ...this.pageConfig,
-      content: pageContent.map((currentNode) => {
-        if (currentNode?.id !== this.node?.id) {
-          return currentNode;
-        }
-
-        return {
-          ...currentNode,
-          content: nextContent,
-        };
-      }),
+      content: contentUpdate.nextNodes,
     };
 
     this.node = {
@@ -1339,38 +1467,11 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
   }
 
   async openSectionSettings() {
-    await this.loadSharedComponentOptions();
+    if (this.supportsReplaceWithSharedComponent()) {
+      await this.loadSharedComponentOptions();
+    }
 
-    this.syncSettingsStateFromNode({
-      settingWidth: "normal",
-      settingWidthCustomValue: "",
-      settingBackgroundColor: "",
-      settingTextColor: "",
-      settingAlignmentMode: "block",
-      settingGap: "",
-      settingRowHeight: `${GRID_EDITOR_ROW_SIZE}px`,
-      settingFixedHeight: "",
-      settingSizing: "medium",
-      settingPaddingTop: "",
-      settingPaddingBottom: "",
-      settingPaddingLeft: "",
-      settingPaddingRight: "",
-      settingFlexDirection: "row",
-      settingFlexHorizontal: "start",
-      settingFlexVertical: "start",
-      settingFlexJustifyContent: "flex-start",
-      settingFlexAlignItems: "flex-start",
-      settingFlexAlignContent: "stretch",
-      settingGridRows: 2,
-      settingGridColumns: 2,
-      settingGridHorizontal: "start",
-      settingGridVertical: "start",
-      settingGridJustifyItems: "start",
-      settingGridAlignItems: "start",
-      settingGridJustifyContent: "start",
-      settingGridAlignContent: "start",
-      settingOtherAlignment: "block",
-    });
+    this.syncSettingsStateFromNode(this.getDefaultSettingsState());
 
     this.openSettingsEditor({
       tabs: [
@@ -1517,35 +1618,46 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
                   `
                 : null}
             </settings-section>
-            <settings-section title="Replace section">
-              <editor-select
-                label="Shared component"
-                .options=${this.sharedComponentOptions.length > 0
-                  ? this.sharedComponentOptions
-                  : [{ label: "No shared components available", value: "" }]}
-                .value=${this.replaceWithSharedComponentId}
-                .disabled=${this.sharedComponentOptions.length === 0}
-                @change=${(event) => {
-                  this.replaceWithSharedComponentId = event.detail.value;
-                }}
-              ></editor-select>
-              <editor-text-input
-                label="Or enter ID"
-                placeholder="navbar"
-                .value=${this.replaceWithSharedComponentId}
-                @change=${(event) => {
-                  this.replaceWithSharedComponentId = event.detail.value;
-                }}
-              ></editor-text-input>
-              <editor-btn
-                style="light"
-                ?disabled=${!String(
-                  this.replaceWithSharedComponentId || "",
-                ).trim()}
-                @click=${() => this.replaceCurrentSectionWithSharedComponent()}
-                >Replace with shared component</editor-btn
-              >
-            </settings-section>
+            ${this.renderGeneralSettingsExtras()}
+            ${this.supportsReplaceWithSharedComponent()
+              ? html`
+                  <settings-section title="Replace section">
+                    <editor-select
+                      label="Shared component"
+                      .options=${this.sharedComponentOptions.length > 0
+                        ? this.sharedComponentOptions
+                        : [
+                            {
+                              label: "No shared components available",
+                              value: "",
+                            },
+                          ]}
+                      .value=${this.replaceWithSharedComponentId}
+                      .disabled=${this.sharedComponentOptions.length === 0}
+                      @change=${(event) => {
+                        this.replaceWithSharedComponentId = event.detail.value;
+                      }}
+                    ></editor-select>
+                    <editor-text-input
+                      label="Or enter ID"
+                      placeholder="navbar"
+                      .value=${this.replaceWithSharedComponentId}
+                      @change=${(event) => {
+                        this.replaceWithSharedComponentId = event.detail.value;
+                      }}
+                    ></editor-text-input>
+                    <editor-btn
+                      style="light"
+                      ?disabled=${!String(
+                        this.replaceWithSharedComponentId || "",
+                      ).trim()}
+                      @click=${() =>
+                        this.replaceCurrentSectionWithSharedComponent()}
+                      >Replace with shared component</editor-btn
+                    >
+                  </settings-section>
+                `
+              : null}
           </div>`;
         }
 
@@ -1553,7 +1665,7 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
           return html`<div>
             <settings-section title="Background color">
               <editor-color-dots
-                .options=${SiteSection.designColorVariables}
+                .options=${this.constructor.designColorVariables}
                 .value=${this.settingBackgroundColor}
                 label="Background color"
                 @change=${(e) => {
@@ -1565,7 +1677,7 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
             </settings-section>
             <settings-section title="Text color">
               <editor-color-dots
-                .options=${SiteSection.designColorVariables}
+                .options=${this.constructor.designColorVariables}
                 .value=${this.settingTextColor}
                 label="Text color"
                 @change=${(e) => {
@@ -1588,12 +1700,34 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       return;
     }
 
+    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    if (activeSettingsOwner && activeSettingsOwner !== this) {
+      return;
+    }
+
     const target = event.target;
     if (!(target instanceof Element)) {
       return;
     }
 
+    const sectionEl = this.renderRoot?.querySelector("section");
+    const containerEl = this.renderRoot?.querySelector(".container");
+    const isDirectBackgroundTarget =
+      target === sectionEl || target === containerEl;
+
+    const composedPath =
+      typeof event.composedPath === "function" ? event.composedPath() : [];
+    const isPointerInsideChildComponent = composedPath.some((node) => {
+      if (!(node instanceof HTMLElement) || node === this) {
+        return false;
+      }
+
+      const tagName = String(node.tagName || "").toLowerCase();
+      return tagName.startsWith("site-");
+    });
+
     const shouldIgnore =
+      isPointerInsideChildComponent ||
       target.closest("[data-editor-block]") ||
       target.closest("[data-grid-child-id]") ||
       target.closest("editor-btn") ||
@@ -1608,6 +1742,10 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       target.closest(".section-resize-handle");
 
     if (shouldIgnore) {
+      return;
+    }
+
+    if (!isDirectBackgroundTarget) {
       return;
     }
 
@@ -1629,6 +1767,12 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
       : "";
     const textColorStyle = this.settingTextColor
       ? `color: var(${this.settingTextColor});`
+      : "";
+    const childBackgroundVarStyle = this.settingBackgroundColor
+      ? `--owb-section-child-background-color: var(${this.settingBackgroundColor});`
+      : "";
+    const childTextVarStyle = this.settingTextColor
+      ? `--owb-section-child-text-color: var(${this.settingTextColor});`
       : "";
     const layoutStyleParts = [];
 
@@ -1704,18 +1848,22 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
     return html`<div>
       <section
         class="${sectionClassName}"
-        style="${backgroundColorStyle}${textColorStyle}"
+        style="${backgroundColorStyle}${textColorStyle}${childBackgroundVarStyle}${childTextVarStyle}"
         @pointerdown=${(event) => this.onSectionPointerDown(event)}
         @pointermove=${(event) => this.onGridContainerPointerMove(event)}
         @pointerleave=${() => this.onSectionPointerLeave()}
       >
-        <editor-btn
-          style="primary"
-          class="add-section-button"
-          @click=${() => this.addSection("before")}
-        >
-          Add section
-        </editor-btn>
+        ${this.shouldShowAddSectionButtons()
+          ? html`
+              <editor-btn
+                style="primary"
+                class="add-section-button"
+                @click=${() => this.addSection("before")}
+              >
+                Add section
+              </editor-btn>
+            `
+          : null}
         ${this.node?.type === "shared"
           ? html`<span class="shared-badge">Shared Component</span>`
           : ""}
@@ -1894,31 +2042,39 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
             }}
             >${createElement(Plus)} Add element</editor-btn
           >
-          <editor-btn
-            style="light"
-            title="Move section up"
-            @click=${() => this.moveSection("up")}
-            >${createElement(ArrowUp)}</editor-btn
-          >
-          <editor-btn
-            style="light"
-            title="Move section down"
-            @click=${() => this.moveSection("down")}
-            >${createElement(ArrowDown)}</editor-btn
-          >
-          <editor-btn
-            style="light text-danger"
-            title="Delete section"
-            @click=${() => this.deleteSection()}
-            >${createElement(Trash)}</editor-btn
-          >
+          ${this.shouldShowSectionReorderButtons()
+            ? html`
+                <editor-btn
+                  style="light"
+                  title="Move section up"
+                  @click=${() => this.moveSection("up")}
+                  >${createElement(ArrowUp)}</editor-btn
+                >
+                <editor-btn
+                  style="light"
+                  title="Move section down"
+                  @click=${() => this.moveSection("down")}
+                  >${createElement(ArrowDown)}</editor-btn
+                >
+              `
+            : null}
+          ${this.shouldShowDeleteButton()
+            ? html`
+                <editor-btn
+                  style="light text-danger"
+                  title="Delete section"
+                  @click=${() => this.deleteSection()}
+                  >${createElement(Trash)}</editor-btn
+                >
+              `
+            : null}
         </div>
         ${this.isBlockPickerOpen
           ? html`
               <div class="section-block-picker">
                 <editor-select
                   label="Block type"
-                  .options=${BLOCK_INSERT_OPTIONS}
+                  .options=${this.getInsertBlockOptions()}
                   .value=${this.blockPickerType}
                   @change=${(event) => {
                     this.blockPickerType = event.detail.value;
@@ -1947,15 +2103,37 @@ export class SiteSection extends withVariantConfig(EditorComponent) {
           title="Resize section"
           @pointerdown=${(event) => this.startSectionResize(event)}
         ></button>
-        <editor-btn
-          style="primary"
-          class="add-section-button bottom"
-          @click=${() => this.addSection("after")}
-        >
-          Add section
-        </editor-btn>
+        ${this.shouldShowAddSectionButtons()
+          ? html`
+              <editor-btn
+                style="primary"
+                class="add-section-button bottom"
+                @click=${() => this.addSection("after")}
+              >
+                Add section
+              </editor-btn>
+            `
+          : null}
       </section>
     </div>`;
+  }
+}
+
+export class SiteSection extends SiteLayoutContainerBase {
+  shouldShowAddSectionButtons() {
+    return true;
+  }
+
+  shouldShowSectionReorderButtons() {
+    return true;
+  }
+
+  shouldShowDeleteButton() {
+    return true;
+  }
+
+  supportsReplaceWithSharedComponent() {
+    return true;
   }
 }
 

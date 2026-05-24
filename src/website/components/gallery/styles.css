@@ -24,7 +24,7 @@
   border-radius: 6px;
   overflow: hidden;
   aspect-ratio: var(--gallery-ratio, 1 / 1);
-  background: #f3f4f6;
+  background: var(--owb-section-child-background-color, #f3f4f6);
   cursor: pointer;
 }
 
@@ -42,7 +42,7 @@
   border: 1px dashed var(--editor-border-color, #d1d5db);
   border-radius: 6px;
   padding: 14px;
-  color: #6b7280;
+  color: var(--owb-section-child-text-color, #6b7280);
 }
 
 .gallery-lightbox {
@@ -110,4 +110,6 @@
   font-size: 12px;
   line-height: 1.4;
   font-family: inherit;
+  background: var(--owb-section-child-background-color, #fff);
+  color: var(--owb-section-child-text-color, inherit);
 }

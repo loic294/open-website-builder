@@ -1,0 +1,37 @@
+:host {
+  box-sizing: border-box;
+}
+
+.form-input-block {
+  position: relative;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.form-input-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--owb-section-child-text-color, inherit);
+}
+
+.form-input-required {
+  color: #b42318;
+}
+
+.form-input-field,
+.form-input-textarea {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, #111111 22%, transparent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  background: var(--owb-section-child-background-color, #fff);
+  color: var(--owb-section-child-text-color, inherit);
+}
+
+.form-input-textarea {
+  resize: vertical;
+}
