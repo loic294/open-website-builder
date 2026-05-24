@@ -2,12 +2,12 @@ import { LitElement, html, unsafeCSS } from "lit";
 import {
   Blocks,
   ChevronDown,
-  Cog,
   Database,
   Files,
   PanelLeftClose,
   PanelLeftOpen,
   Proportions,
+  Upload,
   createElement,
 } from "lucide";
 import { dataLayer } from "../../../data/data-layer.js";
@@ -173,6 +173,10 @@ class EditorMenu extends LitElement {
   }
 
   render() {
+    const isImporterRoute =
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/editor/importer");
+
     return html`<aside class="sidebar ${this.collapsed ? "collapsed" : ""}">
       <div class="sidebar-header">
         <div class="brand">
@@ -204,9 +208,20 @@ class EditorMenu extends LitElement {
       </div>
 
       <div class="sidebar-footer">
-        <button class="settings-button" type="button" title="Settings">
-          ${createElement(Cog)}
-          <span class="settings-label">Settings</span>
+        <button
+          class="settings-button"
+          type="button"
+          title=${isImporterRoute ? "Back to editor" : "Importer"}
+          @click=${() => {
+            window.location.href = isImporterRoute
+              ? "/editor/"
+              : "/editor/importer/";
+          }}
+        >
+          ${createElement(Upload)}
+          <span class="settings-label"
+            >${isImporterRoute ? "Back to editor" : "Importer"}</span
+          >
         </button>
       </div>
     </aside>`;

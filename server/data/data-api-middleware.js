@@ -73,6 +73,17 @@ export function createDataApiMiddleware(resolvers) {
       }
 
       if (
+        method === "POST" &&
+        parts.length === 2 &&
+        parts[0] === "import" &&
+        parts[1] === "squarespace"
+      ) {
+        const body = await parseJsonBody(request);
+        sendJson(response, 200, await resolvers.importSquarespaceXml(body));
+        return;
+      }
+
+      if (
         method === "GET" &&
         parts.length === 1 &&
         parts[0] === "collections"

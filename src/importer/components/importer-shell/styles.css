@@ -1,0 +1,85 @@
+:host {
+  display: block;
+  flex: 1;
+}
+
+.importer-shell {
+  padding: 24px;
+  max-width: 1100px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 28px;
+  color: var(--editor-text-color);
+}
+
+header p {
+  margin-top: 8px;
+  color: var(--editor-muted-text-color);
+  max-width: 720px;
+}
+
+.panel,
+.result-card {
+  margin-top: 20px;
+  border: var(--editor-default-border);
+  border-radius: var(--editor-border-radius);
+  background: var(--editor-white-color);
+  padding: 16px;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+input[type="file"] {
+  display: block;
+  width: 100%;
+}
+
+textarea {
+  width: 100%;
+  min-height: 260px;
+  resize: vertical;
+  border: var(--editor-default-border);
+  border-radius: var(--editor-sharp-radius);
+  padding: 10px;
+  font:
+    13px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  color: var(--editor-text-color);
+  background: var(--editor-white-color);
+}
+
+.actions {
+  margin-top: 14px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 8px 18px;
+}
+
+.error {
+  margin-top: 14px;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.report-line {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--editor-muted-text-color);
+}
+
+.report-line span {
+  color: var(--editor-text-color);
+}

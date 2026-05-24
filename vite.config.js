@@ -6,6 +6,7 @@ import { createJsonDataResolvers } from "./server/data/json-data-resolvers.js";
 import { createDataApiMiddleware } from "./server/data/data-api-middleware.js";
 import { createImagesMiddleware } from "./server/data/images-middleware.js";
 import { publishSite } from "./server/publish/publish-site.js";
+import { importSquarespaceXml } from "./server/import/squarespace-import-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contentRoot = resolve(__dirname, "../my-personal-website");
@@ -111,6 +112,13 @@ export default defineConfig({
               outputDir: publishedOutputDir,
               appRoot: __dirname,
             }),
+          importSquarespaceXml: async ({ xmlContent, sourceName, options }) =>
+            await importSquarespaceXml({
+              xmlContent,
+              sourceName,
+              options,
+              contentRoot,
+            }),
         };
         server.middlewares.use(createDataApiMiddleware(resolvers));
 
@@ -131,6 +139,12 @@ export default defineConfig({
             response.end();
             return;
           }
+          if (request.url === "/editor/importer") {
+            response.statusCode = 302;
+            response.setHeader("Location", "/editor/importer/");
+            response.end();
+            return;
+          }
           next();
         });
       },
@@ -141,6 +155,7 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, "index.html"),
         editor: resolve(__dirname, "editor/index.html"),
+        importer: resolve(__dirname, "editor/importer/index.html"),
       },
     },
   },

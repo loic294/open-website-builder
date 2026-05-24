@@ -60,6 +60,13 @@ export function createDataLayer(transport = createHttpTransport()) {
     async publishSite() {
       return await transport.post("/publish", {});
     },
+    async importSquarespaceXml({ xmlContent, sourceName, options = {} }) {
+      return await transport.post("/import/squarespace", {
+        xmlContent,
+        sourceName,
+        options,
+      });
+    },
 
     async listCollections() {
       return await transport.get("/collections");
