@@ -87,8 +87,8 @@ class ImporterShell extends LitElement {
             <strong>Collection items:</strong> ${summary.collectionItemsCreated}
           </div>
           <div>
-            <strong>Attachments skipped:</strong> ${summary.attachmentsSkipped ||
-            0}
+            <strong>Attachments skipped:</strong>
+            ${summary.attachmentsSkipped || 0}
           </div>
           <div>
             <strong>Assets downloaded:</strong> ${summary.assetsDownloaded}

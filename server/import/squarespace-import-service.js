@@ -427,8 +427,9 @@ function extractImageUrlCandidates($, element) {
     urls.add(rootSrc);
   }
 
-  root.find("a[href], img[src], img[data-src], [data-image], [data-image-url]").each(
-    (_, nested) => {
+  root
+    .find("a[href], img[src], img[data-src], [data-image], [data-image-url]")
+    .each((_, nested) => {
       const nestedEl = $(nested);
       const href = nestedEl.attr("href") || "";
       const src =
@@ -443,10 +444,11 @@ function extractImageUrlCandidates($, element) {
       if (src) {
         urls.add(src);
       }
-    },
-  );
+    });
 
-  return Array.from(urls).filter((value) => /\.(jpe?g|png|gif|webp|avif|svg)(\?.*)?$/i.test(value));
+  return Array.from(urls).filter((value) =>
+    /\.(jpe?g|png|gif|webp|avif|svg)(\?.*)?$/i.test(value),
+  );
 }
 
 function collectMetaValues(item, metaKey) {
@@ -593,7 +595,11 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
 
     const imageEls = contextRoot.find("img").toArray();
     for (const imageEl of imageEls) {
-      if ($(imageEl).closest(".sqs-gallery, .sqs-block-gallery, .image-gallery-wrapper").length) {
+      if (
+        $(imageEl).closest(
+          ".sqs-gallery, .sqs-block-gallery, .image-gallery-wrapper",
+        ).length
+      ) {
         continue;
       }
 
@@ -616,7 +622,9 @@ async function mapHtmlToContent({ html, contentRoot, assetManifest, report }) {
       }
     }
 
-    const textCandidates = contextRoot.find("h1, h2, h3, h4, h5, h6, p").toArray();
+    const textCandidates = contextRoot
+      .find("h1, h2, h3, h4, h5, h6, p")
+      .toArray();
 
     for (const textEl of textCandidates) {
       const textHtml = $.html(textEl) || "";

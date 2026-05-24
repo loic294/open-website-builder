@@ -38,10 +38,17 @@ class EditorMenu extends LitElement {
       shared: [],
     };
     this.didLoadData = false;
+    this.currentRoute = this.getRouteSelection();
   }
 
   async connectedCallback() {
     super.connectedCallback();
+
+    this.onRouteChanged = () => {
+      this.currentRoute = this.getRouteSelection();
+    };
+    window.addEventListener("popstate", this.onRouteChanged);
+    window.addEventListener("editor-route-change", this.onRouteChanged);
 
     if (this.didLoadData) {
       return;
@@ -49,32 +56,140 @@ class EditorMenu extends LitElement {
 
     this.didLoadData = true;
 
-    try {
-      const [pages, collections, sharedComponents] = await Promise.all([
+    const [pagesResult, collectionsResult, sharedResult] =
+      await Promise.allSettled([
         dataLayer.listPages(),
-        dataLayer.listCollections(),
+        dataLayer.getAllCollectionsContent(),
         dataLayer.listSharedComponents(),
       ]);
 
-      this.groupItems = {
-        pages: pages.map((page) => page?.title || page?.id || "Untitled"),
-        collections: collections.map(
-          (collection) => collection?.title || collection?.id || "Untitled",
-        ),
-        shared: sharedComponents.map(
-          (component) => component?.title || component?.id || "Untitled",
-        ),
-      };
-    } catch (error) {
-      console.error(error);
-      this.groupItems = {
-        pages: [],
-        collections: [],
-        shared: [],
-      };
+    if (pagesResult.status === "rejected") {
+      console.error(pagesResult.reason);
     }
+
+    if (collectionsResult.status === "rejected") {
+      console.error(collectionsResult.reason);
+    }
+
+    if (sharedResult.status === "rejected") {
+      console.error(sharedResult.reason);
+    }
+
+    const pages = pagesResult.status === "fulfilled" ? pagesResult.value : [];
+    const collectionsContent =
+      collectionsResult.status === "fulfilled" ? collectionsResult.value : [];
+    const sharedComponents =
+      sharedResult.status === "fulfilled" ? sharedResult.value : [];
+
+    this.groupItems = {
+      pages: pages.map((page) => ({
+        kind: "page",
+        id: page?.id || "",
+        title: page?.title || page?.id || "Untitled",
+        url: page?.url || "",
+      })),
+      collections: collectionsContent.flatMap((collection) => {
+        const collectionId = collection?.collectionId || "";
+        const collectionTitle = collection?.title || collectionId || "Collection";
+        const items = Array.isArray(collection?.items) ? collection.items : [];
+        return items.map((item) => ({
+          kind: "collection-item",
+          collectionId,
+          collectionTitle,
+          itemId: item?.id || "",
+          title: item?.title || item?.id || "Untitled",
+        }));
+      }),
+      shared: sharedComponents.map(
+        (component) => component?.title || component?.id || "Untitled",
+      ),
+    };
   }
 
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("popstate", this.onRouteChanged);
+    window.removeEventListener("editor-route-change", this.onRouteChanged);
+  }
+
+  getRouteSelection() {
+    if (typeof window === "undefined") {
+      return { type: "page", pageId: "index" };
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get("type") || "page";
+
+    if (type === "collection") {
+      return {
+        type: "collection",
+        collectionId: params.get("collectionId") || "",
+        itemId: params.get("itemId") || "",
+      };
+    }
+
+    return {
+      type: "page",
+      pageId: params.get("pageId") || "index",
+    };
+  }
+
+  navigateToSelection(selection) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (selection.kind === "collection-item") {
+      params.set("type", "collection");
+      params.set("collectionId", selection.collectionId || "");
+      params.set("itemId", selection.itemId || "");
+    } else {
+      params.set("type", "page");
+      params.set("pageId", selection.id || "index");
+    }
+
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, "", nextUrl);
+    window.dispatchEvent(new CustomEvent("editor-route-change"));
+  }
+
+  isSelectionActive(selection) {
+    const route = this.currentRoute || { type: "page", pageId: "index" };
+
+    if (selection.kind === "collection-item") {
+      return (
+        route.type === "collection" &&
+        route.collectionId === selection.collectionId &&
+        route.itemId === selection.itemId
+      );
+    }
+
+    return route.type === "page" && route.pageId === selection.id;
+  }
+
+  renderSelectableItem(selection) {
+    const isActive = this.isSelectionActive(selection);
+    const subtitle =
+      selection.kind === "collection-item"
+        ? `${selection.collectionTitle} / ${selection.itemId}`
+        : selection.url || selection.id;
+
+    return html`
+      <button
+        class="group-item-button ${isActive ? "is-active" : ""}"
+        type="button"
+        @click=${() => this.navigateToSelection(selection)}
+      >
+        <span class="group-item-bullet"></span>
+        <span class="group-item-copy">
+          <span class="group-item-title">${selection.title}</span>
+          <span class="group-item-subtitle">${subtitle}</span>
+        </span>
+      </button>
+    `;
+  }
   getStoredCollapsedState() {
     if (typeof window === "undefined") {
       return false;
@@ -136,13 +251,15 @@ class EditorMenu extends LitElement {
         ${expanded && !this.collapsed
           ? html`
               <div class="group-items">
-                ${normalizedItems.map(
-                  (item) => html`
-                    <div class="group-item">
-                      <span class="group-item-bullet"></span>
-                      <span>${item}</span>
-                    </div>
-                  `,
+                ${normalizedItems.map((item) =>
+                  typeof item === "string"
+                    ? html`
+                        <div class="group-item">
+                          <span class="group-item-bullet"></span>
+                          <span>${item}</span>
+                        </div>
+                      `
+                    : this.renderSelectableItem(item),
                 )}
               </div>
             `
@@ -155,13 +272,15 @@ class EditorMenu extends LitElement {
                       <span class="group-flyout-title">${title}</span>
                     </div>
                     <div class="group-items is-flyout">
-                      ${normalizedItems.map(
-                        (item) => html`
-                          <div class="group-item">
-                            <span class="group-item-bullet"></span>
-                            <span>${item}</span>
-                          </div>
-                        `,
+                      ${normalizedItems.map((item) =>
+                        typeof item === "string"
+                          ? html`
+                              <div class="group-item">
+                                <span class="group-item-bullet"></span>
+                                <span>${item}</span>
+                              </div>
+                            `
+                          : this.renderSelectableItem(item),
                       )}
                     </div>
                   </div>

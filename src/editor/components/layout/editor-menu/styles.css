@@ -4,12 +4,14 @@
 
 .sidebar {
   width: 280px;
-  min-height: calc(100vh - 4rem);
+  height: 100vh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
   padding: 16px 12px;
   padding-left: 0px;
-  overflow: visible;
+  box-sizing: border-box;
+  overflow: hidden;
   transition: width 0.22s ease;
 }
 
@@ -85,8 +87,14 @@
 .menu-groups {
   display: flex;
   flex: 1;
+  min-height: 0;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar.collapsed .menu-groups {
   overflow: visible;
 }
 
@@ -178,6 +186,50 @@
 
 .group-item:hover {
   background: var(--editor-hover-surface);
+}
+
+.group-item-button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--editor-sharp-radius);
+  color: var(--editor-subtle-text-color);
+}
+
+.group-item-button:hover {
+  background: var(--editor-hover-surface);
+}
+
+.group-item-button.is-active {
+  background: color-mix(
+    in srgb,
+    var(--editor-primary-color) 14%,
+    var(--editor-white-color)
+  );
+  color: var(--editor-text-color);
+}
+
+.group-item-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.group-item-title {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.group-item-subtitle {
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--editor-muted-text-color);
 }
 
 .group-item-bullet {

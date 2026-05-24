@@ -31,6 +31,7 @@ class WebsiteEditor extends LitElement {
     activeView: { state: true },
     activeSize: { state: true },
     activeOrientation: { state: true },
+    currentSelection: { state: true },
   };
 
   static styles = [unsafeCSS(baseStyle), unsafeCSS(styles), css``];
@@ -43,6 +44,7 @@ class WebsiteEditor extends LitElement {
     this.activeView = "editor";
     this.activeSize = "desktop";
     this.activeOrientation = "vertical";
+    this.currentSelection = { type: "page", pageId: "index" };
   }
 
   viewOptions = [
@@ -71,21 +73,83 @@ class WebsiteEditor extends LitElement {
   async connectedCallback() {
     super.connectedCallback();
 
-    if (this.didLoadConfig) {
-      return;
+    this.onRouteChanged = async () => {
+      await this.loadSelectionFromRoute();
+    };
+
+    window.addEventListener("popstate", this.onRouteChanged);
+    window.addEventListener("editor-route-change", this.onRouteChanged);
+
+    if (!this.didLoadConfig) {
+      this.didLoadConfig = true;
+      await this.loadSelectionFromRoute();
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("popstate", this.onRouteChanged);
+    window.removeEventListener("editor-route-change", this.onRouteChanged);
+  }
+
+  getRouteSelection() {
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get("type") || "page";
+
+    if (type === "collection") {
+      return {
+        type: "collection",
+        collectionId: params.get("collectionId") || "",
+        itemId: params.get("itemId") || "",
+      };
     }
 
-    this.didLoadConfig = true;
+    return {
+      type: "page",
+      pageId: params.get("pageId") || "index",
+    };
+  }
+
+  async loadSelectionFromRoute() {
+    const selection = this.getRouteSelection();
+    this.currentSelection = selection;
 
     try {
-      this.pageConfig = await dataLayer.getPageConfig("index");
+      if (selection.type === "collection") {
+        const item = await dataLayer.getCollectionItemContent(
+          selection.collectionId,
+          selection.itemId,
+        );
+
+        this.pageConfig = {
+          ...item,
+          id: item?.id || selection.itemId,
+          title: item?.title || selection.itemId || "Collection item",
+          url:
+            item?.url ||
+            `/collections/${selection.collectionId}/${selection.itemId}`,
+          content: Array.isArray(item?.content) ? item.content : [],
+        };
+        return;
+      }
+
+      this.pageConfig = await dataLayer.getPageConfig(selection.pageId);
     } catch (error) {
       console.error(error);
       this.pageConfig = {
         type: "page",
-        id: "home",
-        title: "Home",
-        url: "/",
+        id:
+          selection.type === "collection"
+            ? selection.itemId || "item"
+            : selection.pageId || "home",
+        title:
+          selection.type === "collection"
+            ? selection.itemId || "Collection item"
+            : "Home",
+        url:
+          selection.type === "collection"
+            ? `/collections/${selection.collectionId}/${selection.itemId}`
+            : "/",
         content: [],
       };
     }
@@ -96,7 +160,18 @@ class WebsiteEditor extends LitElement {
     this.pageConfig = event.detail;
 
     try {
-      await dataLayer.savePageConfig("index", this.pageConfig);
+      if (this.currentSelection?.type === "collection") {
+        await dataLayer.updateCollectionItem(
+          this.currentSelection.collectionId,
+          this.currentSelection.itemId,
+          this.pageConfig,
+        );
+      } else {
+        await dataLayer.savePageConfig(
+          this.currentSelection?.pageId || "index",
+          this.pageConfig,
+        );
+      }
     } catch (error) {
       console.error(error);
     }
@@ -157,9 +232,16 @@ class WebsiteEditor extends LitElement {
         <div class="left-menu">
           <div class="page-info">
             <div class="page-info-main">
-              <span class="page-title">Home</span>
+              <span class="page-title"
+                >${this.pageConfig?.title || this.pageConfig?.id || "Untitled"}</span
+              >
             </div>
-            <span class="page-path">/index</span>
+            <span class="page-path"
+              >${this.pageConfig?.url ||
+              (this.currentSelection?.type === "collection"
+                ? `/collections/${this.currentSelection.collectionId}/${this.currentSelection.itemId}`
+                : `/${this.currentSelection?.pageId || "index"}`)}</span
+            >
           </div>
           <div class="view-mode-switcher">
             <editor-radio-button

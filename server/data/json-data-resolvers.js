@@ -159,7 +159,14 @@ export function createJsonDataResolvers({ contentRoot }) {
 
       const collectionDir = resolve(collectionsDir, entry.name);
       const configPath = resolve(collectionDir, "_config.json");
-      const config = await readJsonFile(configPath);
+      let config;
+      try {
+        config = await readJsonFile(configPath);
+      } catch {
+        // Ignore malformed collection directories so one bad folder does not
+        // break the whole sidebar collections list.
+        continue;
+      }
 
       collections.push({
         id: config?.id || entry.name,
@@ -182,7 +189,14 @@ export function createJsonDataResolvers({ contentRoot }) {
 
       const collectionDir = resolve(collectionsDir, entry.name);
       const configPath = resolve(collectionDir, "_config.json");
-      const config = await readJsonFile(configPath);
+      let config;
+      try {
+        config = await readJsonFile(configPath);
+      } catch {
+        // Ignore malformed collection directories so one bad folder does not
+        // break all collection content loading.
+        continue;
+      }
       const itemFiles = await listJsonFileNames(collectionDir);
       const items = [];
 
