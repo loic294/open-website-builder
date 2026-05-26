@@ -141,6 +141,28 @@
   padding: 0 8px 10px;
 }
 
+.collection-folder-group {
+  display: grid;
+  gap: 2px;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--editor-muted-text-color) 22%, transparent);
+}
+
+.collection-folder-group:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.collection-folder-title {
+  padding: 6px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--editor-muted-text-color);
+  font-weight: 700;
+}
+
 .group-flyout-wrap {
   position: absolute;
   top: -10px;

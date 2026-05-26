@@ -90,6 +90,12 @@ export class EditorComponent extends LitElement {
     this.onOverlayKeydown = this.onOverlayKeydown.bind(this);
     this.onOverlayPointerMove = this.onOverlayPointerMove.bind(this);
     this.onOverlayPointerUp = this.onOverlayPointerUp.bind(this);
+    this.onFocusNodeRequest = this.onFocusNodeRequest.bind(this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("owb-focus-node", this.onFocusNodeRequest);
   }
 
   willUpdate(changedProperties) {
@@ -140,7 +146,13 @@ export class EditorComponent extends LitElement {
 
   openSettingsEditor(options = html`<p>No settings available.</p>`) {
     const activeOwner = EditorComponent.activeSettingsOwner;
+
+    // Don't let a child steal settings from its parent collection when it is the active owner
     if (activeOwner && activeOwner !== this) {
+      const parentCollection = this.findParentCollection();
+      if (parentCollection && parentCollection === activeOwner) {
+        return;
+      }
       activeOwner.closeSettingsEditor();
     }
 
@@ -376,9 +388,17 @@ export class EditorComponent extends LitElement {
   }
 
   renderMoreSettingsTab() {
+    const parentState = this.getParentNodeState();
+
     return html`
       <div class="settings-more-tab">
         <settings-section title="Node actions">
+          <editor-btn
+            style="light"
+            ?disabled=${!parentState.canFocusParent}
+            @click=${() => this.focusOnParentNode()}
+            >${createElement(ArrowUp)} Focus parent</editor-btn
+          >
           <editor-btn
             style="light text-danger"
             ?disabled=${!this.node?.id ||
@@ -392,6 +412,57 @@ export class EditorComponent extends LitElement {
         </settings-section>
       </div>
     `;
+  }
+
+  getParentNodeState() {
+    if (!this.node?.id || !Array.isArray(this.pageConfig?.content)) {
+      return { canFocusParent: false, parentNodeId: "" };
+    }
+
+    const found = this.findNodeParentInTree(
+      this.pageConfig.content,
+      this.node.id,
+    );
+    const parentNodeId = String(found?.parentNode?.id || "");
+
+    return {
+      canFocusParent: Boolean(parentNodeId),
+      parentNodeId,
+    };
+  }
+
+  focusOnParentNode() {
+    const parentState = this.getParentNodeState();
+    if (!parentState.canFocusParent) {
+      return;
+    }
+
+    this.closeSettingsEditor();
+
+    window.dispatchEvent(
+      new CustomEvent("owb-focus-node", {
+        detail: {
+          nodeId: parentState.parentNodeId,
+        },
+      }),
+    );
+  }
+
+  onFocusNodeRequest(event) {
+    const requestedNodeId = String(event?.detail?.nodeId || "");
+    if (!requestedNodeId || String(this.node?.id || "") !== requestedNodeId) {
+      return;
+    }
+
+    this.scrollIntoView({ block: "center", behavior: "smooth" });
+
+    const editorBlock = this.renderRoot?.querySelector("[data-editor-block]");
+    if (editorBlock instanceof HTMLElement) {
+      editorBlock.click();
+      return;
+    }
+
+    this.openSettingsEditor();
   }
 
   removeNodeByIdFromTree(nodes, targetNodeId) {
@@ -849,6 +920,7 @@ export class EditorComponent extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener("owb-focus-node", this.onFocusNodeRequest);
     this.closeSettingsEditor();
     this.destroyCssEditor();
 
@@ -861,6 +933,29 @@ export class EditorComponent extends LitElement {
     window.removeEventListener("pointerup", this.onOverlayPointerUp);
   }
 
+  findParentCollection() {
+    if (this.tagName === "SITE-COLLECTION") {
+      return null;
+    }
+
+    let current = this;
+    while (current) {
+      const root = current.getRootNode?.();
+      const host = root instanceof ShadowRoot ? root.host : null;
+      if (!host) {
+        break;
+      }
+
+      if (host.tagName === "SITE-COLLECTION") {
+        return host;
+      }
+
+      current = host;
+    }
+
+    return null;
+  }
+
   renderSettingsOverlay() {
     if (!this.settingsOverlayContainer) {
       return;
@@ -871,6 +966,8 @@ export class EditorComponent extends LitElement {
       this.destroyCssEditor();
       return;
     }
+
+    const parentCollection = this.findParentCollection();
 
     render(
       html`
@@ -912,6 +1009,21 @@ export class EditorComponent extends LitElement {
                 ${createElement(X)}
               </button>
             </div>
+            ${parentCollection
+              ? html`
+                  <div class="settings-overlay-collection-bar">
+                    <button
+                      type="button"
+                      class="settings-overlay-collection-btn"
+                      @click=${() => {
+                        void parentCollection.openSectionSettings();
+                      }}
+                    >
+                      ← Edit collection list
+                    </button>
+                  </div>
+                `
+              : null}
             <div class="settings-overlay-body">
               ${typeof this.settingsOverlayContent === "function"
                 ? this.settingsOverlayContent(this.settingsOverlayActiveTab)

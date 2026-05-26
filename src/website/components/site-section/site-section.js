@@ -57,6 +57,8 @@ const BLOCK_INSERT_OPTIONS = [
   { label: "Form", value: "form" },
   { label: "Social media", value: "social-media" },
   { label: "Gallery", value: "gallery" },
+  { label: "Collection", value: "collection" },
+  { label: "Collection content", value: "collection-content" },
   { label: "Shared component", value: "shared" },
 ];
 
@@ -1229,6 +1231,32 @@ export class SiteLayoutContainerBase extends withVariantConfig(
         id: createNodeId("container"),
         type: "container",
         content: [],
+      };
+    }
+
+    if (type === "collection") {
+      return {
+        id: createNodeId("collection"),
+        type: "collection",
+        content: [
+          {
+            id: createNodeId("text"),
+            type: "text",
+            content: "<p>{{title}}</p>",
+          },
+        ],
+        settings: {
+          settingCollectionId: "",
+          settingCollectionItemsCount: "all",
+          settingCollectionSort: "disk",
+        },
+      };
+    }
+
+    if (type === "collection-content") {
+      return {
+        id: createNodeId("collection-content"),
+        type: "collection-content",
       };
     }
 

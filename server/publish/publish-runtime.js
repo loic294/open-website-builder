@@ -770,6 +770,12 @@ class OwbInput extends HTMLElement {
   }
 }
 
+class OwbCollectionContent extends HTMLElement {
+  connectedCallback() {
+    // Marker component: publish output already injects its children where needed.
+  }
+}
+
 if (!customElements.get("owb-text")) {
   customElements.define("owb-text", OwbText);
 }
@@ -799,4 +805,7 @@ if (!customElements.get("owb-form")) {
 }
 if (!customElements.get("owb-input")) {
   customElements.define("owb-input", OwbInput);
+}
+if (!customElements.get("owb-collection-content")) {
+  customElements.define("owb-collection-content", OwbCollectionContent);
 }

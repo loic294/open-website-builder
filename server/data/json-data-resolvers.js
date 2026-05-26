@@ -36,6 +36,21 @@ function buildCollectionRequiredFields(fields = {}) {
     .map(([fieldName]) => fieldName);
 }
 
+function isCollectionConfigFile(fileName) {
+  return fileName === "_config.json";
+}
+
+function getDefaultCollectionTemplate() {
+  return [
+    {
+      id: "section-collection-template",
+      type: "section",
+      content: [],
+      settings: {},
+    },
+  ];
+}
+
 export function createJsonDataResolvers({ contentRoot }) {
   const pagesDir = resolve(contentRoot, "pages");
   const collectionsDir = resolve(contentRoot, "collections");
@@ -223,6 +238,88 @@ export function createJsonDataResolvers({ contentRoot }) {
     return data;
   }
 
+  async function getGroupedCollectionsContent() {
+    const entries = await readdir(collectionsDir, { withFileTypes: true });
+    const groups = [];
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const collectionDir = resolve(collectionsDir, entry.name);
+      const configPath = resolve(collectionDir, "_config.json");
+      let config;
+      try {
+        config = await readJsonFile(configPath);
+      } catch {
+        continue;
+      }
+
+      const itemFiles = await listJsonFileNames(collectionDir);
+      const items = [];
+      for (const itemFile of itemFiles) {
+        if (isCollectionConfigFile(itemFile)) {
+          continue;
+        }
+
+        const itemPath = resolve(collectionDir, itemFile);
+        const item = await readJsonFile(itemPath);
+        items.push({
+          id: item?.id || toFileId(itemFile),
+          title: item?.title || item?.id || toFileId(itemFile),
+        });
+      }
+
+      groups.push({
+        collectionId: config?.id || entry.name,
+        title: config?.title || entry.name,
+        items,
+        configItem: {
+          id: "_config",
+          title: "_config.json",
+        },
+      });
+    }
+
+    return groups;
+  }
+
+  async function getCollectionConfig(collectionId) {
+    const normalizedCollectionId = sanitizeId(collectionId);
+    const configPath = resolve(
+      collectionsDir,
+      normalizedCollectionId,
+      "_config.json",
+    );
+    const config = await readJsonFile(configPath);
+    const hasTemplateContent =
+      Array.isArray(config?.content) && config.content.length > 0;
+
+    if (hasTemplateContent) {
+      return config;
+    }
+
+    const nextConfig = {
+      ...(config && typeof config === "object" ? config : {}),
+      content: getDefaultCollectionTemplate(),
+    };
+
+    await writeFile(configPath, toJsonString(nextConfig));
+    return nextConfig;
+  }
+
+  async function saveCollectionConfig(collectionId, config) {
+    const normalizedCollectionId = sanitizeId(collectionId);
+    const configPath = resolve(
+      collectionsDir,
+      normalizedCollectionId,
+      "_config.json",
+    );
+    await writeFile(configPath, toJsonString(config));
+    return { ok: true, id: normalizedCollectionId };
+  }
+
   async function getCollectionItemContent(collectionId, itemId) {
     const normalizedCollectionId = sanitizeId(collectionId);
     const normalizedItemId = sanitizeId(itemId);
@@ -234,6 +331,48 @@ export function createJsonDataResolvers({ contentRoot }) {
     );
 
     return await readJsonFile(itemPath);
+  }
+
+  async function getCollectionItemsMetadata(collectionId) {
+    const normalizedCollectionId = sanitizeId(collectionId);
+    const collectionPath = resolve(collectionsDir, normalizedCollectionId);
+    const itemFiles = await listJsonFileNames(collectionPath);
+    const items = [];
+
+    for (const itemFile of itemFiles) {
+      if (isCollectionConfigFile(itemFile)) {
+        continue;
+      }
+
+      const itemPath = resolve(collectionPath, itemFile);
+      const item = await readJsonFile(itemPath);
+
+      const itemId = item?.id || toFileId(itemFile);
+      const rawUrl =
+        item?.url ||
+        item?.metadata?.url ||
+        item?.metadata?.sourceUrl ||
+        `/${normalizedCollectionId}/${itemId}`;
+      const computedUrl = String(rawUrl || "")
+        .split("?")[0]
+        .split("#")[0]
+        .replace(/^\/+/, "")
+        .replace(/\/+$/, "");
+      const metadata = { ...(item && typeof item === "object" ? item : {}) };
+      delete metadata.content;
+      metadata.url = computedUrl;
+
+      items.push({
+        id: itemId,
+        title: item?.title || itemId,
+        metadata,
+      });
+    }
+
+    return {
+      collectionId: normalizedCollectionId,
+      items,
+    };
   }
 
   async function addCollectionItem(collectionId, item) {
@@ -383,7 +522,11 @@ export function createJsonDataResolvers({ contentRoot }) {
     createPage,
     listCollections,
     getAllCollectionsContent,
+    getGroupedCollectionsContent,
+    getCollectionConfig,
+    saveCollectionConfig,
     getCollectionItemContent,
+    getCollectionItemsMetadata,
     addCollectionItem,
     updateCollectionItem,
     listSharedComponents,

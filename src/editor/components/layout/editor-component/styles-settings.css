@@ -23,6 +23,32 @@
   pointer-events: auto;
 }
 
+.settings-overlay-collection-bar {
+  display: flex;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--editor-light-color, #fbfbfb);
+}
+
+.settings-overlay-collection-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  background: var(--editor-background, #fbfbfb);
+  color: var(--editor-text, #111);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+}
+
+.settings-overlay-collection-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .settings-overlay-header {
   display: flex;
   align-items: center;

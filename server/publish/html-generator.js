@@ -38,6 +38,8 @@ const SIMPLE_ICON_MAP = new Map(
   SIMPLE_ICON_LIBRARY.map((icon) => [icon.slug, icon]),
 );
 
+const BASE_DYNAMIC_FIELDS = ["title", "excerpt", "tags", "url"];
+
 function normalizeIconSlug(value) {
   const raw = String(value || "")
     .trim()
@@ -58,20 +60,169 @@ function configScript(obj) {
   return `<script type="application/json" data-owb-config>${JSON.stringify(obj)}</script>`;
 }
 
-function renderText(node) {
-  return `<owb-text>${configScript({ content: node?.content ?? "", settings: node?.settings ?? {} })}</owb-text>`;
+function replaceTemplateTokens(value, tokenValues = {}) {
+  if (!value) {
+    return String(value ?? "");
+  }
+
+  return String(value).replace(
+    /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/g,
+    (match, rawKey) => {
+      const key = String(rawKey || "").trim();
+      if (!key) {
+        return match;
+      }
+
+      const exact = tokenValues[key];
+      if (exact !== undefined && exact !== null) {
+        return String(exact);
+      }
+
+      const upper = tokenValues[key.toUpperCase()];
+      if (upper !== undefined && upper !== null) {
+        return String(upper);
+      }
+
+      return match;
+    },
+  );
 }
 
-function renderImage(node) {
-  return `<owb-image>${configScript({ url: node?.url ?? "", settings: node?.settings ?? {} })}</owb-image>`;
+function applyTokensToJson(value, tokenValues = {}) {
+  if (typeof value === "string") {
+    return replaceTemplateTokens(value, tokenValues);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => applyTokensToJson(item, tokenValues));
+  }
+
+  if (value && typeof value === "object") {
+    const next = {};
+    for (const [key, nestedValue] of Object.entries(value)) {
+      next[key] = applyTokensToJson(nestedValue, tokenValues);
+    }
+    return next;
+  }
+
+  return value;
 }
 
-function renderButton(node) {
-  return `<owb-button>${configScript({ content: node?.content ?? "Button", settings: node?.settings ?? {} })}</owb-button>`;
+function getValueByPath(value, path) {
+  const segments = String(path || "")
+    .split(".")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  let current = value;
+  for (const segment of segments) {
+    if (!current || typeof current !== "object") {
+      return undefined;
+    }
+
+    current = current[segment];
+  }
+
+  return current;
 }
 
-function renderEmbed(node) {
-  return `<owb-embed>${configScript({ html: node?.html ?? "" })}</owb-embed>`;
+function getTokenValueMap(metadata = {}, allowlist = []) {
+  const tokenValues = {};
+  const dynamicFields = [...new Set([...BASE_DYNAMIC_FIELDS, ...allowlist])];
+
+  for (const fieldName of dynamicFields) {
+    const normalized = String(fieldName || "").trim();
+    if (!normalized) {
+      continue;
+    }
+
+    const value =
+      metadata?.[normalized] ??
+      getValueByPath(metadata?.metadata, normalized) ??
+      getValueByPath(metadata, normalized);
+
+    if (Array.isArray(value)) {
+      const joined = value.map((item) => String(item || "")).join(", ");
+      tokenValues[normalized] = joined;
+      tokenValues[normalized.toUpperCase()] = joined;
+      continue;
+    }
+
+    if (
+      typeof value !== "string" &&
+      typeof value !== "number" &&
+      typeof value !== "boolean"
+    ) {
+      continue;
+    }
+
+    tokenValues[normalized] = String(value);
+    tokenValues[normalized.toUpperCase()] = String(value);
+  }
+
+  return tokenValues;
+}
+
+function getSortedCollectionItems(items = [], sortMode = "disk") {
+  const next = [...items];
+  if (sortMode === "title-asc") {
+    next.sort((a, b) =>
+      String(a?.title || "").localeCompare(String(b?.title || "")),
+    );
+    return next;
+  }
+
+  if (sortMode === "title-desc") {
+    next.sort((a, b) =>
+      String(b?.title || "").localeCompare(String(a?.title || "")),
+    );
+    return next;
+  }
+
+  if (sortMode === "id-asc") {
+    next.sort((a, b) => String(a?.id || "").localeCompare(String(b?.id || "")));
+    return next;
+  }
+
+  if (sortMode === "id-desc") {
+    next.sort((a, b) => String(b?.id || "").localeCompare(String(a?.id || "")));
+    return next;
+  }
+
+  return next;
+}
+
+function renderText(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const payload = applyTokensToJson(
+    { content: node?.content ?? "", settings: node?.settings ?? {} },
+    tokenValues,
+  );
+  return `<owb-text>${configScript(payload)}</owb-text>`;
+}
+
+function renderImage(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const payload = applyTokensToJson(
+    { url: node?.url ?? "", settings: node?.settings ?? {} },
+    tokenValues,
+  );
+  return `<owb-image>${configScript(payload)}</owb-image>`;
+}
+
+function renderButton(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const payload = applyTokensToJson(
+    { content: node?.content ?? "Button", settings: node?.settings ?? {} },
+    tokenValues,
+  );
+  return `<owb-button>${configScript(payload)}</owb-button>`;
+}
+
+function renderEmbed(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const payload = applyTokensToJson({ html: node?.html ?? "" }, tokenValues);
+  return `<owb-embed>${configScript(payload)}</owb-embed>`;
 }
 
 function renderSocialMedia(node) {
@@ -221,6 +372,84 @@ async function renderContainer(node, context) {
   return `<owb-container>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-container>`;
 }
 
+async function renderCollectionContent(node, context) {
+  const items = Array.isArray(context?.collectionItemContent)
+    ? context.collectionItemContent
+    : [];
+
+  if (items.length === 0) {
+    return `<owb-collection-content></owb-collection-content>`;
+  }
+
+  return await renderNodes(items, context);
+}
+
+async function renderCollection(node, context) {
+  const settings = node?.settings ?? {};
+  const collectionId = String(settings.settingCollectionId || "").trim();
+  if (!collectionId) {
+    context.warnings.push(
+      "Collection component is missing settingCollectionId",
+    );
+    return "";
+  }
+
+  const templateNode = Array.isArray(node?.content) ? node.content[0] : null;
+  if (!templateNode || typeof templateNode !== "object") {
+    context.warnings.push(
+      `Collection component \"${collectionId}\" has no first child template`,
+    );
+    return "";
+  }
+
+  if (
+    typeof context.loadCollectionItemsMetadata !== "function" ||
+    typeof context.loadCollectionConfig !== "function"
+  ) {
+    context.warnings.push(
+      `Collection loaders are missing for component \"${collectionId}\"`,
+    );
+    return "";
+  }
+
+  const metadataResult =
+    await context.loadCollectionItemsMetadata(collectionId);
+  const collectionConfig = await context.loadCollectionConfig(collectionId);
+
+  const items = Array.isArray(metadataResult?.items)
+    ? metadataResult.items
+    : [];
+  const allowlist = Array.isArray(collectionConfig?.collectionMetadataAllowlist)
+    ? collectionConfig.collectionMetadataAllowlist
+    : [];
+
+  const sortMode = String(settings.settingCollectionSort || "disk");
+  const sortedItems = getSortedCollectionItems(items, sortMode);
+  const limitRaw = String(settings.settingCollectionItemsCount || "all").trim();
+  const limit =
+    limitRaw === "all"
+      ? sortedItems.length
+      : Math.max(0, Number.parseInt(limitRaw, 10) || 0);
+
+  const selectedItems = sortedItems.slice(0, limit);
+  const renderedChildren = [];
+
+  for (const item of selectedItems) {
+    const tokenValues = getTokenValueMap(item?.metadata || {}, allowlist);
+
+    const childHtml = await renderNode(templateNode, {
+      ...context,
+      tokenValues,
+    });
+
+    if (childHtml) {
+      renderedChildren.push(childHtml);
+    }
+  }
+
+  return `<owb-container>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-container>`;
+}
+
 async function renderForm(node, context) {
   const settings = node?.settings ?? {};
   const alignmentMode = String(settings.settingAlignmentMode || "block");
@@ -254,13 +483,13 @@ async function renderNode(node, context) {
 
   switch (node.type) {
     case "text":
-      return renderText(node);
+      return renderText(node, context);
     case "image":
-      return renderImage(node);
+      return renderImage(node, context);
     case "button":
-      return renderButton(node);
+      return renderButton(node, context);
     case "embed":
-      return renderEmbed(node);
+      return renderEmbed(node, context);
     case "social-media":
       return renderSocialMedia(node);
     case "gallery":
@@ -271,6 +500,10 @@ async function renderNode(node, context) {
       return await renderSection(node, context);
     case "container":
       return await renderContainer(node, context);
+    case "collection":
+      return await renderCollection(node, context);
+    case "collection-content":
+      return await renderCollectionContent(node, context);
     case "form":
       return await renderForm(node, context);
     case "input":
@@ -318,12 +551,23 @@ function buildPageHtml({ title, bodyHtml }) {
 </html>`;
 }
 
-export async function generatePageHtml({ pageConfig, loadSharedComponent }) {
+export async function generatePageHtml({
+  pageConfig,
+  loadSharedComponent,
+  loadCollectionConfig,
+  loadCollectionItemsMetadata,
+  tokenValues = {},
+  collectionItemContent = [],
+}) {
   const warnings = [];
   const context = {
     warnings,
     loadSharedComponent,
+    loadCollectionConfig,
+    loadCollectionItemsMetadata,
     sharedStack: new Set(),
+    tokenValues,
+    collectionItemContent,
   };
 
   const bodyHtml = await renderNodes(pageConfig?.content, context);

@@ -9,6 +9,8 @@ import { editorRenderButton } from "./button/button";
 import { editorRenderEmbed } from "./embed/embed";
 import { editorRenderSocialMedia } from "./social-media/social-media";
 import { editorRenderGallery } from "./gallery/gallery";
+import { editorRenderCollection } from "./collection/collection";
+import { editorRenderCollectionContent } from "./collection-content/collection-content";
 
 const renderComponents = new Map();
 renderComponents.set("section", editorRenderSiteSection);
@@ -22,5 +24,7 @@ renderComponents.set("button", editorRenderButton);
 renderComponents.set("embed", editorRenderEmbed);
 renderComponents.set("social-media", editorRenderSocialMedia);
 renderComponents.set("gallery", editorRenderGallery);
+renderComponents.set("collection", editorRenderCollection);
+renderComponents.set("collection-content", editorRenderCollectionContent);
 
 export { renderComponents };

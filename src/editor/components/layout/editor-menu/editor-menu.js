@@ -59,7 +59,7 @@ class EditorMenu extends LitElement {
     const [pagesResult, collectionsResult, sharedResult] =
       await Promise.allSettled([
         dataLayer.listPages(),
-        dataLayer.getAllCollectionsContent(),
+        dataLayer.getGroupedCollectionsContent(),
         dataLayer.listSharedComponents(),
       ]);
 
@@ -88,18 +88,29 @@ class EditorMenu extends LitElement {
         title: page?.title || page?.id || "Untitled",
         url: page?.url || "",
       })),
-      collections: collectionsContent.flatMap((collection) => {
+      collections: collectionsContent.map((collection) => {
         const collectionId = collection?.collectionId || "";
         const collectionTitle =
           collection?.title || collectionId || "Collection";
         const items = Array.isArray(collection?.items) ? collection.items : [];
-        return items.map((item) => ({
-          kind: "collection-item",
+
+        return {
           collectionId,
           collectionTitle,
-          itemId: item?.id || "",
-          title: item?.title || item?.id || "Untitled",
-        }));
+          config: {
+            kind: "collection-config",
+            collectionId,
+            collectionTitle,
+            title: collection?.configItem?.title || "_config.json",
+          },
+          items: items.map((item) => ({
+            kind: "collection-item",
+            collectionId,
+            collectionTitle,
+            itemId: item?.id || "",
+            title: item?.title || item?.id || "Untitled",
+          })),
+        };
       }),
       shared: sharedComponents.map((component) => ({
         kind: "shared",
@@ -131,6 +142,13 @@ class EditorMenu extends LitElement {
       };
     }
 
+    if (type === "collection-config") {
+      return {
+        type: "collection-config",
+        collectionId: params.get("collectionId") || "",
+      };
+    }
+
     if (type === "shared") {
       return {
         type: "shared",
@@ -154,6 +172,9 @@ class EditorMenu extends LitElement {
       params.set("type", "collection");
       params.set("collectionId", selection.collectionId || "");
       params.set("itemId", selection.itemId || "");
+    } else if (selection.kind === "collection-config") {
+      params.set("type", "collection-config");
+      params.set("collectionId", selection.collectionId || "");
     } else if (selection.kind === "shared") {
       params.set("type", "shared");
       params.set("componentId", selection.id || "");
@@ -169,6 +190,13 @@ class EditorMenu extends LitElement {
 
   isSelectionActive(selection) {
     const route = this.currentRoute || { type: "page", pageId: "index" };
+
+    if (selection.kind === "collection-config") {
+      return (
+        route.type === "collection-config" &&
+        route.collectionId === selection.collectionId
+      );
+    }
 
     if (selection.kind === "collection-item") {
       return (
@@ -188,11 +216,13 @@ class EditorMenu extends LitElement {
   renderSelectableItem(selection) {
     const isActive = this.isSelectionActive(selection);
     const subtitle =
-      selection.kind === "collection-item"
-        ? `${selection.collectionTitle} / ${selection.itemId}`
-        : selection.kind === "shared"
-          ? `/shared/${selection.id || ""}`
-          : selection.url || selection.id;
+      selection.kind === "collection-config"
+        ? `${selection.collectionTitle} / _config.json`
+        : selection.kind === "collection-item"
+          ? `${selection.collectionTitle} / ${selection.itemId}`
+          : selection.kind === "shared"
+            ? `/shared/${selection.id || ""}`
+            : selection.url || selection.id;
 
     return html`
       <button
@@ -206,6 +236,49 @@ class EditorMenu extends LitElement {
           <span class="group-item-subtitle">${subtitle}</span>
         </span>
       </button>
+    `;
+  }
+
+  renderCollectionGroup(collectionGroup) {
+    const collectionTitle = collectionGroup?.collectionTitle || "Collection";
+    const collectionItems = Array.isArray(collectionGroup?.items)
+      ? collectionGroup.items
+      : [];
+
+    return html`
+      <div class="collection-folder-group">
+        <div class="collection-folder-title">${collectionTitle}</div>
+        ${this.renderSelectableItem(collectionGroup.config)}
+        ${collectionItems.length > 0
+          ? collectionItems.map((item) => this.renderSelectableItem(item))
+          : html`
+              <div class="group-item">
+                <span class="group-item-bullet"></span>
+                <span>No items yet</span>
+              </div>
+            `}
+      </div>
+    `;
+  }
+
+  renderCollectionsItems(items, isFlyout = false) {
+    const normalizedItems = items.length > 0 ? items : ["No collections yet"];
+
+    return html`
+      <div class="group-items ${isFlyout ? "is-flyout" : ""}">
+        ${normalizedItems.map((item) => {
+          if (typeof item === "string") {
+            return html`
+              <div class="group-item">
+                <span class="group-item-bullet"></span>
+                <span>${item}</span>
+              </div>
+            `;
+          }
+
+          return this.renderCollectionGroup(item);
+        })}
+      </div>
     `;
   }
   getStoredCollapsedState() {
@@ -250,6 +323,7 @@ class EditorMenu extends LitElement {
   renderGroup(sectionKey, title, icon, items) {
     const expanded = this.sections[sectionKey];
     const normalizedItems = items.length > 0 ? items : ["No items yet"];
+    const isCollectionsSection = sectionKey === "collections";
 
     return html`
       <section class="menu-group">
@@ -268,28 +342,10 @@ class EditorMenu extends LitElement {
         </button>
         ${expanded && !this.collapsed
           ? html`
-              <div class="group-items">
-                ${normalizedItems.map((item) =>
-                  typeof item === "string"
-                    ? html`
-                        <div class="group-item">
-                          <span class="group-item-bullet"></span>
-                          <span>${item}</span>
-                        </div>
-                      `
-                    : this.renderSelectableItem(item),
-                )}
-              </div>
-            `
-          : this.collapsed
-            ? html`
-                <div class="group-flyout-wrap">
-                  <div class="group-flyout" role="menu" aria-label=${title}>
-                    <div class="group-flyout-header">
-                      <span class="section-icon">${createElement(icon)}</span>
-                      <span class="group-flyout-title">${title}</span>
-                    </div>
-                    <div class="group-items is-flyout">
+              ${isCollectionsSection
+                ? this.renderCollectionsItems(normalizedItems)
+                : html`
+                    <div class="group-items">
                       ${normalizedItems.map((item) =>
                         typeof item === "string"
                           ? html`
@@ -301,6 +357,32 @@ class EditorMenu extends LitElement {
                           : this.renderSelectableItem(item),
                       )}
                     </div>
+                  `}
+            `
+          : this.collapsed
+            ? html`
+                <div class="group-flyout-wrap">
+                  <div class="group-flyout" role="menu" aria-label=${title}>
+                    <div class="group-flyout-header">
+                      <span class="section-icon">${createElement(icon)}</span>
+                      <span class="group-flyout-title">${title}</span>
+                    </div>
+                    ${isCollectionsSection
+                      ? this.renderCollectionsItems(normalizedItems, true)
+                      : html`
+                          <div class="group-items is-flyout">
+                            ${normalizedItems.map((item) =>
+                              typeof item === "string"
+                                ? html`
+                                    <div class="group-item">
+                                      <span class="group-item-bullet"></span>
+                                      <span>${item}</span>
+                                    </div>
+                                  `
+                                : this.renderSelectableItem(item),
+                            )}
+                          </div>
+                        `}
                   </div>
                 </div>
               `

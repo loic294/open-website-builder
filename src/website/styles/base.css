@@ -40,3 +40,45 @@ a[href] {
   color: var(--website-link-color);
   text-decoration: underline;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root) {
+    animation: owb-page-out 200ms ease-out both;
+  }
+
+  ::view-transition-new(root) {
+    animation: owb-page-in 280ms ease both;
+  }
+}
+
+@keyframes owb-page-out {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0.88;
+    filter: blur(2px);
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes owb-page-in {
+  from {
+    opacity: 0.74;
+    filter: blur(3px);
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}

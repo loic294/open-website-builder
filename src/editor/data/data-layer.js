@@ -74,9 +74,28 @@ export function createDataLayer(transport = createHttpTransport()) {
     async getAllCollectionsContent() {
       return await transport.get("/collections/content");
     },
+    async getGroupedCollectionsContent() {
+      return await transport.get("/collections/grouped-content");
+    },
+    async getCollectionConfig(collectionId) {
+      return await transport.get(
+        `/collections/${encodeURIComponent(collectionId)}/config`,
+      );
+    },
+    async saveCollectionConfig(collectionId, config) {
+      return await transport.put(
+        `/collections/${encodeURIComponent(collectionId)}/config`,
+        { config },
+      );
+    },
     async getCollectionItemContent(collectionId, itemId) {
       return await transport.get(
         `/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`,
+      );
+    },
+    async getCollectionItemsMetadata(collectionId) {
+      return await transport.get(
+        `/collections/${encodeURIComponent(collectionId)}/items-metadata`,
       );
     },
     async addCollectionItem(collectionId, item) {

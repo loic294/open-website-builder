@@ -53,6 +53,82 @@ function stripViteClientScript(html) {
   );
 }
 
+function useAbsolutePublishAssetPaths(html) {
+  return String(html || "")
+    .replace(/href="\.\/theme\.css"/g, 'href="/theme.css"')
+    .replace(/href="\.\/base\.css"/g, 'href="/base.css"')
+    .replace(/src="\.\/publish-runtime\.js"/g, 'src="/publish-runtime.js"');
+}
+
+function normalizePublishedUrlPath(rawValue, fallbackValue = "") {
+  const raw = String(rawValue || fallbackValue || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  const withoutQuery = raw.split("?")[0].split("#")[0];
+  const normalized = withoutQuery.replace(/^\/+/, "").replace(/\/+$/, "");
+  return normalized;
+}
+
+function appendTokenValuesFromObject(target, value, prefix = "") {
+  if (!value || typeof value !== "object") {
+    return;
+  }
+
+  for (const [key, nested] of Object.entries(value)) {
+    const normalizedKey = String(key || "").trim();
+    if (!normalizedKey) {
+      continue;
+    }
+
+    const path = prefix ? `${prefix}.${normalizedKey}` : normalizedKey;
+    if (Array.isArray(nested)) {
+      const joined = nested.map((item) => String(item || "")).join(", ");
+      target[path] = joined;
+      target[path.toUpperCase()] = joined;
+      continue;
+    }
+
+    if (nested && typeof nested === "object") {
+      appendTokenValuesFromObject(target, nested, path);
+      continue;
+    }
+
+    if (
+      typeof nested === "string" ||
+      typeof nested === "number" ||
+      typeof nested === "boolean"
+    ) {
+      target[path] = String(nested);
+      target[path.toUpperCase()] = String(nested);
+    }
+  }
+}
+
+function buildItemTemplateTokenValues(itemConfig = {}) {
+  const tokenValues = {};
+
+  const rawUrl =
+    itemConfig?.url ||
+    itemConfig?.metadata?.url ||
+    itemConfig?.metadata?.sourceUrl;
+  const computedUrl = rawUrl
+    ? String(rawUrl).split("?")[0].split("#")[0].replace(/^\/+/, "").replace(/\/+$/, "")
+    : undefined;
+
+  appendTokenValuesFromObject(tokenValues, {
+    id: itemConfig?.id,
+    title: itemConfig?.title,
+    excerpt: itemConfig?.excerpt,
+    tags: itemConfig?.tags,
+    url: computedUrl ?? itemConfig?.url,
+  });
+
+  appendTokenValuesFromObject(tokenValues, itemConfig?.metadata || {});
+  return tokenValues;
+}
+
 async function copyDirectoryRecursive(sourceDir, targetDir) {
   let sourceStats;
   try {
@@ -115,8 +191,11 @@ async function buildPublishedComponentStyles(appRoot) {
 export async function publishSite({ contentRoot, outputDir, appRoot }) {
   const pagesDir = resolve(contentRoot, "pages");
   const sharedDir = resolve(contentRoot, "shared");
+  const collectionsDir = resolve(contentRoot, "collections");
 
   const sharedCache = new Map();
+  const collectionConfigCache = new Map();
+  const collectionMetadataCache = new Map();
 
   async function loadSharedComponent(componentId) {
     const normalized = String(componentId || "").trim();
@@ -137,6 +216,82 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
       sharedCache.set(normalized, null);
       return null;
     }
+  }
+
+  async function loadCollectionConfig(collectionId) {
+    const normalized = String(collectionId || "").trim();
+    if (!normalized) {
+      return null;
+    }
+
+    if (collectionConfigCache.has(normalized)) {
+      return collectionConfigCache.get(normalized);
+    }
+
+    try {
+      const config = await readJson(
+        resolve(collectionsDir, normalized, "_config.json"),
+      );
+      collectionConfigCache.set(normalized, config);
+      return config;
+    } catch {
+      collectionConfigCache.set(normalized, null);
+      return null;
+    }
+  }
+
+  async function loadCollectionItemsMetadata(collectionId) {
+    const normalized = String(collectionId || "").trim();
+    if (!normalized) {
+      return { collectionId: "", items: [] };
+    }
+
+    if (collectionMetadataCache.has(normalized)) {
+      return collectionMetadataCache.get(normalized);
+    }
+
+    let itemEntries = [];
+    try {
+      itemEntries = await readdir(resolve(collectionsDir, normalized), {
+        withFileTypes: true,
+      });
+    } catch {
+      const emptyResult = { collectionId: normalized, items: [] };
+      collectionMetadataCache.set(normalized, emptyResult);
+      return emptyResult;
+    }
+
+    const jsonItemFiles = itemEntries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .filter((entry) => entry.name !== "_config.json")
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b));
+
+    const items = [];
+    for (const fileName of jsonItemFiles) {
+      try {
+        const item = await readJson(
+          resolve(collectionsDir, normalized, fileName),
+        );
+        const metadata = { ...(item && typeof item === "object" ? item : {}) };
+        delete metadata.content;
+        const itemId = String(item?.id || toBaseName(fileName));
+        items.push({
+          id: itemId,
+          title: item?.title || itemId,
+          metadata,
+        });
+      } catch {
+        // Ignore malformed items so one broken file does not stop publishing.
+      }
+    }
+
+    const result = {
+      collectionId: normalized,
+      items,
+    };
+    collectionMetadataCache.set(normalized, result);
+    return result;
   }
 
   const pageFiles = (await readdir(pagesDir, { withFileTypes: true }))
@@ -198,11 +353,15 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
     const { html, warnings: pageWarnings } = await generatePageHtml({
       pageConfig,
       loadSharedComponent,
+      loadCollectionConfig,
+      loadCollectionItemsMetadata,
     });
 
     await writeFile(
       outputPath,
-      withGeneratedHtmlHeader(stripViteClientScript(html)),
+      withGeneratedHtmlHeader(
+        useAbsolutePublishAssetPaths(stripViteClientScript(html)),
+      ),
       "utf8",
     );
 
@@ -214,6 +373,103 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
 
     for (const warning of pageWarnings) {
       warnings.push(`[${fileBaseName}] ${warning}`);
+    }
+  }
+
+  const collectionEntries = (
+    await readdir(collectionsDir, { withFileTypes: true })
+  )
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const collectionId of collectionEntries) {
+    const collectionConfig = await loadCollectionConfig(collectionId);
+    if (!collectionConfig) {
+      continue;
+    }
+
+    const collectionTemplateContent =
+      Array.isArray(collectionConfig?.content) &&
+      collectionConfig.content.length > 0
+        ? collectionConfig.content
+        : [
+            {
+              id: "section-collection-template",
+              type: "section",
+              content: [],
+              settings: {},
+            },
+          ];
+
+    const itemMetadata = await loadCollectionItemsMetadata(collectionId);
+    const items = Array.isArray(itemMetadata?.items) ? itemMetadata.items : [];
+
+    for (const itemMeta of items) {
+      const itemId = String(itemMeta?.id || "").trim();
+      if (!itemId) {
+        continue;
+      }
+
+      let itemConfig;
+      try {
+        itemConfig = await readJson(
+          resolve(collectionsDir, collectionId, `${itemId}.json`),
+        );
+      } catch {
+        continue;
+      }
+
+      const outputUrlPath = normalizePublishedUrlPath(
+        itemConfig?.metadata?.url ||
+          itemConfig?.metadata?.sourceUrl ||
+          itemConfig?.url,
+        `/collections/${collectionId}/${itemId}`,
+      );
+      if (!outputUrlPath) {
+        continue;
+      }
+
+      const outputDirectory = resolve(outputDir, outputUrlPath);
+      const outputPath = resolve(outputDirectory, "index.html");
+
+      const pageTemplate = {
+        id: itemId,
+        title: itemConfig?.title || itemId,
+        content: collectionTemplateContent,
+      };
+
+      const tokenValues = buildItemTemplateTokenValues(itemConfig);
+
+      const { html, warnings: pageWarnings } = await generatePageHtml({
+        pageConfig: pageTemplate,
+        loadSharedComponent,
+        loadCollectionConfig,
+        loadCollectionItemsMetadata,
+        tokenValues,
+        collectionItemContent: Array.isArray(itemConfig?.content)
+          ? itemConfig.content
+          : [],
+      });
+
+      await mkdir(outputDirectory, { recursive: true });
+      await writeFile(
+        outputPath,
+        withGeneratedHtmlHeader(
+          useAbsolutePublishAssetPaths(stripViteClientScript(html)),
+        ),
+        "utf8",
+      );
+
+      published.push({
+        pageId: `${collectionId}/${itemId}`,
+        fileName: `${outputUrlPath}/index.html`,
+        outputPath,
+      });
+
+      for (const warning of pageWarnings) {
+        warnings.push(`[${collectionId}/${itemId}] ${warning}`);
+      }
     }
   }
 

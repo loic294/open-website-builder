@@ -104,6 +104,47 @@ export function createDataApiMiddleware(resolvers) {
 
       if (
         method === "GET" &&
+        parts.length === 2 &&
+        parts[0] === "collections" &&
+        parts[1] === "grouped-content"
+      ) {
+        sendJson(response, 200, await resolvers.getGroupedCollectionsContent());
+        return;
+      }
+
+      if (
+        method === "GET" &&
+        parts.length === 3 &&
+        parts[0] === "collections" &&
+        parts[2] === "config"
+      ) {
+        const collectionId = decodePathPart(parts[1]);
+        sendJson(
+          response,
+          200,
+          await resolvers.getCollectionConfig(collectionId),
+        );
+        return;
+      }
+
+      if (
+        method === "PUT" &&
+        parts.length === 3 &&
+        parts[0] === "collections" &&
+        parts[2] === "config"
+      ) {
+        const collectionId = decodePathPart(parts[1]);
+        const body = await parseJsonBody(request);
+        sendJson(
+          response,
+          200,
+          await resolvers.saveCollectionConfig(collectionId, body.config),
+        );
+        return;
+      }
+
+      if (
+        method === "GET" &&
         parts.length === 4 &&
         parts[0] === "collections" &&
         parts[2] === "items"
@@ -114,6 +155,21 @@ export function createDataApiMiddleware(resolvers) {
           response,
           200,
           await resolvers.getCollectionItemContent(collectionId, itemId),
+        );
+        return;
+      }
+
+      if (
+        method === "GET" &&
+        parts.length === 3 &&
+        parts[0] === "collections" &&
+        parts[2] === "items-metadata"
+      ) {
+        const collectionId = decodePathPart(parts[1]);
+        sendJson(
+          response,
+          200,
+          await resolvers.getCollectionItemsMetadata(collectionId),
         );
         return;
       }
