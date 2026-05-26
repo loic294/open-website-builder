@@ -85,6 +85,22 @@ class SharedComponent extends EditorComponent {
     return String(this.node?.settings?.shared_component_id || "").trim();
   }
 
+  navigateToSharedEditor(componentId) {
+    const normalizedComponentId = String(componentId || "").trim();
+    if (!normalizedComponentId || typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set("type", "shared");
+    params.set("componentId", normalizedComponentId);
+
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, "", nextUrl);
+    window.dispatchEvent(new CustomEvent("editor-route-change"));
+    this.closeSettingsEditor();
+  }
+
   openSharedSettings() {
     const currentId = this.currentSharedComponentId;
     const options = this.sharedComponentOptions;
@@ -117,6 +133,14 @@ class SharedComponent extends EditorComponent {
               this.loadComponentIfNeeded();
             }}
           ></editor-select>
+          <editor-btn
+            class="edit-shared-component-button"
+            style="light"
+            @click=${() => this.navigateToSharedEditor(currentId)}
+            ?disabled=${!currentId}
+          >
+            Edit Shared Component
+          </editor-btn>
         </settings-section>
       `,
     });

@@ -104,6 +104,13 @@ class WebsiteEditor extends LitElement {
       };
     }
 
+    if (type === "shared") {
+      return {
+        type: "shared",
+        componentId: params.get("componentId") || "",
+      };
+    }
+
     return {
       type: "page",
       pageId: params.get("pageId") || "index",
@@ -133,6 +140,27 @@ class WebsiteEditor extends LitElement {
         return;
       }
 
+      if (selection.type === "shared") {
+        const componentConfig = await dataLayer.getComponentConfig(
+          selection.componentId,
+        );
+
+        this.pageConfig = {
+          ...componentConfig,
+          type: "shared",
+          id: componentConfig?.id || selection.componentId,
+          title:
+            componentConfig?.title ||
+            selection.componentId ||
+            "Shared component",
+          url: `/shared/${selection.componentId}`,
+          content: Array.isArray(componentConfig?.content)
+            ? componentConfig.content
+            : [],
+        };
+        return;
+      }
+
       this.pageConfig = await dataLayer.getPageConfig(selection.pageId);
     } catch (error) {
       console.error(error);
@@ -141,15 +169,21 @@ class WebsiteEditor extends LitElement {
         id:
           selection.type === "collection"
             ? selection.itemId || "item"
-            : selection.pageId || "home",
+            : selection.type === "shared"
+              ? selection.componentId || "component"
+              : selection.pageId || "home",
         title:
           selection.type === "collection"
             ? selection.itemId || "Collection item"
-            : "Home",
+            : selection.type === "shared"
+              ? selection.componentId || "Shared component"
+              : "Home",
         url:
           selection.type === "collection"
             ? `/collections/${selection.collectionId}/${selection.itemId}`
-            : "/",
+            : selection.type === "shared"
+              ? `/shared/${selection.componentId}`
+              : "/",
         content: [],
       };
     }
@@ -164,6 +198,11 @@ class WebsiteEditor extends LitElement {
         await dataLayer.updateCollectionItem(
           this.currentSelection.collectionId,
           this.currentSelection.itemId,
+          this.pageConfig,
+        );
+      } else if (this.currentSelection?.type === "shared") {
+        await dataLayer.saveComponentConfig(
+          this.currentSelection.componentId,
           this.pageConfig,
         );
       } else {
@@ -233,14 +272,18 @@ class WebsiteEditor extends LitElement {
           <div class="page-info">
             <div class="page-info-main">
               <span class="page-title"
-                >${this.pageConfig?.title || this.pageConfig?.id || "Untitled"}</span
+                >${this.pageConfig?.title ||
+                this.pageConfig?.id ||
+                "Untitled"}</span
               >
             </div>
             <span class="page-path"
               >${this.pageConfig?.url ||
               (this.currentSelection?.type === "collection"
                 ? `/collections/${this.currentSelection.collectionId}/${this.currentSelection.itemId}`
-                : `/${this.currentSelection?.pageId || "index"}`)}</span
+                : this.currentSelection?.type === "shared"
+                  ? `/shared/${this.currentSelection.componentId}`
+                  : `/${this.currentSelection?.pageId || "index"}`)}</span
             >
           </div>
           <div class="view-mode-switcher">

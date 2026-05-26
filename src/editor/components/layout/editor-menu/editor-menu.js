@@ -90,7 +90,8 @@ class EditorMenu extends LitElement {
       })),
       collections: collectionsContent.flatMap((collection) => {
         const collectionId = collection?.collectionId || "";
-        const collectionTitle = collection?.title || collectionId || "Collection";
+        const collectionTitle =
+          collection?.title || collectionId || "Collection";
         const items = Array.isArray(collection?.items) ? collection.items : [];
         return items.map((item) => ({
           kind: "collection-item",
@@ -100,12 +101,13 @@ class EditorMenu extends LitElement {
           title: item?.title || item?.id || "Untitled",
         }));
       }),
-      shared: sharedComponents.map(
-        (component) => component?.title || component?.id || "Untitled",
-      ),
+      shared: sharedComponents.map((component) => ({
+        kind: "shared",
+        id: component?.id || "",
+        title: component?.title || component?.id || "Untitled",
+      })),
     };
   }
-
 
   disconnectedCallback() {
     super.disconnectedCallback();
@@ -129,6 +131,13 @@ class EditorMenu extends LitElement {
       };
     }
 
+    if (type === "shared") {
+      return {
+        type: "shared",
+        componentId: params.get("componentId") || "",
+      };
+    }
+
     return {
       type: "page",
       pageId: params.get("pageId") || "index",
@@ -145,6 +154,9 @@ class EditorMenu extends LitElement {
       params.set("type", "collection");
       params.set("collectionId", selection.collectionId || "");
       params.set("itemId", selection.itemId || "");
+    } else if (selection.kind === "shared") {
+      params.set("type", "shared");
+      params.set("componentId", selection.id || "");
     } else {
       params.set("type", "page");
       params.set("pageId", selection.id || "index");
@@ -166,6 +178,10 @@ class EditorMenu extends LitElement {
       );
     }
 
+    if (selection.kind === "shared") {
+      return route.type === "shared" && route.componentId === selection.id;
+    }
+
     return route.type === "page" && route.pageId === selection.id;
   }
 
@@ -174,7 +190,9 @@ class EditorMenu extends LitElement {
     const subtitle =
       selection.kind === "collection-item"
         ? `${selection.collectionTitle} / ${selection.itemId}`
-        : selection.url || selection.id;
+        : selection.kind === "shared"
+          ? `/shared/${selection.id || ""}`
+          : selection.url || selection.id;
 
     return html`
       <button
