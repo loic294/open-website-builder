@@ -63,6 +63,20 @@ function sanitizeEmbed(rawHtml) {
     .replace(/\ssrcdoc\s*=\s*'[^']*'/gi, "");
 }
 
+function normalizeTextLinksToSameTab(rawHtml) {
+  const html = String(rawHtml ?? "");
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  const anchors = template.content.querySelectorAll("a");
+  anchors.forEach((anchor) => {
+    anchor.removeAttribute("target");
+    anchor.removeAttribute("rel");
+  });
+
+  return template.innerHTML;
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -210,9 +224,10 @@ class OwbText extends HTMLElement {
   connectedCallback() {
     const { content = "", settings = {} } = readConfig(this);
     const customCss = String(settings.customCss || "").trim();
+    const normalizedContent = normalizeTextLinksToSameTab(content);
     renderShadow(
       this,
-      `${customCss ? `<style>${customCss}</style>` : ""}<div class="text-block ProseMirror">${content}</div>`,
+      `${customCss ? `<style>${customCss}</style>` : ""}<div class="text-block ProseMirror">${normalizedContent}</div>`,
     );
   }
 }
@@ -222,13 +237,82 @@ class OwbImage extends HTMLElement {
     const { url = "", settings = {} } = readConfig(this);
     const mode = String(settings.imageSizeMode || "contained");
     const customCss = String(settings.customCss || "").trim();
-    const content = url
-      ? `<div class="image-block size-${mode}"><div class="image-frame size-${mode}"><img src="${url}" alt="" loading="lazy" /></div></div>`
-      : `<div class="image-block"><div class="image-frame"></div></div>`;
-    renderShadow(
+    const clickAction = String(settings.imageClickAction || "none");
+    const linkUrl = String(settings.imageLinkUrl || "").trim();
+    const linkTarget = String(settings.imageLinkTarget || "current");
+
+    const imageFrame = url
+      ? `<div class="image-frame size-${mode}"><img src="${escapeAttr(url)}" alt="" loading="lazy" /></div>`
+      : `<div class="image-frame"></div>`;
+
+    let imageContent = imageFrame;
+    if (clickAction === "link" && linkUrl) {
+      const target = linkTarget === "new" ? "_blank" : "_self";
+      const rel = target === "_blank" ? ` rel="noopener noreferrer"` : "";
+      imageContent = `<a class="image-action-link" href="${escapeAttr(linkUrl)}" target="${target}"${rel}>${imageFrame}</a>`;
+    } else if (clickAction === "lightbox" && url) {
+      imageContent = `<button class="image-lightbox-trigger" type="button" data-image-open-lightbox>${imageFrame}</button>`;
+    }
+
+    const lightboxMarkup =
+      clickAction === "lightbox" && url
+        ? `<div class="image-lightbox" data-image-lightbox hidden style="display:none;"><button class="image-lightbox-close" type="button" aria-label="Close image" data-image-lightbox-close>x</button><img class="image-lightbox-image" src="${escapeAttr(url)}" alt="" /></div>`
+        : "";
+
+    const root = renderShadow(
       this,
-      `<style>:host{display:block;width:100%;height:100%;}</style>${customCss ? `<style>${customCss}</style>` : ""}${content}`,
+      `<style>:host{display:block;width:100%;height:100%;}</style>${customCss ? `<style>${customCss}</style>` : ""}<div class="image-block size-${mode}">${imageContent}</div>${lightboxMarkup}`,
     );
+
+    const lightbox = root.querySelector("[data-image-lightbox]");
+    const openBtn = root.querySelector("[data-image-open-lightbox]");
+    const closeBtn = root.querySelector("[data-image-lightbox-close]");
+
+    if (lightbox instanceof HTMLElement) {
+      const openLightbox = () => {
+        lightbox.hidden = false;
+        lightbox.style.display = "grid";
+      };
+
+      const closeLightbox = () => {
+        lightbox.hidden = true;
+        lightbox.style.display = "none";
+      };
+
+      if (openBtn instanceof HTMLElement) {
+        openBtn.addEventListener("click", (event) => {
+          event.preventDefault();
+          openLightbox();
+        });
+      }
+
+      if (closeBtn instanceof HTMLElement) {
+        closeBtn.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeLightbox();
+        });
+      }
+
+      lightbox.addEventListener("click", () => {
+        closeLightbox();
+      });
+
+      this.onImageLightboxKeydown = (event) => {
+        if (event.key === "Escape") {
+          closeLightbox();
+        }
+      };
+
+      window.addEventListener("keydown", this.onImageLightboxKeydown);
+    }
+  }
+
+  disconnectedCallback() {
+    if (this.onImageLightboxKeydown) {
+      window.removeEventListener("keydown", this.onImageLightboxKeydown);
+      this.onImageLightboxKeydown = null;
+    }
   }
 }
 

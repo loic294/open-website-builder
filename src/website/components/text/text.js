@@ -86,6 +86,20 @@ const FontSize = Extension.create({
   },
 });
 
+function normalizeTextLinksToSameTab(rawHtml) {
+  const html = String(rawHtml ?? "");
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  const anchors = template.content.querySelectorAll("a");
+  anchors.forEach((anchor) => {
+    anchor.removeAttribute("target");
+    anchor.removeAttribute("rel");
+  });
+
+  return template.innerHTML;
+}
+
 class Text extends withVariantConfig(EditorComponent) {
   static properties = {
     content: { type: String },
@@ -874,6 +888,7 @@ class OwbText extends withVariantConfig(LitElement) {
   render() {
     const { content = "", settings = {} } = this.config;
     const customCss = String(settings?.customCss || "").trim();
+    const normalizedContent = normalizeTextLinksToSameTab(content);
 
     return html`
       ${customCss
@@ -881,7 +896,7 @@ class OwbText extends withVariantConfig(LitElement) {
             ${customCss}
           </style>`
         : null}
-      <div class="text-block ProseMirror">${unsafeHTML(content)}</div>
+      <div class="text-block ProseMirror">${unsafeHTML(normalizedContent)}</div>
     `;
   }
 }
