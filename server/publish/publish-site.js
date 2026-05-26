@@ -114,7 +114,11 @@ function buildItemTemplateTokenValues(itemConfig = {}) {
     itemConfig?.metadata?.url ||
     itemConfig?.metadata?.sourceUrl;
   const computedUrl = rawUrl
-    ? String(rawUrl).split("?")[0].split("#")[0].replace(/^\/+/, "").replace(/\/+$/, "")
+    ? String(rawUrl)
+        .split("?")[0]
+        .split("#")[0]
+        .replace(/^\/+/, "")
+        .replace(/\/+$/, "")
     : undefined;
 
   appendTokenValuesFromObject(tokenValues, {
