@@ -668,10 +668,7 @@ class Text extends withVariantConfig(EditorComponent) {
   }
 
   render() {
-    return html`<div
-      class="text-block"
-      @pointerdown=${() => this.openTextSettingsIfNeeded()}
-    >
+    return html`<div class="text-block">
       <div data-editor data-editor-block></div>
       <div class="menu menu-${this.node.id}">
         <editor-btn

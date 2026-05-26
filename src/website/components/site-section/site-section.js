@@ -496,6 +496,29 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       : "";
   }
 
+  hasDescendantNodeId(targetNodeId, nodes = this.getChildNodes()) {
+    const normalizedTargetId = String(targetNodeId || "");
+    if (!normalizedTargetId || !Array.isArray(nodes)) {
+      return false;
+    }
+
+    return nodes.some((node) => {
+      if (!node || typeof node !== "object") {
+        return false;
+      }
+
+      if (String(node.id || "") === normalizedTargetId) {
+        return true;
+      }
+
+      if (Array.isArray(node.content)) {
+        return this.hasDescendantNodeId(normalizedTargetId, node.content);
+      }
+
+      return false;
+    });
+  }
+
   isSettingsOwnedBySection() {
     const activeSettingsOwner = EditorComponent.activeSettingsOwner;
     if (!activeSettingsOwner) {
@@ -1082,16 +1105,22 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     this.dispatchPageConfigUpdated(this.pageConfig);
   }
 
-  renderChildNode(node) {
+  renderChildNode(node, renderOptions = {}) {
     if (typeof this.renderNodeFn !== "function") {
       return html``;
     }
+
+    const childId = typeof node?.id === "string" ? node.id : "";
 
     return this.renderNodeFn(
       node,
       this.pageConfig,
       this.onPageConfigUpdated,
       this.renderNodeFn,
+      {
+        ...renderOptions,
+        hostDataGridChildId: renderOptions.hostDataGridChildId ?? childId,
+      },
     );
   }
 
@@ -1701,7 +1730,13 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     }
 
     const activeSettingsOwner = EditorComponent.activeSettingsOwner;
-    if (activeSettingsOwner && activeSettingsOwner !== this) {
+    const activeOwnerNodeId = String(activeSettingsOwner?.node?.id || "");
+    const isActiveOwnerDescendant = this.hasDescendantNodeId(activeOwnerNodeId);
+    if (
+      activeSettingsOwner &&
+      activeSettingsOwner !== this &&
+      !isActiveOwnerDescendant
+    ) {
       return;
     }
 
@@ -1710,24 +1745,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       return;
     }
 
-    const sectionEl = this.renderRoot?.querySelector("section");
-    const containerEl = this.renderRoot?.querySelector(".container");
-    const isDirectBackgroundTarget =
-      target === sectionEl || target === containerEl;
-
-    const composedPath =
-      typeof event.composedPath === "function" ? event.composedPath() : [];
-    const isPointerInsideChildComponent = composedPath.some((node) => {
-      if (!(node instanceof HTMLElement) || node === this) {
-        return false;
-      }
-
-      const tagName = String(node.tagName || "").toLowerCase();
-      return tagName.startsWith("site-");
-    });
-
     const shouldIgnore =
-      isPointerInsideChildComponent ||
       target.closest("[data-editor-block]") ||
       target.closest("[data-grid-child-id]") ||
       target.closest("editor-btn") ||
@@ -1742,10 +1760,6 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       target.closest(".section-resize-handle");
 
     if (shouldIgnore) {
-      return;
-    }
-
-    if (!isDirectBackgroundTarget) {
       return;
     }
 
