@@ -347,7 +347,10 @@ class SiteCollection extends SiteLayoutContainerBase {
         getValueByPath(metadata?.metadata, normalizedFieldName) ??
         getValueByPath(metadata, normalizedFieldName);
 
-      if (normalizedFieldName === "url" || normalizedFieldName === "sourceUrl") {
+      if (
+        normalizedFieldName === "url" ||
+        normalizedFieldName === "sourceUrl"
+      ) {
         const pathValue = normalizePathTokenValue(value);
         if (pathValue) {
           tokenMap[normalizedFieldName] = pathValue;

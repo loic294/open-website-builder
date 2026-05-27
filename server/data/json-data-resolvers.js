@@ -548,7 +548,9 @@ export function createJsonDataResolvers({ contentRoot }) {
     const componentPath = await resolveSharedComponentFilePath(componentId);
     const currentConfig = await readJsonFile(componentPath);
 
-    const normalizedId = sanitizeId(identity?.id || currentConfig?.id || componentId);
+    const normalizedId = sanitizeId(
+      identity?.id || currentConfig?.id || componentId,
+    );
     if (!normalizedId) {
       throw new Error("Shared component id is required");
     }
@@ -569,7 +571,9 @@ export function createJsonDataResolvers({ contentRoot }) {
     if (nextComponentPath !== componentPath) {
       try {
         await readFile(nextComponentPath, "utf8");
-        throw new Error(`Shared component file already exists: ${nextFileName}`);
+        throw new Error(
+          `Shared component file already exists: ${nextFileName}`,
+        );
       } catch (error) {
         if (!(error instanceof Error) || !error.message.includes("ENOENT")) {
           throw error;
@@ -578,7 +582,9 @@ export function createJsonDataResolvers({ contentRoot }) {
     }
 
     const nextConfig = {
-      ...(currentConfig && typeof currentConfig === "object" ? currentConfig : {}),
+      ...(currentConfig && typeof currentConfig === "object"
+        ? currentConfig
+        : {}),
       id: normalizedId,
       title: nextTitle,
     };

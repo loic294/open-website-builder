@@ -15,6 +15,161 @@ import { dataLayer } from "../../../data/data-layer.js";
 import styles from "./styles.css?inline";
 
 const MENU_COLLAPSED_STORAGE_KEY = "editor-menu-collapsed";
+const MENU_MODE_STORAGE_KEY = "editor-menu-mode";
+
+function getNodeLabel(node) {
+  const nodeType = String(node?.type || "component");
+  const titleValue =
+    typeof node?.title === "string" ? node.title.trim() : "";
+  const textContentValue =
+    typeof node?.content === "string" ? node.content.trim() : "";
+
+  if (textContentValue && nodeType === "text") {
+    const stripped = textContentValue.replace(/<[^>]+>/g, "").trim();
+    if (stripped) {
+      return stripped.slice(0, 48);
+    }
+  }
+
+  if (titleValue) {
+    return titleValue.slice(0, 48);
+  }
+
+  if (textContentValue) {
+    return textContentValue.slice(0, 48);
+  }
+
+  return nodeType;
+}
+
+function cloneNodes(nodes) {
+  return JSON.parse(JSON.stringify(Array.isArray(nodes) ? nodes : []));
+}
+
+function findNodeById(nodes, nodeId) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  for (const node of list) {
+    if (!node || typeof node !== "object") {
+      continue;
+    }
+    if (String(node.id || "") === nodeId) {
+      return node;
+    }
+    const nested = findNodeById(node.content, nodeId);
+    if (nested) {
+      return nested;
+    }
+  }
+  return null;
+}
+
+function collectDescendantIds(node, ids = new Set()) {
+  if (!node || typeof node !== "object") {
+    return ids;
+  }
+
+  const id = String(node.id || "").trim();
+  if (id) {
+    ids.add(id);
+  }
+
+  const children = Array.isArray(node.content) ? node.content : [];
+  for (const child of children) {
+    collectDescendantIds(child, ids);
+  }
+
+  return ids;
+}
+
+function removeNodeById(nodes, nodeId) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  let removed = null;
+
+  const nextNodes = list
+    .map((node) => {
+      if (!node || typeof node !== "object") {
+        return node;
+      }
+
+      if (String(node.id || "") === nodeId) {
+        removed = node;
+        return null;
+      }
+
+      if (!Array.isArray(node.content)) {
+        return node;
+      }
+
+      const nested = removeNodeById(node.content, nodeId);
+      if (!nested.removed) {
+        return node;
+      }
+
+      removed = nested.removed;
+      return {
+        ...node,
+        content: nested.nextNodes,
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    nextNodes,
+    removed,
+  };
+}
+
+function insertNodeAt(nodes, parentId, index, nodeToInsert) {
+  const list = Array.isArray(nodes) ? [...nodes] : [];
+
+  if (!parentId) {
+    const clamped = Math.max(0, Math.min(index, list.length));
+    list.splice(clamped, 0, nodeToInsert);
+    return {
+      didInsert: true,
+      nextNodes: list,
+    };
+  }
+
+  let didInsert = false;
+
+  const nextNodes = list.map((node) => {
+    if (!node || typeof node !== "object") {
+      return node;
+    }
+
+    if (String(node.id || "") === parentId) {
+      const content = Array.isArray(node.content) ? [...node.content] : [];
+      const clamped = Math.max(0, Math.min(index, content.length));
+      content.splice(clamped, 0, nodeToInsert);
+      didInsert = true;
+      return {
+        ...node,
+        content,
+      };
+    }
+
+    if (!Array.isArray(node.content)) {
+      return node;
+    }
+
+    const nested = insertNodeAt(node.content, parentId, index, nodeToInsert);
+    if (!nested.didInsert) {
+      return node;
+    }
+
+    didInsert = true;
+    return {
+      ...node,
+      content: nested.nextNodes,
+    };
+  });
+
+  return {
+    didInsert,
+    nextNodes,
+  };
+}
 
 class EditorMenu extends LitElement {
   static properties = {
@@ -22,6 +177,10 @@ class EditorMenu extends LitElement {
     sections: { state: true },
     groupItems: { state: true },
     collectionSections: { state: true },
+    menuMode: { state: true },
+    layersConfig: { state: true },
+    layerSections: { state: true },
+    activeLayerNodeId: { state: true },
   };
 
   static styles = unsafeCSS(styles);
@@ -40,8 +199,35 @@ class EditorMenu extends LitElement {
       shared: [],
     };
     this.collectionSections = {};
+    this.menuMode = this.getStoredMenuMode();
+    this.layersConfig = null;
+    this.layerSections = {};
+    this.activeLayerNodeId = "";
+    this.draggedLayerNodeId = "";
     this.didLoadData = false;
     this.currentRoute = this.getRouteSelection();
+  }
+
+  getStoredMenuMode() {
+    if (typeof window === "undefined") {
+      return "site-content";
+    }
+
+    const value = window.localStorage.getItem(MENU_MODE_STORAGE_KEY);
+    return value === "layers" ? "layers" : "site-content";
+  }
+
+  persistMenuMode() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(MENU_MODE_STORAGE_KEY, this.menuMode);
+  }
+
+  setMenuMode(nextMode) {
+    this.menuMode = nextMode === "layers" ? "layers" : "site-content";
+    this.persistMenuMode();
   }
 
   async reloadGroupItems() {
@@ -126,15 +312,24 @@ class EditorMenu extends LitElement {
   async connectedCallback() {
     super.connectedCallback();
 
-    this.onRouteChanged = () => {
+    this.onRouteChanged = async () => {
       this.currentRoute = this.getRouteSelection();
+      await this.reloadLayersConfig();
     };
     this.onDataChanged = async () => {
       await this.reloadGroupItems();
+      await this.reloadLayersConfig();
+    };
+    this.onSettingsOwnerChanged = (event) => {
+      this.activeLayerNodeId = String(event?.detail?.ownerNodeId || "");
     };
     window.addEventListener("popstate", this.onRouteChanged);
     window.addEventListener("editor-route-change", this.onRouteChanged);
     window.addEventListener("editor-data-changed", this.onDataChanged);
+    window.addEventListener(
+      "owb-active-settings-owner-changed",
+      this.onSettingsOwnerChanged,
+    );
 
     if (this.didLoadData) {
       return;
@@ -143,6 +338,7 @@ class EditorMenu extends LitElement {
     this.didLoadData = true;
 
     await this.reloadGroupItems();
+    await this.reloadLayersConfig();
   }
 
   disconnectedCallback() {
@@ -150,6 +346,279 @@ class EditorMenu extends LitElement {
     window.removeEventListener("popstate", this.onRouteChanged);
     window.removeEventListener("editor-route-change", this.onRouteChanged);
     window.removeEventListener("editor-data-changed", this.onDataChanged);
+    window.removeEventListener(
+      "owb-active-settings-owner-changed",
+      this.onSettingsOwnerChanged,
+    );
+  }
+
+  async reloadLayersConfig() {
+    const selection = this.getRouteSelection();
+
+    try {
+      if (selection.type === "collection-config") {
+        this.layersConfig = await dataLayer.getCollectionConfig(
+          selection.collectionId,
+        );
+      } else if (selection.type === "collection") {
+        this.layersConfig = await dataLayer.getCollectionItemContent(
+          selection.collectionId,
+          selection.itemId,
+        );
+      } else if (selection.type === "shared") {
+        this.layersConfig = await dataLayer.getComponentConfig(
+          selection.componentId,
+        );
+      } else {
+        this.layersConfig = await dataLayer.getPageConfig(selection.pageId);
+      }
+    } catch (error) {
+      console.error(error);
+      this.layersConfig = null;
+    }
+
+    const ids = new Set();
+    const walk = (nodes) => {
+      for (const node of Array.isArray(nodes) ? nodes : []) {
+        const id = String(node?.id || "").trim();
+        if (id) {
+          ids.add(id);
+        }
+        walk(node?.content);
+      }
+    };
+    walk(this.layersConfig?.content);
+
+    const nextLayerSections = {};
+    for (const id of ids) {
+      nextLayerSections[id] = this.layerSections?.[id] ?? true;
+    }
+    this.layerSections = nextLayerSections;
+  }
+
+  toggleLayerSection(nodeId) {
+    const id = String(nodeId || "").trim();
+    if (!id) {
+      return;
+    }
+
+    this.layerSections = {
+      ...(this.layerSections || {}),
+      [id]: !Boolean(this.layerSections?.[id]),
+    };
+  }
+
+  focusLayerNode(nodeId) {
+    const id = String(nodeId || "").trim();
+    if (!id) {
+      return;
+    }
+
+    this.activeLayerNodeId = id;
+    window.dispatchEvent(
+      new CustomEvent("owb-focus-node", {
+        detail: { nodeId: id },
+      }),
+    );
+  }
+
+  onLayerDragStart(event, nodeId) {
+    const id = String(nodeId || "").trim();
+    if (!id) {
+      return;
+    }
+
+    this.draggedLayerNodeId = id;
+    event.dataTransfer?.setData("text/plain", id);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+    }
+  }
+
+  onLayerDragEnd() {
+    this.draggedLayerNodeId = "";
+  }
+
+  onLayerDragOver(event) {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "move";
+    }
+  }
+
+  async saveLayersContent(nextContent) {
+    const selection = this.getRouteSelection();
+    const nextConfig = {
+      ...(this.layersConfig && typeof this.layersConfig === "object"
+        ? this.layersConfig
+        : {}),
+      content: nextContent,
+    };
+
+    if (selection.type === "collection-config") {
+      await dataLayer.saveCollectionConfig(selection.collectionId, nextConfig);
+    } else if (selection.type === "collection") {
+      await dataLayer.updateCollectionItem(
+        selection.collectionId,
+        selection.itemId,
+        nextConfig,
+      );
+    } else if (selection.type === "shared") {
+      const componentId = String(
+        this.layersConfig?.id || selection.componentId || "",
+      ).trim();
+      await dataLayer.saveComponentConfig(componentId, nextConfig);
+    } else {
+      await dataLayer.savePageConfig(selection.pageId || "index", nextConfig);
+    }
+
+    this.layersConfig = nextConfig;
+    window.dispatchEvent(new CustomEvent("editor-route-change"));
+  }
+
+  async moveLayerNode(sourceNodeId, targetParentId, targetIndex) {
+    const sourceId = String(sourceNodeId || "").trim();
+    if (!sourceId) {
+      return;
+    }
+
+    const sourceTree = cloneNodes(this.layersConfig?.content);
+    const sourceNode = findNodeById(sourceTree, sourceId);
+    if (!sourceNode) {
+      return;
+    }
+
+    const blockedTargets = collectDescendantIds(sourceNode);
+    const normalizedTargetParentId = String(targetParentId || "").trim();
+    if (normalizedTargetParentId && blockedTargets.has(normalizedTargetParentId)) {
+      return;
+    }
+
+    const removed = removeNodeById(sourceTree, sourceId);
+    if (!removed.removed) {
+      return;
+    }
+
+    const inserted = insertNodeAt(
+      removed.nextNodes,
+      normalizedTargetParentId || "",
+      Number.isFinite(targetIndex) ? targetIndex : 0,
+      removed.removed,
+    );
+    if (!inserted.didInsert) {
+      return;
+    }
+
+    await this.saveLayersContent(inserted.nextNodes);
+    this.focusLayerNode(sourceId);
+  }
+
+  async onLayerDrop(event, targetParentId, targetIndex) {
+    event.preventDefault();
+    const sourceId =
+      this.draggedLayerNodeId || event.dataTransfer?.getData("text/plain") || "";
+    this.draggedLayerNodeId = "";
+
+    await this.moveLayerNode(sourceId, targetParentId, targetIndex);
+  }
+
+  getNodeTypeLabel(type) {
+    return String(type || "component").replace(/-/g, " ");
+  }
+
+  renderLayerNode(node, parentId, index, depth = 0) {
+    if (!node || typeof node !== "object") {
+      return html``;
+    }
+
+    const nodeId = String(node.id || "").trim();
+    const hasChildren = Array.isArray(node.content) && node.content.length > 0;
+    const isExpanded = this.layerSections?.[nodeId] ?? true;
+    const isActive = nodeId && nodeId === this.activeLayerNodeId;
+
+    return html`
+      <div class="layer-entry" style=${`--layer-depth:${depth};`}>
+        <div
+          class="layer-drop-zone"
+          @dragover=${(event) => this.onLayerDragOver(event)}
+          @drop=${(event) => this.onLayerDrop(event, parentId, index)}
+        ></div>
+        <div
+          class="layer-row ${isActive ? "is-active" : ""}"
+          draggable=${nodeId ? "true" : "false"}
+          @dragstart=${(event) => this.onLayerDragStart(event, nodeId)}
+          @dragend=${() => this.onLayerDragEnd()}
+        >
+          ${hasChildren
+            ? html`
+                <button
+                  type="button"
+                  class="layer-toggle"
+                  @click=${() => this.toggleLayerSection(nodeId)}
+                >
+                  <span class="collection-folder-chevron ${isExpanded
+                    ? ""
+                    : "is-collapsed"}">
+                    ${createElement(ChevronDown)}
+                  </span>
+                </button>
+              `
+            : html`<span class="layer-toggle layer-toggle-spacer"></span>`}
+
+          <button
+            type="button"
+            class="layer-select ${isActive ? "is-active" : ""}"
+            @click=${() => this.focusLayerNode(nodeId)}
+          >
+            <span class="layer-title">${getNodeLabel(node)}</span>
+            <span class="layer-meta">
+              ${this.getNodeTypeLabel(node.type)}${nodeId ? ` / ${nodeId}` : ""}
+            </span>
+          </button>
+        </div>
+
+        ${hasChildren && isExpanded
+          ? html`
+              <div class="layer-children">
+                ${(node.content || []).map((child, childIndex) =>
+                  this.renderLayerNode(child, nodeId, childIndex, depth + 1),
+                )}
+                <div
+                  class="layer-drop-zone"
+                  @dragover=${(event) => this.onLayerDragOver(event)}
+                  @drop=${(event) =>
+                    this.onLayerDrop(
+                      event,
+                      nodeId,
+                      Array.isArray(node.content) ? node.content.length : 0,
+                    )}
+                ></div>
+              </div>
+            `
+          : html``}
+      </div>
+    `;
+  }
+
+  renderLayersTree() {
+    const content = Array.isArray(this.layersConfig?.content)
+      ? this.layersConfig.content
+      : [];
+
+    if (!content.length) {
+      return html`<div class="group-item"><span>No components yet</span></div>`;
+    }
+
+    return html`
+      <div class="layers-tree">
+        ${content.map((node, index) => this.renderLayerNode(node, "", index, 0))}
+        <div
+          class="layer-drop-zone"
+          @dragover=${(event) => this.onLayerDragOver(event)}
+          @drop=${(event) => this.onLayerDrop(event, "", content.length)}
+        ></div>
+      </div>
+    `;
   }
 
   toSafeId(value, fallbackPrefix) {
@@ -179,14 +648,19 @@ class EditorMenu extends LitElement {
       });
     } catch (error) {
       console.error(error);
-      window.alert(error instanceof Error ? error.message : "Failed to create page");
+      window.alert(
+        error instanceof Error ? error.message : "Failed to create page",
+      );
     }
   }
 
   async createCollectionFromMenu() {
     const timestamp = Date.now();
     const title = `New Collection ${timestamp}`;
-    const collectionId = this.toSafeId(`new-collection-${timestamp}`, "collection");
+    const collectionId = this.toSafeId(
+      `new-collection-${timestamp}`,
+      "collection",
+    );
 
     try {
       const created = await dataLayer.createCollection({
@@ -217,16 +691,19 @@ class EditorMenu extends LitElement {
     const title = `New Item ${timestamp}`;
     const fallbackId = this.toSafeId(`new-item-${timestamp}`, "item");
     try {
-      const created = await dataLayer.addCollectionItem(normalizedCollectionId, {
-        id: fallbackId,
-        title,
-        excerpt: "",
-        tags: [],
-        metadata: {
-          sourceUrl: `/${normalizedCollectionId}/${fallbackId}`,
+      const created = await dataLayer.addCollectionItem(
+        normalizedCollectionId,
+        {
+          id: fallbackId,
+          title,
+          excerpt: "",
+          tags: [],
+          metadata: {
+            sourceUrl: `/${normalizedCollectionId}/${fallbackId}`,
+          },
+          content: [],
         },
-        content: [],
-      });
+      );
       const itemId = created?.id || fallbackId;
       await this.reloadGroupItems();
       this.navigateToSelection({
@@ -237,7 +714,9 @@ class EditorMenu extends LitElement {
     } catch (error) {
       console.error(error);
       window.alert(
-        error instanceof Error ? error.message : "Failed to create collection item",
+        error instanceof Error
+          ? error.message
+          : "Failed to create collection item",
       );
     }
   }
@@ -403,7 +882,11 @@ class EditorMenu extends LitElement {
             @click=${() => this.toggleCollectionSection(collectionId)}
           >
             <span class="collection-folder-title">${collectionTitle}</span>
-            <span class="collection-folder-chevron ${isExpanded ? "" : "is-collapsed"}">
+            <span
+              class="collection-folder-chevron ${isExpanded
+                ? ""
+                : "is-collapsed"}"
+            >
               ${createElement(ChevronDown)}
             </span>
           </button>
@@ -411,7 +894,8 @@ class EditorMenu extends LitElement {
             class="group-create-button"
             type="button"
             title="New collection item"
-            @click=${() => this.createCollectionItemFromMenu(collectionGroup.collectionId)}
+            @click=${() =>
+              this.createCollectionItemFromMenu(collectionGroup.collectionId)}
           >
             ${createElement(Plus)}
           </button>
@@ -421,7 +905,9 @@ class EditorMenu extends LitElement {
               <div class="collection-folder-items">
                 ${this.renderSelectableItem(collectionGroup.config)}
                 ${collectionItems.length > 0
-                  ? collectionItems.map((item) => this.renderSelectableItem(item))
+                  ? collectionItems.map((item) =>
+                      this.renderSelectableItem(item),
+                    )
                   : html`
                       <div class="group-item">
                         <span class="group-item-bullet"></span>
@@ -631,16 +1117,53 @@ class EditorMenu extends LitElement {
         </button>
       </div>
 
-      <div class="menu-groups">
-        ${this.renderGroup("pages", "Pages", Files, this.groupItems.pages)}
-        ${this.renderGroup(
-          "collections",
-          "Collections",
-          Database,
-          this.groupItems.collections,
-        )}
-        ${this.renderGroup("shared", "Shared", Blocks, this.groupItems.shared)}
+      <div class="menu-mode-toggle">
+        <label>
+          <input
+            type="radio"
+            name="menu-mode"
+            .checked=${this.menuMode === "site-content"}
+            @change=${() => this.setMenuMode("site-content")}
+          />
+          <span>Site Content</span>
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="menu-mode"
+            .checked=${this.menuMode === "layers"}
+            @change=${() => this.setMenuMode("layers")}
+          />
+          <span>Layers</span>
+        </label>
       </div>
+
+      ${this.menuMode === "site-content"
+        ? html`
+            <div class="menu-groups">
+              ${this.renderGroup("pages", "Pages", Files, this.groupItems.pages)}
+              ${this.renderGroup(
+                "collections",
+                "Collections",
+                Database,
+                this.groupItems.collections,
+              )}
+              ${this.renderGroup("shared", "Shared", Blocks, this.groupItems.shared)}
+            </div>
+          `
+        : html`
+            <div class="menu-groups layers-groups">
+              <section class="menu-group">
+                <div class="group-toggle static">
+                  <span class="section-icon">${createElement(Files)}</span>
+                  <span class="group-label">Layers</span>
+                </div>
+                <div class="group-content-scroll layers-scroll">
+                  ${this.renderLayersTree()}
+                </div>
+              </section>
+            </div>
+          `}
 
       <div class="sidebar-footer">
         <button

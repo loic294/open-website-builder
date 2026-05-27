@@ -906,7 +906,10 @@ export async function importSquarespaceXml({
         type: "page",
         id: pageId,
         title,
-        url: String(metadata.sourceUrl || "").trim() || parsedUrlPath || `/${pageId}`,
+        url:
+          String(metadata.sourceUrl || "").trim() ||
+          parsedUrlPath ||
+          `/${pageId}`,
         metadata,
         content,
       };

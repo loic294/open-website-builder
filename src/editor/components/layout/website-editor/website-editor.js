@@ -401,7 +401,10 @@ class WebsiteEditor extends LitElement {
   }
 
   async deleteCurrentSelection() {
-    const selection = this.currentSelection || { type: "page", pageId: "index" };
+    const selection = this.currentSelection || {
+      type: "page",
+      pageId: "index",
+    };
 
     const label =
       selection.type === "collection-config"
@@ -784,7 +787,8 @@ class WebsiteEditor extends LitElement {
     }
 
     const nextMetadata = {
-      ...(this.pageConfig?.metadata && typeof this.pageConfig.metadata === "object"
+      ...(this.pageConfig?.metadata &&
+      typeof this.pageConfig.metadata === "object"
         ? this.pageConfig.metadata
         : {}),
     };
@@ -833,19 +837,23 @@ class WebsiteEditor extends LitElement {
     ).trim();
 
     try {
-      const result = await dataLayer.updateComponentIdentity(currentComponentId, {
-        id: String(this.sharedIdentityDraft?.id || "").trim(),
-        title: String(this.sharedIdentityDraft?.title || "").trim(),
-        fileName: String(this.sharedIdentityDraft?.fileName || "").trim(),
-      });
+      const result = await dataLayer.updateComponentIdentity(
+        currentComponentId,
+        {
+          id: String(this.sharedIdentityDraft?.id || "").trim(),
+          title: String(this.sharedIdentityDraft?.title || "").trim(),
+          fileName: String(this.sharedIdentityDraft?.fileName || "").trim(),
+        },
+      );
 
       const nextComponentId = String(result?.id || currentComponentId).trim();
       const nextTitle =
         String(result?.title || this.sharedIdentityDraft?.title || "").trim() ||
         nextComponentId;
       const nextFileName =
-        String(result?.fileName || this.sharedIdentityDraft?.fileName || "").trim() ||
-        `${nextComponentId}.json`;
+        String(
+          result?.fileName || this.sharedIdentityDraft?.fileName || "",
+        ).trim() || `${nextComponentId}.json`;
 
       this.pageConfig = {
         ...this.pageConfig,

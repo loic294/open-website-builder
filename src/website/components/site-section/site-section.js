@@ -1523,6 +1523,16 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     this.closeSettingsEditor();
   }
 
+  onFocusNodeRequest(event) {
+    const requestedNodeId = String(event?.detail?.nodeId || "");
+    if (!requestedNodeId || String(this.node?.id || "") !== requestedNodeId) {
+      return;
+    }
+
+    this.scrollIntoView({ block: "center", behavior: "smooth" });
+    void this.openSectionSettings();
+  }
+
   async openSectionSettings() {
     if (this.supportsReplaceWithSharedComponent()) {
       await this.loadSharedComponentOptions();

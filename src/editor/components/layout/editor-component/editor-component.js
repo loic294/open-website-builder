@@ -458,7 +458,15 @@ export class EditorComponent extends LitElement {
 
     const editorBlock = this.renderRoot?.querySelector("[data-editor-block]");
     if (editorBlock instanceof HTMLElement) {
-      editorBlock.click();
+      editorBlock.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+          pointerId: 1,
+          isPrimary: true,
+        }),
+      );
       return;
     }
 

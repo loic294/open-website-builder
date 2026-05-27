@@ -374,6 +374,16 @@ class Text extends withVariantConfig(EditorComponent) {
     );
   }
 
+  onFocusNodeRequest(event) {
+    const requestedNodeId = String(event?.detail?.nodeId || "");
+    if (!requestedNodeId || String(this.node?.id || "") !== requestedNodeId) {
+      return;
+    }
+
+    this.scrollIntoView({ block: "center", behavior: "smooth" });
+    this.openTextSettingsIfNeeded();
+  }
+
   openTextSettingsIfNeeded() {
     if (this.isSettingsEditorOpen) {
       return;
