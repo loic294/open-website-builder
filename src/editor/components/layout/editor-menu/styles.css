@@ -125,7 +125,11 @@
 }
 
 .menu-mode-toggle label:has(input:checked) {
-  border-color: color-mix(in srgb, var(--editor-primary-color) 40%, transparent);
+  border-color: color-mix(
+    in srgb,
+    var(--editor-primary-color) 40%,
+    transparent
+  );
   color: var(--editor-text-color);
   background: color-mix(
     in srgb,
@@ -417,6 +421,40 @@
   align-items: stretch;
   gap: 4px;
   padding-left: calc(var(--layer-depth) * 14px);
+  cursor: default;
+}
+
+.layer-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  min-width: 18px;
+  color: var(--editor-muted-text-color);
+  opacity: 0.3;
+  cursor: grab;
+  transition: opacity 0.12s ease;
+  flex: 0 0 auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.layer-row:hover .layer-drag-handle {
+  opacity: 1;
+}
+
+.layer-drag-handle:active {
+  cursor: grabbing;
+}
+
+.layer-drag-handle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.layer-row.is-dragging {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .layer-toggle {
@@ -474,13 +512,29 @@
 }
 
 .layer-drop-zone {
-  height: 7px;
-  margin: 1px 0;
+  height: 5px;
+  margin: 0;
+  border-radius: 99px;
+  transition:
+    height 0.1s ease,
+    background 0.1s ease;
+  flex-shrink: 0;
+}
+
+.layers-tree.is-dragging .layer-drop-zone {
+  height: 5px;
+}
+
+.layer-drop-zone.is-active {
+  height: 3px;
+  background: var(--editor-primary-color);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--editor-primary-color) 30%, transparent);
   border-radius: 99px;
 }
 
-.layer-drop-zone:hover {
-  background: color-mix(in srgb, var(--editor-primary-color) 35%, transparent);
+.layers-tree.is-dragging .layer-drop-zone.is-active {
+  height: 4px;
 }
 
 .sidebar.collapsed .group-toggle {

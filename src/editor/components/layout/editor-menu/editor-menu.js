@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Database,
   Files,
+  GripVertical,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -19,8 +20,7 @@ const MENU_MODE_STORAGE_KEY = "editor-menu-mode";
 
 function getNodeLabel(node) {
   const nodeType = String(node?.type || "component");
-  const titleValue =
-    typeof node?.title === "string" ? node.title.trim() : "";
+  const titleValue = typeof node?.title === "string" ? node.title.trim() : "";
   const textContentValue =
     typeof node?.content === "string" ? node.content.trim() : "";
 
@@ -181,6 +181,8 @@ class EditorMenu extends LitElement {
     layersConfig: { state: true },
     layerSections: { state: true },
     activeLayerNodeId: { state: true },
+    dropTargetKey: { state: true },
+    isDragging: { state: true },
   };
 
   static styles = unsafeCSS(styles);
@@ -204,6 +206,8 @@ class EditorMenu extends LitElement {
     this.layerSections = {};
     this.activeLayerNodeId = "";
     this.draggedLayerNodeId = "";
+    this.dropTargetKey = "";
+    this.isDragging = false;
     this.didLoadData = false;
     this.currentRoute = this.getRouteSelection();
   }
@@ -422,28 +426,70 @@ class EditorMenu extends LitElement {
     );
   }
 
-  onLayerDragStart(event, nodeId) {
+  onLayerPointerDown(event, nodeId) {
     const id = String(nodeId || "").trim();
-    if (!id) {
-      return;
-    }
+    if (!id) return;
+
+    event.preventDefault();
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
 
     this.draggedLayerNodeId = id;
-    event.dataTransfer?.setData("text/plain", id);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "move";
-    }
-  }
+    this.isDragging = true;
+    this.dropTargetKey = "";
+    this._dragStartY = event.clientY;
+    this._dragMoved = false;
 
-  onLayerDragEnd() {
-    this.draggedLayerNodeId = "";
-  }
+    const onMove = (moveEvent) => {
+      if (!this.isDragging) return;
+      const dy = Math.abs(moveEvent.clientY - this._dragStartY);
+      if (dy > 4) this._dragMoved = true;
+      if (!this._dragMoved) return;
 
-  onLayerDragOver(event) {
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "move";
-    }
+      // Find closest drop zone by clientY
+      const zones = Array.from(
+        this.renderRoot?.querySelectorAll(".layer-drop-zone") ?? [],
+      );
+      let bestKey = "";
+      let bestDist = Infinity;
+      for (const zone of zones) {
+        const rect = zone.getBoundingClientRect();
+        const centerY = rect.top + rect.height / 2;
+        const dist = Math.abs(moveEvent.clientY - centerY);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestKey = zone.dataset.zoneKey || "";
+        }
+      }
+      if (this.dropTargetKey !== bestKey) {
+        this.dropTargetKey = bestKey;
+      }
+    };
+
+    const onUp = async () => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+
+      const sourceId = this.draggedLayerNodeId;
+      const targetKey = this.dropTargetKey;
+      this.draggedLayerNodeId = "";
+      this.isDragging = false;
+      this.dropTargetKey = "";
+
+      if (!sourceId || !targetKey || !this._dragMoved) return;
+
+      const colonIdx = targetKey.lastIndexOf(":");
+      const parentId = targetKey.slice(0, colonIdx);
+      const index = parseInt(targetKey.slice(colonIdx + 1), 10);
+      if (!Number.isFinite(index)) return;
+
+      await this.moveLayerNode(sourceId, parentId, index);
+    };
+
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
   }
 
   async saveLayersContent(nextContent) {
@@ -490,7 +536,10 @@ class EditorMenu extends LitElement {
 
     const blockedTargets = collectDescendantIds(sourceNode);
     const normalizedTargetParentId = String(targetParentId || "").trim();
-    if (normalizedTargetParentId && blockedTargets.has(normalizedTargetParentId)) {
+    if (
+      normalizedTargetParentId &&
+      blockedTargets.has(normalizedTargetParentId)
+    ) {
       return;
     }
 
@@ -513,15 +562,6 @@ class EditorMenu extends LitElement {
     this.focusLayerNode(sourceId);
   }
 
-  async onLayerDrop(event, targetParentId, targetIndex) {
-    event.preventDefault();
-    const sourceId =
-      this.draggedLayerNodeId || event.dataTransfer?.getData("text/plain") || "";
-    this.draggedLayerNodeId = "";
-
-    await this.moveLayerNode(sourceId, targetParentId, targetIndex);
-  }
-
   getNodeTypeLabel(type) {
     return String(type || "component").replace(/-/g, " ");
   }
@@ -536,19 +576,30 @@ class EditorMenu extends LitElement {
     const isExpanded = this.layerSections?.[nodeId] ?? true;
     const isActive = nodeId && nodeId === this.activeLayerNodeId;
 
+    const beforeKey = `${String(parentId || "")}:${index}`;
+    const afterKey = `${nodeId}:${Array.isArray(node.content) ? node.content.length : 0}`;
+    const isDraggedNode = nodeId && nodeId === this.draggedLayerNodeId;
+
     return html`
       <div class="layer-entry" style=${`--layer-depth:${depth};`}>
         <div
-          class="layer-drop-zone"
-          @dragover=${(event) => this.onLayerDragOver(event)}
-          @drop=${(event) => this.onLayerDrop(event, parentId, index)}
+          class="layer-drop-zone ${this.dropTargetKey === beforeKey
+            ? "is-active"
+            : ""}"
+          data-zone-key=${beforeKey}
         ></div>
         <div
-          class="layer-row ${isActive ? "is-active" : ""}"
-          draggable=${nodeId ? "true" : "false"}
-          @dragstart=${(event) => this.onLayerDragStart(event, nodeId)}
-          @dragend=${() => this.onLayerDragEnd()}
+          class="layer-row ${isActive ? "is-active" : ""} ${isDraggedNode
+            ? "is-dragging"
+            : ""}"
         >
+          <span
+            class="layer-drag-handle"
+            aria-hidden="true"
+            @pointerdown=${(event) => this.onLayerPointerDown(event, nodeId)}
+          >
+            ${createElement(GripVertical)}
+          </span>
           ${hasChildren
             ? html`
                 <button
@@ -556,9 +607,11 @@ class EditorMenu extends LitElement {
                   class="layer-toggle"
                   @click=${() => this.toggleLayerSection(nodeId)}
                 >
-                  <span class="collection-folder-chevron ${isExpanded
-                    ? ""
-                    : "is-collapsed"}">
+                  <span
+                    class="collection-folder-chevron ${isExpanded
+                      ? ""
+                      : "is-collapsed"}"
+                  >
                     ${createElement(ChevronDown)}
                   </span>
                 </button>
@@ -584,14 +637,10 @@ class EditorMenu extends LitElement {
                   this.renderLayerNode(child, nodeId, childIndex, depth + 1),
                 )}
                 <div
-                  class="layer-drop-zone"
-                  @dragover=${(event) => this.onLayerDragOver(event)}
-                  @drop=${(event) =>
-                    this.onLayerDrop(
-                      event,
-                      nodeId,
-                      Array.isArray(node.content) ? node.content.length : 0,
-                    )}
+                  class="layer-drop-zone ${this.dropTargetKey === afterKey
+                    ? "is-active"
+                    : ""}"
+                  data-zone-key=${afterKey}
                 ></div>
               </div>
             `
@@ -609,13 +658,18 @@ class EditorMenu extends LitElement {
       return html`<div class="group-item"><span>No components yet</span></div>`;
     }
 
+    const trailingKey = `:${content.length}`;
+
     return html`
-      <div class="layers-tree">
-        ${content.map((node, index) => this.renderLayerNode(node, "", index, 0))}
+      <div class="layers-tree ${this.isDragging ? "is-dragging" : ""}">
+        ${content.map((node, index) =>
+          this.renderLayerNode(node, "", index, 0),
+        )}
         <div
-          class="layer-drop-zone"
-          @dragover=${(event) => this.onLayerDragOver(event)}
-          @drop=${(event) => this.onLayerDrop(event, "", content.length)}
+          class="layer-drop-zone ${this.dropTargetKey === trailingKey
+            ? "is-active"
+            : ""}"
+          data-zone-key=${trailingKey}
         ></div>
       </div>
     `;
@@ -1141,14 +1195,24 @@ class EditorMenu extends LitElement {
       ${this.menuMode === "site-content"
         ? html`
             <div class="menu-groups">
-              ${this.renderGroup("pages", "Pages", Files, this.groupItems.pages)}
+              ${this.renderGroup(
+                "pages",
+                "Pages",
+                Files,
+                this.groupItems.pages,
+              )}
               ${this.renderGroup(
                 "collections",
                 "Collections",
                 Database,
                 this.groupItems.collections,
               )}
-              ${this.renderGroup("shared", "Shared", Blocks, this.groupItems.shared)}
+              ${this.renderGroup(
+                "shared",
+                "Shared",
+                Blocks,
+                this.groupItems.shared,
+              )}
             </div>
           `
         : html`
