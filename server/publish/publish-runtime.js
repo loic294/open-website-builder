@@ -42,11 +42,56 @@ function cacheInlineConfigsOnHosts() {
 
 cacheInlineConfigsOnHosts();
 
+function getSpacingCss(settings) {
+  const props = [
+    ["padding-top", settings.settingSpacingPaddingTop],
+    ["padding-right", settings.settingSpacingPaddingRight],
+    ["padding-bottom", settings.settingSpacingPaddingBottom],
+    ["padding-left", settings.settingSpacingPaddingLeft],
+    ["margin-top", settings.settingSpacingMarginTop],
+    ["margin-right", settings.settingSpacingMarginRight],
+    ["margin-bottom", settings.settingSpacingMarginBottom],
+    ["margin-left", settings.settingSpacingMarginLeft],
+  ];
+  const parts = props
+    .filter(([, v]) => String(v || "").trim())
+    .map(([p, v]) => `${p}: ${v}`);
+  return parts.length ? `:host { ${parts.join("; ")} }` : "";
+}
+
+function buildResponsiveSpacingCss(settings) {
+  const overrides = settings.responsiveOverrides;
+  if (!overrides || typeof overrides !== "object") return "";
+  const rules = RESPONSIVE_BREAKPOINTS.map(({ bucket, maxWidth }) => {
+    const bucketOverrides = overrides[bucket];
+    if (!bucketOverrides || typeof bucketOverrides !== "object") return "";
+    const merged = { ...settings, ...bucketOverrides };
+    const css = getSpacingCss(merged);
+    if (!css) return "";
+    // Wrap each property declaration with !important so it overrides the base :host rule
+    const important = css.replace(/:host \{([^}]+)\}/, (_, decls) => {
+      const importantDecls = decls
+        .split(";")
+        .map((d) => d.trim())
+        .filter(Boolean)
+        .map((d) => `${d} !important`)
+        .join("; ");
+      return `@media (max-width: ${maxWidth}px) { :host { ${importantDecls} } }`;
+    });
+    return important;
+  }).filter(Boolean).join("\n");
+  return rules;
+}
+
 const SHADOW_STYLESHEET_HREF = "/owb-components.css";
 
 function renderShadow(host, markup) {
   const root = host.shadowRoot || host.attachShadow({ mode: "open" });
-  root.innerHTML = `<link rel="stylesheet" href="${SHADOW_STYLESHEET_HREF}" />${markup}`;
+  const { settings = {} } = readConfig(host);
+  const spacingCss = getSpacingCss(settings);
+  const responsiveSpacingCss = buildResponsiveSpacingCss(settings);
+  const combinedSpacing = [spacingCss, responsiveSpacingCss].filter(Boolean).join("\n");
+  root.innerHTML = `<link rel="stylesheet" href="${SHADOW_STYLESHEET_HREF}" />${combinedSpacing ? `<style data-spacing>${combinedSpacing}</style>` : ""}${markup}`;
   return root;
 }
 

@@ -79,6 +79,14 @@ export class EditorComponent extends LitElement {
     customCssError: { type: String },
     activeViewportSize: { type: String },
     activeViewportOrientation: { type: String },
+    settingSpacingPaddingTop: { type: String },
+    settingSpacingPaddingRight: { type: String },
+    settingSpacingPaddingBottom: { type: String },
+    settingSpacingPaddingLeft: { type: String },
+    settingSpacingMarginTop: { type: String },
+    settingSpacingMarginRight: { type: String },
+    settingSpacingMarginBottom: { type: String },
+    settingSpacingMarginLeft: { type: String },
   };
 
   static styles = unsafeCSS(blocksStyles);
@@ -94,6 +102,14 @@ export class EditorComponent extends LitElement {
     this.settingsOverlayPosition = this.getInitialOverlayPosition();
     this.settingCustomCss = "";
     this.customCssError = "";
+    this.settingSpacingPaddingTop = "";
+    this.settingSpacingPaddingRight = "";
+    this.settingSpacingPaddingBottom = "";
+    this.settingSpacingPaddingLeft = "";
+    this.settingSpacingMarginTop = "";
+    this.settingSpacingMarginRight = "";
+    this.settingSpacingMarginBottom = "";
+    this.settingSpacingMarginLeft = "";
     this.cssEditorView = null;
     this.isSyncingCssEditorUpdate = false;
     this.dragState = null;
@@ -355,6 +371,34 @@ export class EditorComponent extends LitElement {
     styleEl.textContent = String(cssText || "");
   }
 
+  applySpacingToRenderRoot() {
+    if (!(this.renderRoot instanceof ShadowRoot)) {
+      return;
+    }
+
+    let styleEl = this.renderRoot.querySelector("style[data-spacing]");
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.setAttribute("data-spacing", "true");
+      this.renderRoot.appendChild(styleEl);
+    }
+
+    const props = [
+      ["padding-top", this.settingSpacingPaddingTop],
+      ["padding-right", this.settingSpacingPaddingRight],
+      ["padding-bottom", this.settingSpacingPaddingBottom],
+      ["padding-left", this.settingSpacingPaddingLeft],
+      ["margin-top", this.settingSpacingMarginTop],
+      ["margin-right", this.settingSpacingMarginRight],
+      ["margin-bottom", this.settingSpacingMarginBottom],
+      ["margin-left", this.settingSpacingMarginLeft],
+    ];
+    const parts = props
+      .filter(([, v]) => String(v || "").trim())
+      .map(([p, v]) => `${p}: ${v}`);
+    styleEl.textContent = parts.length ? `:host { ${parts.join("; ")} }` : "";
+  }
+
   validateCustomCss(cssText) {
     const nextCss = String(cssText || "").trim();
     if (!nextCss) {
@@ -379,11 +423,54 @@ export class EditorComponent extends LitElement {
 
     return html`
       <div class="settings-css-tab">
-        <label class="settings-css-label">CSS</label>
-        <div class="settings-css-editor" data-css-code-editor></div>
-        <p class="settings-css-help">
-          Styles are scoped to this block. Syntax errors appear in the gutter.
-        </p>
+        <settings-section
+          title="Padding"
+          ?overridden=${this.hasAnyOverriddenKeys(
+            "settingSpacingPaddingTop", "settingSpacingPaddingRight",
+            "settingSpacingPaddingBottom", "settingSpacingPaddingLeft",
+          )}
+        >
+          <editor-padding-input
+            .value=${{ top: this.settingSpacingPaddingTop, right: this.settingSpacingPaddingRight, bottom: this.settingSpacingPaddingBottom, left: this.settingSpacingPaddingLeft }}
+            @change=${(e) => {
+              const v = e.detail.value || {};
+              this.updateSettingsState({
+                settingSpacingPaddingTop: v.top || "",
+                settingSpacingPaddingRight: v.right || "",
+                settingSpacingPaddingBottom: v.bottom || "",
+                settingSpacingPaddingLeft: v.left || "",
+              });
+            }}
+          ></editor-padding-input>
+        </settings-section>
+        <settings-section
+          title="Margin"
+          ?overridden=${this.hasAnyOverriddenKeys(
+            "settingSpacingMarginTop", "settingSpacingMarginRight",
+            "settingSpacingMarginBottom", "settingSpacingMarginLeft",
+          )}
+        >
+          <editor-padding-input
+            .labels=${{ top: "Top", right: "Right", bottom: "Bottom", left: "Left" }}
+            .value=${{ top: this.settingSpacingMarginTop, right: this.settingSpacingMarginRight, bottom: this.settingSpacingMarginBottom, left: this.settingSpacingMarginLeft }}
+            @change=${(e) => {
+              const v = e.detail.value || {};
+              this.updateSettingsState({
+                settingSpacingMarginTop: v.top || "",
+                settingSpacingMarginRight: v.right || "",
+                settingSpacingMarginBottom: v.bottom || "",
+                settingSpacingMarginLeft: v.left || "",
+              });
+            }}
+          ></editor-padding-input>
+        </settings-section>
+        <settings-section title="Custom CSS">
+          <label class="settings-css-label">CSS</label>
+          <div class="settings-css-editor" data-css-code-editor></div>
+          <p class="settings-css-help">
+            Styles are scoped to this block. Syntax errors appear in the gutter.
+          </p>
+        </settings-section>
         ${orderState?.isEligible
           ? html`
               <div class="settings-node-order">
@@ -971,6 +1058,17 @@ export class EditorComponent extends LitElement {
 
     this.validateCustomCss(this.settingCustomCss);
     this.applyCustomCssToRenderRoot(this.settingCustomCss);
+
+    // Sync base-class spacing properties from effective settings
+    for (const key of [
+      "settingSpacingPaddingTop", "settingSpacingPaddingRight",
+      "settingSpacingPaddingBottom", "settingSpacingPaddingLeft",
+      "settingSpacingMarginTop", "settingSpacingMarginRight",
+      "settingSpacingMarginBottom", "settingSpacingMarginLeft",
+    ]) {
+      this[key] = String(effectiveSettings[key] || "");
+    }
+    this.applySpacingToRenderRoot();
   }
 
   getPersistedSettings(nextState) {
@@ -1005,6 +1103,17 @@ export class EditorComponent extends LitElement {
         const normalKey = key === "customCss" ? "customCss" : key;
         if (normalKey in nextBase && nextBase[normalKey] === defaultValue) {
           delete nextBase[normalKey];
+        }
+      }
+      // Strip empty spacing values
+      for (const key of [
+        "settingSpacingPaddingTop", "settingSpacingPaddingRight",
+        "settingSpacingPaddingBottom", "settingSpacingPaddingLeft",
+        "settingSpacingMarginTop", "settingSpacingMarginRight",
+        "settingSpacingMarginBottom", "settingSpacingMarginLeft",
+      ]) {
+        if (key in nextBase && !String(nextBase[key] || "").trim()) {
+          delete nextBase[key];
         }
       }
       const hasOverrides = Object.keys(currentOverrides).some(
@@ -1112,6 +1221,7 @@ export class EditorComponent extends LitElement {
 
   updateSettingsState(nextState) {
     Object.assign(this, nextState);
+    this.applySpacingToRenderRoot();
 
     if (this.node && typeof this.node === "object") {
       const nextPersistedSettings = this.getPersistedSettings(nextState);
