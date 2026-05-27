@@ -38,6 +38,9 @@ function createHttpTransport(baseUrl = "/__data") {
         body: JSON.stringify(body),
       });
     },
+    delete(path) {
+      return request(path, { method: "DELETE" });
+    },
   };
 }
 
@@ -57,6 +60,9 @@ export function createDataLayer(transport = createHttpTransport()) {
     async createPage(page) {
       return await transport.post("/pages", page);
     },
+    async deletePage(pageId) {
+      return await transport.delete(`/pages/${encodeURIComponent(pageId)}`);
+    },
     async publishSite() {
       return await transport.post("/publish", {});
     },
@@ -70,6 +76,14 @@ export function createDataLayer(transport = createHttpTransport()) {
 
     async listCollections() {
       return await transport.get("/collections");
+    },
+    async createCollection(collection) {
+      return await transport.post("/collections", collection);
+    },
+    async deleteCollection(collectionId) {
+      return await transport.delete(
+        `/collections/${encodeURIComponent(collectionId)}`,
+      );
     },
     async getAllCollectionsContent() {
       return await transport.get("/collections/content");
@@ -104,6 +118,11 @@ export function createDataLayer(transport = createHttpTransport()) {
         item,
       );
     },
+    async deleteCollectionItem(collectionId, itemId) {
+      return await transport.delete(
+        `/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`,
+      );
+    },
     async updateCollectionItem(collectionId, itemId, item) {
       return await transport.put(
         `/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`,
@@ -125,8 +144,19 @@ export function createDataLayer(transport = createHttpTransport()) {
         { componentConfig },
       );
     },
+    async updateComponentIdentity(componentId, identity) {
+      return await transport.put(
+        `/shared-components/${encodeURIComponent(componentId)}/identity`,
+        { identity },
+      );
+    },
     async createComponentConfig(component) {
       return await transport.post("/shared-components", component);
+    },
+    async deleteComponentConfig(componentId) {
+      return await transport.delete(
+        `/shared-components/${encodeURIComponent(componentId)}`,
+      );
     },
     async getImageUrls(imagePath) {
       return await transport.get(`/images/${encodeURIComponent(imagePath)}`);

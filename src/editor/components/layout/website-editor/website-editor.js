@@ -34,6 +34,7 @@ class WebsiteEditor extends LitElement {
     activeSize: { state: true },
     activeOrientation: { state: true },
     currentSelection: { state: true },
+    sharedIdentityDraft: { state: true },
   };
 
   static styles = [unsafeCSS(baseStyle), unsafeCSS(styles), css``];
@@ -48,6 +49,11 @@ class WebsiteEditor extends LitElement {
     this.activeOrientation = "vertical";
     this.currentSelection = { type: "page", pageId: "index" };
     this.collectionMetadataFieldOptions = [];
+    this.sharedIdentityDraft = {
+      id: "",
+      title: "",
+      fileName: "",
+    };
   }
 
   buildCollectionConfigForSave(config = this.pageConfig) {
@@ -250,18 +256,29 @@ class WebsiteEditor extends LitElement {
           selection.componentId,
         );
 
+        const resolvedId =
+          String(componentConfig?.id || selection.componentId || "").trim() ||
+          "component";
+
         this.pageConfig = {
           ...componentConfig,
           type: "shared",
-          id: componentConfig?.id || selection.componentId,
+          id: resolvedId,
           title:
             componentConfig?.title ||
             selection.componentId ||
             "Shared component",
-          url: `/shared/${selection.componentId}`,
+          url: `/shared/${resolvedId}`,
           content: Array.isArray(componentConfig?.content)
             ? componentConfig.content
             : [],
+        };
+        this.sharedIdentityDraft = {
+          id: resolvedId,
+          title: String(componentConfig?.title || "").trim(),
+          fileName:
+            String(componentConfig?.__fileName || "").trim() ||
+            `${resolvedId}.json`,
         };
         return;
       }
@@ -355,6 +372,80 @@ class WebsiteEditor extends LitElement {
   onActiveOrientationChange = (event) => {
     this.activeOrientation = event.detail.value;
   };
+
+  notifyDataChanged() {
+    window.dispatchEvent(new CustomEvent("editor-data-changed"));
+  }
+
+  navigateToSelection(selection) {
+    const params = new URLSearchParams();
+
+    if (selection?.type === "collection") {
+      params.set("type", "collection");
+      params.set("collectionId", selection.collectionId || "");
+      params.set("itemId", selection.itemId || "");
+    } else if (selection?.type === "collection-config") {
+      params.set("type", "collection-config");
+      params.set("collectionId", selection.collectionId || "");
+    } else if (selection?.type === "shared") {
+      params.set("type", "shared");
+      params.set("componentId", selection.componentId || "");
+    } else {
+      params.set("type", "page");
+      params.set("pageId", selection?.pageId || "index");
+    }
+
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, "", nextUrl);
+    window.dispatchEvent(new CustomEvent("editor-route-change"));
+  }
+
+  async deleteCurrentSelection() {
+    const selection = this.currentSelection || { type: "page", pageId: "index" };
+
+    const label =
+      selection.type === "collection-config"
+        ? `collection "${selection.collectionId || ""}"`
+        : selection.type === "collection"
+          ? `collection item "${selection.itemId || ""}"`
+          : selection.type === "shared"
+            ? `shared component "${selection.componentId || ""}"`
+            : `page "${selection.pageId || ""}"`;
+
+    const confirmed = window.confirm(`Delete ${label}? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      if (selection.type === "collection-config") {
+        await dataLayer.deleteCollection(selection.collectionId || "");
+      } else if (selection.type === "collection") {
+        await dataLayer.deleteCollectionItem(
+          selection.collectionId || "",
+          selection.itemId || "",
+        );
+      } else if (selection.type === "shared") {
+        await dataLayer.deleteComponentConfig(selection.componentId || "");
+      } else {
+        await dataLayer.deletePage(selection.pageId || "index");
+      }
+
+      this.notifyDataChanged();
+
+      if (selection.type === "collection") {
+        this.navigateToSelection({
+          type: "collection-config",
+          collectionId: selection.collectionId || "",
+        });
+        return;
+      }
+
+      this.navigateToSelection({ type: "page", pageId: "index" });
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   normalizeKeySegment(value) {
     return String(value || "")
@@ -653,6 +744,213 @@ class WebsiteEditor extends LitElement {
     }
   }
 
+  getPageMetadataFields() {
+    const metadata =
+      this.pageConfig?.metadata && typeof this.pageConfig.metadata === "object"
+        ? this.pageConfig.metadata
+        : {};
+
+    return this.flattenObjectFields(metadata).map((entry) => ({
+      ...entry,
+      value: this.getValueByPath(metadata, entry.path),
+    }));
+  }
+
+  async updatePageBaseField(fieldName, value) {
+    if (this.currentSelection?.type !== "page") {
+      return;
+    }
+
+    const nextConfig = {
+      ...this.pageConfig,
+      [fieldName]: value,
+    };
+
+    this.pageConfig = nextConfig;
+
+    try {
+      await dataLayer.savePageConfig(
+        this.currentSelection?.pageId || "index",
+        nextConfig,
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async updatePageMetadataField(path, rawValue, fieldType) {
+    if (this.currentSelection?.type !== "page") {
+      return;
+    }
+
+    const nextMetadata = {
+      ...(this.pageConfig?.metadata && typeof this.pageConfig.metadata === "object"
+        ? this.pageConfig.metadata
+        : {}),
+    };
+
+    const nextValue =
+      fieldType === "array"
+        ? String(rawValue || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : String(rawValue || "");
+
+    this.setValueByPath(nextMetadata, path, nextValue);
+
+    const nextConfig = {
+      ...this.pageConfig,
+      metadata: nextMetadata,
+    };
+
+    this.pageConfig = nextConfig;
+
+    try {
+      await dataLayer.savePageConfig(
+        this.currentSelection?.pageId || "index",
+        nextConfig,
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  updateSharedIdentityDraft(fieldName, value) {
+    this.sharedIdentityDraft = {
+      ...(this.sharedIdentityDraft || {}),
+      [fieldName]: String(value || ""),
+    };
+  }
+
+  async saveSharedIdentity() {
+    if (this.currentSelection?.type !== "shared") {
+      return;
+    }
+
+    const currentComponentId = String(
+      this.currentSelection?.componentId || this.pageConfig?.id || "",
+    ).trim();
+
+    try {
+      const result = await dataLayer.updateComponentIdentity(currentComponentId, {
+        id: String(this.sharedIdentityDraft?.id || "").trim(),
+        title: String(this.sharedIdentityDraft?.title || "").trim(),
+        fileName: String(this.sharedIdentityDraft?.fileName || "").trim(),
+      });
+
+      const nextComponentId = String(result?.id || currentComponentId).trim();
+      const nextTitle =
+        String(result?.title || this.sharedIdentityDraft?.title || "").trim() ||
+        nextComponentId;
+      const nextFileName =
+        String(result?.fileName || this.sharedIdentityDraft?.fileName || "").trim() ||
+        `${nextComponentId}.json`;
+
+      this.pageConfig = {
+        ...this.pageConfig,
+        id: nextComponentId,
+        title: nextTitle,
+        url: `/shared/${nextComponentId}`,
+        __fileName: nextFileName,
+      };
+
+      this.sharedIdentityDraft = {
+        id: nextComponentId,
+        title: nextTitle,
+        fileName: nextFileName,
+      };
+
+      this.notifyDataChanged();
+
+      if (nextComponentId !== currentComponentId) {
+        this.navigateToSelection({
+          type: "shared",
+          componentId: nextComponentId,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  renderPageSettings() {
+    const metadataFields = this.getPageMetadataFields();
+
+    return html`
+      <div class="collection-config-settings">
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <h3>Page</h3>
+          </div>
+
+          <div class="field-row field-row-compact">
+            <label class="settings-label">Title</label>
+            <input
+              type="text"
+              class="settings-input"
+              .value=${String(this.pageConfig?.title || "")}
+              @change=${(event) =>
+                this.updatePageBaseField("title", event.target.value)}
+            />
+          </div>
+
+          <div class="field-row field-row-compact">
+            <label class="settings-label">URL</label>
+            <input
+              type="text"
+              class="settings-input"
+              .value=${String(this.pageConfig?.url || "")}
+              @change=${(event) =>
+                this.updatePageBaseField("url", event.target.value)}
+            />
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <h3>Metadata fields</h3>
+          </div>
+          ${metadataFields.length === 0
+            ? html`<p class="settings-empty">No metadata fields available.</p>`
+            : html`${metadataFields.map(
+                (field) => html`
+                  <div class="field-row field-row-compact">
+                    <label class="settings-label">${field.path}</label>
+                    <input
+                      type="text"
+                      class="settings-input"
+                      .value=${Array.isArray(field.value)
+                        ? field.value.join(", ")
+                        : String(field.value ?? "")}
+                      @change=${(event) =>
+                        this.updatePageMetadataField(
+                          field.path,
+                          event.target.value,
+                          field.type,
+                        )}
+                    />
+                  </div>
+                `,
+              )}`}
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <h3>Danger zone</h3>
+          </div>
+          <button
+            type="button"
+            class="settings-danger-button"
+            @click=${() => this.deleteCurrentSelection()}
+          >
+            Delete page
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   renderCollectionConfigSettings() {
     const fields = this.getCollectionConfigFields();
     const selectedAllowlist = Array.isArray(
@@ -758,6 +1056,19 @@ class WebsiteEditor extends LitElement {
                 </div>
               `}
         </div>
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <h3>Danger zone</h3>
+          </div>
+          <button
+            type="button"
+            class="settings-danger-button"
+            @click=${() => this.deleteCurrentSelection()}
+          >
+            Delete collection
+          </button>
+        </div>
       </div>
     `;
   }
@@ -857,6 +1168,85 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
                 `,
               )}`}
         </div>
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <h3>Danger zone</h3>
+          </div>
+          <button
+            type="button"
+            class="settings-danger-button"
+            @click=${() => this.deleteCurrentSelection()}
+          >
+            Delete collection item
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  renderSharedSettings() {
+    return html`
+      <div class="collection-config-settings">
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <h3>Shared component</h3>
+          </div>
+
+          <div class="field-row field-row-compact">
+            <label class="settings-label">Id</label>
+            <input
+              type="text"
+              class="settings-input"
+              .value=${String(this.sharedIdentityDraft?.id || "")}
+              @input=${(event) =>
+                this.updateSharedIdentityDraft("id", event.target.value)}
+            />
+          </div>
+
+          <div class="field-row field-row-compact">
+            <label class="settings-label">Title</label>
+            <input
+              type="text"
+              class="settings-input"
+              .value=${String(this.sharedIdentityDraft?.title || "")}
+              @input=${(event) =>
+                this.updateSharedIdentityDraft("title", event.target.value)}
+            />
+          </div>
+
+          <div class="field-row field-row-compact">
+            <label class="settings-label">Filename</label>
+            <input
+              type="text"
+              class="settings-input"
+              .value=${String(this.sharedIdentityDraft?.fileName || "")}
+              @input=${(event) =>
+                this.updateSharedIdentityDraft("fileName", event.target.value)}
+            />
+          </div>
+
+          <button
+            type="button"
+            class="settings-inline-button"
+            @click=${() => this.saveSharedIdentity()}
+          >
+            Save shared settings
+          </button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <h3>Danger zone</h3>
+          </div>
+          <button
+            type="button"
+            class="settings-danger-button"
+            @click=${() => this.deleteCurrentSelection()}
+          >
+            Delete shared component
+          </button>
+        </div>
       </div>
     `;
   }
@@ -872,6 +1262,12 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
       }
       if (this.currentSelection?.type === "collection") {
         return this.renderCollectionItemSettings();
+      }
+      if (this.currentSelection?.type === "page") {
+        return this.renderPageSettings();
+      }
+      if (this.currentSelection?.type === "shared") {
+        return this.renderSharedSettings();
       }
       return html`<div class="view-placeholder">Settings section</div>`;
     }

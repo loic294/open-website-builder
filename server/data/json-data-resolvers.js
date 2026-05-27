@@ -1,5 +1,5 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { basename, resolve } from "node:path";
 
 function toJsonString(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
@@ -15,6 +15,10 @@ async function listJsonFileNames(directoryPath) {
   return entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
     .map((entry) => entry.name);
+}
+
+async function ensureDir(dirPath) {
+  await mkdir(dirPath, { recursive: true });
 }
 
 function toFileId(fileName) {
@@ -44,6 +48,17 @@ function getDefaultCollectionTemplate() {
   return [
     {
       id: "section-collection-template",
+      type: "section",
+      content: [],
+      settings: {},
+    },
+  ];
+}
+
+function getDefaultSectionContent(sectionId = "section-default") {
+  return [
+    {
+      id: sectionId,
       type: "section",
       content: [],
       settings: {},
@@ -156,11 +171,20 @@ export function createJsonDataResolvers({ contentRoot }) {
       id: requestedId,
       title: page?.title || "Untitled",
       url: page?.url || `/${requestedId}`,
-      content: Array.isArray(page?.content) ? page.content : [],
+      content:
+        Array.isArray(page?.content) && page.content.length > 0
+          ? page.content
+          : getDefaultSectionContent("section-page-default"),
     };
 
     await writeFile(filePath, toJsonString(pageConfig));
     return pageConfig;
+  }
+
+  async function deletePage(pageId) {
+    const filePath = await resolvePageFilePath(pageId);
+    await rm(filePath);
+    return { ok: true, id: sanitizeId(pageId) };
   }
 
   async function listCollections() {
@@ -191,6 +215,52 @@ export function createJsonDataResolvers({ contentRoot }) {
     }
 
     return collections;
+  }
+
+  async function createCollection(collection) {
+    const collectionId = sanitizeId(collection?.id || collection?.title);
+    if (!collectionId) {
+      throw new Error("Collection id or title is required");
+    }
+
+    const collectionPath = resolve(collectionsDir, collectionId);
+    await ensureDir(collectionPath);
+
+    const configPath = resolve(collectionPath, "_config.json");
+    try {
+      await readFile(configPath, "utf8");
+      throw new Error(`Collection already exists: ${collectionId}`);
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("ENOENT")) {
+        throw error;
+      }
+    }
+
+    const config = {
+      id: collectionId,
+      title: String(collection?.title || collectionId).trim() || collectionId,
+      fields: {
+        title: { type: "string", required: true },
+        content: { type: "array", required: true },
+        metadata: { type: "object", required: false },
+      },
+      content: getDefaultCollectionTemplate(),
+      collectionMetadataAllowlist: [],
+    };
+
+    await writeFile(configPath, toJsonString(config));
+    return config;
+  }
+
+  async function deleteCollection(collectionId) {
+    const normalizedCollectionId = sanitizeId(collectionId);
+    if (!normalizedCollectionId) {
+      throw new Error("Collection id is required");
+    }
+
+    const collectionPath = resolve(collectionsDir, normalizedCollectionId);
+    await rm(collectionPath, { recursive: true, force: false });
+    return { ok: true, id: normalizedCollectionId };
   }
 
   async function getAllCollectionsContent() {
@@ -394,7 +464,14 @@ export function createJsonDataResolvers({ contentRoot }) {
       }
     }
 
-    const itemPayload = { id: itemId, ...item };
+    const itemPayload = {
+      id: itemId,
+      ...item,
+      content:
+        Array.isArray(item?.content) && item.content.length > 0
+          ? item.content
+          : getDefaultSectionContent("section-collection-item-default"),
+    };
     await writeFile(itemPath, toJsonString(itemPayload));
     return itemPayload;
   }
@@ -411,6 +488,23 @@ export function createJsonDataResolvers({ contentRoot }) {
     const itemPayload = { id: normalizedItemId, ...item };
     await writeFile(itemPath, toJsonString(itemPayload));
     return itemPayload;
+  }
+
+  async function deleteCollectionItem(collectionId, itemId) {
+    const normalizedCollectionId = sanitizeId(collectionId);
+    const normalizedItemId = sanitizeId(itemId);
+    if (!normalizedCollectionId || !normalizedItemId) {
+      throw new Error("Collection id and item id are required");
+    }
+
+    const itemPath = resolve(
+      collectionsDir,
+      normalizedCollectionId,
+      `${normalizedItemId}.json`,
+    );
+
+    await rm(itemPath);
+    return { ok: true, id: normalizedItemId };
   }
 
   async function listSharedComponents() {
@@ -431,14 +525,75 @@ export function createJsonDataResolvers({ contentRoot }) {
 
   async function getComponentConfig(componentId) {
     const componentPath = await resolveSharedComponentFilePath(componentId);
-    return await readJsonFile(componentPath);
+    return {
+      ...(await readJsonFile(componentPath)),
+      __fileName: basename(componentPath),
+    };
   }
 
   async function saveComponentConfig(componentId, componentConfig) {
     const normalizedComponentId = sanitizeId(componentId);
     const componentPath = await resolveSharedComponentFilePath(componentId);
-    await writeFile(componentPath, toJsonString(componentConfig));
+    const nextConfig = {
+      ...(componentConfig && typeof componentConfig === "object"
+        ? componentConfig
+        : {}),
+    };
+    delete nextConfig.__fileName;
+    await writeFile(componentPath, toJsonString(nextConfig));
     return { ok: true, id: normalizedComponentId };
+  }
+
+  async function updateComponentIdentity(componentId, identity) {
+    const componentPath = await resolveSharedComponentFilePath(componentId);
+    const currentConfig = await readJsonFile(componentPath);
+
+    const normalizedId = sanitizeId(identity?.id || currentConfig?.id || componentId);
+    if (!normalizedId) {
+      throw new Error("Shared component id is required");
+    }
+
+    const nextTitle =
+      String(identity?.title || currentConfig?.title || normalizedId).trim() ||
+      normalizedId;
+
+    const requestedFileStem = sanitizeId(
+      String(identity?.fileName || "")
+        .trim()
+        .replace(/\.json$/i, ""),
+    );
+    const nextFileStem = requestedFileStem || normalizedId;
+    const nextFileName = `${nextFileStem}.json`;
+    const nextComponentPath = resolve(sharedDir, nextFileName);
+
+    if (nextComponentPath !== componentPath) {
+      try {
+        await readFile(nextComponentPath, "utf8");
+        throw new Error(`Shared component file already exists: ${nextFileName}`);
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes("ENOENT")) {
+          throw error;
+        }
+      }
+    }
+
+    const nextConfig = {
+      ...(currentConfig && typeof currentConfig === "object" ? currentConfig : {}),
+      id: normalizedId,
+      title: nextTitle,
+    };
+
+    await writeFile(nextComponentPath, toJsonString(nextConfig));
+    if (nextComponentPath !== componentPath) {
+      await rm(componentPath);
+    }
+
+    return {
+      ok: true,
+      id: normalizedId,
+      title: nextTitle,
+      fileName: nextFileName,
+    };
   }
 
   async function createComponentConfig(component) {
@@ -461,12 +616,26 @@ export function createJsonDataResolvers({ contentRoot }) {
     const componentPayload = {
       type: "shared-component",
       id: componentId,
-      content: Array.isArray(component?.content) ? component.content : [],
       ...component,
+      content:
+        Array.isArray(component?.content) && component.content.length > 0
+          ? component.content
+          : getDefaultSectionContent("section-shared-default"),
     };
 
     await writeFile(componentPath, toJsonString(componentPayload));
     return componentPayload;
+  }
+
+  async function deleteComponentConfig(componentId) {
+    const normalizedComponentId = sanitizeId(componentId);
+    if (!normalizedComponentId) {
+      throw new Error("Component id is required");
+    }
+
+    const componentPath = await resolveSharedComponentFilePath(componentId);
+    await rm(componentPath);
+    return { ok: true, id: normalizedComponentId };
   }
 
   async function listImageFiles(directoryPath) {
@@ -520,7 +689,10 @@ export function createJsonDataResolvers({ contentRoot }) {
     getPageConfig,
     savePageConfig,
     createPage,
+    deletePage,
     listCollections,
+    createCollection,
+    deleteCollection,
     getAllCollectionsContent,
     getGroupedCollectionsContent,
     getCollectionConfig,
@@ -529,10 +701,13 @@ export function createJsonDataResolvers({ contentRoot }) {
     getCollectionItemsMetadata,
     addCollectionItem,
     updateCollectionItem,
+    deleteCollectionItem,
     listSharedComponents,
     getComponentConfig,
     saveComponentConfig,
+    updateComponentIdentity,
     createComponentConfig,
+    deleteComponentConfig,
     getImageUrls,
   };
 }

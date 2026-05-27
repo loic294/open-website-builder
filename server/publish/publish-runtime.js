@@ -42,7 +42,7 @@ function cacheInlineConfigsOnHosts() {
 
 cacheInlineConfigsOnHosts();
 
-const SHADOW_STYLESHEET_HREF = "./owb-components.css";
+const SHADOW_STYLESHEET_HREF = "/owb-components.css";
 
 function renderShadow(host, markup) {
   const root = host.shadowRoot || host.attachShadow({ mode: "open" });

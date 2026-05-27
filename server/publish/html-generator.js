@@ -38,7 +38,16 @@ const SIMPLE_ICON_MAP = new Map(
   SIMPLE_ICON_LIBRARY.map((icon) => [icon.slug, icon]),
 );
 
-const BASE_DYNAMIC_FIELDS = ["title", "excerpt", "tags", "url"];
+const BASE_DYNAMIC_FIELDS = [
+  "title",
+  "excerpt",
+  "tags",
+  "url",
+  "sourceUrl",
+  "featuredImageUrl",
+  "publishedAt",
+  "categories",
+];
 
 function normalizeIconSlug(value) {
   const raw = String(value || "")
@@ -126,6 +135,15 @@ function getValueByPath(value, path) {
   return current;
 }
 
+function normalizePathTokenValue(value) {
+  return String(value || "")
+    .trim()
+    .split("?")[0]
+    .split("#")[0]
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "");
+}
+
 function getTokenValueMap(metadata = {}, allowlist = []) {
   const tokenValues = {};
   const dynamicFields = [...new Set([...BASE_DYNAMIC_FIELDS, ...allowlist])];
@@ -140,6 +158,15 @@ function getTokenValueMap(metadata = {}, allowlist = []) {
       metadata?.[normalized] ??
       getValueByPath(metadata?.metadata, normalized) ??
       getValueByPath(metadata, normalized);
+
+    if (normalized === "url" || normalized === "sourceUrl") {
+      const pathValue = normalizePathTokenValue(value);
+      if (pathValue) {
+        tokenValues[normalized] = pathValue;
+        tokenValues[normalized.toUpperCase()] = pathValue;
+      }
+      continue;
+    }
 
     if (Array.isArray(value)) {
       const joined = value.map((item) => String(item || "")).join(", ");

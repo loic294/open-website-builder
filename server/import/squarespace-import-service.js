@@ -731,11 +731,33 @@ async function ensureCollectionConfig(contentRoot, collectionId) {
 }
 
 function buildCollectionId(metadata) {
-  const category = asArray(metadata?.categories || [])
-    .map((value) => sanitizeId(value))
+  const rawSourceUrl = String(metadata?.sourceUrl || "").trim();
+  const pathValue = (() => {
+    if (!rawSourceUrl) {
+      return "";
+    }
+
+    try {
+      const parsed = new URL(rawSourceUrl);
+      return String(parsed.pathname || "").trim();
+    } catch {
+      return rawSourceUrl;
+    }
+  })();
+
+  const sourceGroup = String(pathValue || "")
+    .split("?")[0]
+    .split("#")[0]
+    .split("/")
+    .map((segment) => sanitizeId(segment))
     .find(Boolean);
+
+  if (sourceGroup) {
+    return sourceGroup;
+  }
+
   const postType = sanitizeId(metadata?.postType);
-  return category || postType || "posts";
+  return postType || "posts";
 }
 
 async function writeReport(contentRoot, report) {
@@ -884,7 +906,7 @@ export async function importSquarespaceXml({
         type: "page",
         id: pageId,
         title,
-        url: parsedUrlPath || `/${pageId}`,
+        url: String(metadata.sourceUrl || "").trim() || parsedUrlPath || `/${pageId}`,
         metadata,
         content,
       };

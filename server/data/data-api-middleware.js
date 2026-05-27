@@ -67,6 +67,12 @@ export function createDataApiMiddleware(resolvers) {
         return;
       }
 
+      if (method === "DELETE" && parts.length === 2 && parts[0] === "pages") {
+        const pageId = decodePathPart(parts[1]);
+        sendJson(response, 200, await resolvers.deletePage(pageId));
+        return;
+      }
+
       if (method === "POST" && parts.length === 1 && parts[0] === "publish") {
         sendJson(response, 200, await resolvers.publishSite());
         return;
@@ -89,6 +95,26 @@ export function createDataApiMiddleware(resolvers) {
         parts[0] === "collections"
       ) {
         sendJson(response, 200, await resolvers.listCollections());
+        return;
+      }
+
+      if (
+        method === "POST" &&
+        parts.length === 1 &&
+        parts[0] === "collections"
+      ) {
+        const body = await parseJsonBody(request);
+        sendJson(response, 201, await resolvers.createCollection(body));
+        return;
+      }
+
+      if (
+        method === "DELETE" &&
+        parts.length === 2 &&
+        parts[0] === "collections"
+      ) {
+        const collectionId = decodePathPart(parts[1]);
+        sendJson(response, 200, await resolvers.deleteCollection(collectionId));
         return;
       }
 
@@ -208,6 +234,22 @@ export function createDataApiMiddleware(resolvers) {
       }
 
       if (
+        method === "DELETE" &&
+        parts.length === 4 &&
+        parts[0] === "collections" &&
+        parts[2] === "items"
+      ) {
+        const collectionId = decodePathPart(parts[1]);
+        const itemId = decodePathPart(parts[3]);
+        sendJson(
+          response,
+          200,
+          await resolvers.deleteCollectionItem(collectionId, itemId),
+        );
+        return;
+      }
+
+      if (
         method === "GET" &&
         parts.length === 1 &&
         parts[0] === "shared-components"
@@ -249,12 +291,42 @@ export function createDataApiMiddleware(resolvers) {
       }
 
       if (
+        method === "PUT" &&
+        parts.length === 3 &&
+        parts[0] === "shared-components" &&
+        parts[2] === "identity"
+      ) {
+        const componentId = decodePathPart(parts[1]);
+        const body = await parseJsonBody(request);
+        sendJson(
+          response,
+          200,
+          await resolvers.updateComponentIdentity(componentId, body.identity),
+        );
+        return;
+      }
+
+      if (
         method === "POST" &&
         parts.length === 1 &&
         parts[0] === "shared-components"
       ) {
         const body = await parseJsonBody(request);
         sendJson(response, 201, await resolvers.createComponentConfig(body));
+        return;
+      }
+
+      if (
+        method === "DELETE" &&
+        parts.length === 2 &&
+        parts[0] === "shared-components"
+      ) {
+        const componentId = decodePathPart(parts[1]);
+        sendJson(
+          response,
+          200,
+          await resolvers.deleteComponentConfig(componentId),
+        );
         return;
       }
 

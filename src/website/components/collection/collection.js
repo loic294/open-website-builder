@@ -25,7 +25,25 @@ const COLLECTION_SORT_OPTIONS = [
   { label: "Id Z-A", value: "id-desc" },
 ];
 
-const BASE_DYNAMIC_FIELDS = ["title", "excerpt", "tags", "url"];
+const BASE_DYNAMIC_FIELDS = [
+  "title",
+  "excerpt",
+  "tags",
+  "url",
+  "sourceUrl",
+  "featuredImageUrl",
+  "publishedAt",
+  "categories",
+];
+
+function normalizePathTokenValue(value) {
+  return String(value || "")
+    .trim()
+    .split("?")[0]
+    .split("#")[0]
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "");
+}
 
 function getValueByPath(value, path) {
   const segments = String(path || "")
@@ -319,15 +337,29 @@ class SiteCollection extends SiteLayoutContainerBase {
     const tokenMap = {};
 
     for (const fieldName of dynamicFields) {
+      const normalizedFieldName = String(fieldName || "").trim();
+      if (!normalizedFieldName) {
+        continue;
+      }
+
       const value =
-        metadata?.[fieldName] ??
-        getValueByPath(metadata?.metadata, fieldName) ??
-        getValueByPath(metadata, fieldName);
+        metadata?.[normalizedFieldName] ??
+        getValueByPath(metadata?.metadata, normalizedFieldName) ??
+        getValueByPath(metadata, normalizedFieldName);
+
+      if (normalizedFieldName === "url" || normalizedFieldName === "sourceUrl") {
+        const pathValue = normalizePathTokenValue(value);
+        if (pathValue) {
+          tokenMap[normalizedFieldName] = pathValue;
+          tokenMap[normalizedFieldName.toUpperCase()] = pathValue;
+        }
+        continue;
+      }
 
       if (Array.isArray(value)) {
         const joined = value.map((item) => String(item || "")).join(", ");
-        tokenMap[fieldName] = joined;
-        tokenMap[String(fieldName).toUpperCase()] = joined;
+        tokenMap[normalizedFieldName] = joined;
+        tokenMap[normalizedFieldName.toUpperCase()] = joined;
         continue;
       }
 
@@ -340,8 +372,8 @@ class SiteCollection extends SiteLayoutContainerBase {
         typeof value === "number" ||
         typeof value === "boolean"
       ) {
-        tokenMap[fieldName] = String(value);
-        tokenMap[String(fieldName).toUpperCase()] = String(value);
+        tokenMap[normalizedFieldName] = String(value);
+        tokenMap[normalizedFieldName.toUpperCase()] = String(value);
       }
     }
 
