@@ -158,41 +158,50 @@ class SiteGallery extends withVariantConfig(EditorComponent) {
           ></textarea>
         </settings-section>
         <settings-section title="Layout">
-          <editor-text-input
-            type="number"
-            label="Columns"
-            min=${1}
-            max=${12}
-            .value=${String(this.galleryColumns)}
-            @change=${(event) =>
-              this.updateSettingsState({
-                galleryColumns: Math.max(
-                  1,
-                  Math.min(12, Number.parseInt(event.detail.value, 10) || 1),
-                ),
-              })}
-          ></editor-text-input>
-          <editor-select
-            label="Picture format"
-            .value=${this.galleryFormat}
-            .options=${FORMAT_OPTIONS.map((option) => ({
-              label: option.label,
-              value: option.value,
-            }))}
-            @change=${(event) =>
-              this.updateSettingsState({
-                galleryFormat: event.detail.value,
-              })}
-          ></editor-select>
-          <editor-text-input
-            label="Gap"
-            placeholder="8px"
-            .value=${this.galleryGap}
-            @change=${(event) =>
-              this.updateSettingsState({
-                galleryGap: event.detail.value,
-              })}
-          ></editor-text-input>
+          <settings-section
+            title="Layout"
+            ?overridden=${this.hasAnyOverriddenKeys(
+              "galleryColumns",
+              "galleryFormat",
+              "galleryGap",
+            )}
+          >
+            <editor-text-input
+              type="number"
+              label="Columns"
+              min=${1}
+              max=${12}
+              .value=${String(this.galleryColumns)}
+              @change=${(event) =>
+                this.updateSettingsState({
+                  galleryColumns: Math.max(
+                    1,
+                    Math.min(12, Number.parseInt(event.detail.value, 10) || 1),
+                  ),
+                })}
+            ></editor-text-input>
+            <editor-select
+              label="Picture format"
+              .value=${this.galleryFormat}
+              .options=${FORMAT_OPTIONS.map((option) => ({
+                label: option.label,
+                value: option.value,
+              }))}
+              @change=${(event) =>
+                this.updateSettingsState({
+                  galleryFormat: event.detail.value,
+                })}
+            ></editor-select>
+            <editor-text-input
+              label="Gap"
+              placeholder="8px"
+              .value=${this.galleryGap}
+              @change=${(event) =>
+                this.updateSettingsState({
+                  galleryGap: event.detail.value,
+                })}
+            ></editor-text-input>
+          </settings-section>
         </settings-section>
       `,
     });

@@ -224,130 +224,169 @@ class SiteButton extends withVariantConfig(EditorComponent) {
         if (tab === "general") {
           return html`
             <settings-section title="Content">
-              <editor-text-input
-                label="Label"
-                .value=${this.buttonText}
-                @input=${(event) => this.updateButtonText(event.detail.value)}
-                @change=${(event) => this.updateButtonText(event.detail.value)}
-              ></editor-text-input>
-              <editor-text-input
-                label="Link"
-                placeholder="https://example.com"
-                .value=${this.buttonLink}
-                .disabled=${this.buttonType !== "link"}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    buttonLink: event.detail.value,
-                  })}
-              ></editor-text-input>
-              <editor-select
-                label="Button action"
-                .value=${this.buttonType}
-                .options=${[
-                  { label: "Link", value: "link" },
-                  { label: "Normal button", value: "button" },
-                  { label: "Submit button", value: "submit" },
-                ]}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    buttonType: event.detail.value,
-                  })}
-              ></editor-select>
-            </settings-section>
-            <settings-section title="Size">
-              <editor-radio-button
-                .options=${SIZE_OPTIONS}
-                .value=${this.buttonSize}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    buttonSize: event.detail.value,
-                  })}
-              ></editor-radio-button>
-              ${this.buttonSize === "custom"
-                ? html`
-                    <editor-padding-input
-                      .value=${{
-                        top: this.buttonPaddingTop,
-                        right: this.buttonPaddingRight,
-                        bottom: this.buttonPaddingBottom,
-                        left: this.buttonPaddingLeft,
-                      }}
-                      @change=${(event) => {
-                        const value = event.detail.value || {};
-                        this.updateSettingsState({
-                          buttonPaddingTop: value.top || "",
-                          buttonPaddingRight: value.right || "",
-                          buttonPaddingBottom: value.bottom || "",
-                          buttonPaddingLeft: value.left || "",
-                        });
-                      }}
-                    ></editor-padding-input>
-                  `
-                : null}
-            </settings-section>
+              <settings-section
+                title="Content"
+                ?overridden=${this.hasAnyOverriddenKeys(
+                  "buttonText",
+                  "buttonLink",
+                  "buttonType",
+                )}
+              >
+                <editor-text-input
+                  label="Label"
+                  .value=${this.buttonText}
+                  @input=${(event) => this.updateButtonText(event.detail.value)}
+                  @change=${(event) =>
+                    this.updateButtonText(event.detail.value)}
+                ></editor-text-input>
+                <editor-text-input
+                  label="Link"
+                  placeholder="https://example.com"
+                  .value=${this.buttonLink}
+                  .disabled=${this.buttonType !== "link"}
+                  @change=${(event) =>
+                    this.updateSettingsState({
+                      buttonLink: event.detail.value,
+                    })}
+                ></editor-text-input>
+                <editor-select
+                  label="Button action"
+                  .value=${this.buttonType}
+                  .options=${[
+                    { label: "Link", value: "link" },
+                    { label: "Normal button", value: "button" },
+                    { label: "Submit button", value: "submit" },
+                  ]}
+                  @change=${(event) =>
+                    this.updateSettingsState({
+                      buttonType: event.detail.value,
+                    })}
+                ></editor-select>
+              </settings-section>
+              <settings-section title="Size">
+                <settings-section
+                  title="Size"
+                  ?overridden=${this.hasAnyOverriddenKeys(
+                    "buttonSize",
+                    "buttonPaddingTop",
+                    "buttonPaddingRight",
+                    "buttonPaddingBottom",
+                    "buttonPaddingLeft",
+                  )}
+                >
+                  <editor-radio-button
+                    .options=${SIZE_OPTIONS}
+                    .value=${this.buttonSize}
+                    @change=${(event) =>
+                      this.updateSettingsState({
+                        buttonSize: event.detail.value,
+                      })}
+                  ></editor-radio-button>
+                  ${this.buttonSize === "custom"
+                    ? html`
+                        <editor-padding-input
+                          .value=${{
+                            top: this.buttonPaddingTop,
+                            right: this.buttonPaddingRight,
+                            bottom: this.buttonPaddingBottom,
+                            left: this.buttonPaddingLeft,
+                          }}
+                          @change=${(event) => {
+                            const value = event.detail.value || {};
+                            this.updateSettingsState({
+                              buttonPaddingTop: value.top || "",
+                              buttonPaddingRight: value.right || "",
+                              buttonPaddingBottom: value.bottom || "",
+                              buttonPaddingLeft: value.left || "",
+                            });
+                          }}
+                        ></editor-padding-input>
+                      `
+                    : null}
+                </settings-section>
+              </settings-section></settings-section
+            >
           `;
         }
 
         if (tab === "design") {
           return html`
             <settings-section title="Theme">
-              <editor-select
-                label="Theme color"
-                .value=${this.buttonTheme}
-                .options=${[
-                  { label: "Primary", value: "primary" },
-                  { label: "Secondary", value: "secondary" },
-                  { label: "Light", value: "light" },
-                  { label: "Dark", value: "dark" },
-                  { label: "Muted", value: "muted" },
-                ]}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    buttonTheme: event.detail.value,
-                  })}
-              ></editor-select>
-            </settings-section>
-            <settings-section title="Style">
-              <editor-radio-button
-                .options=${[
-                  { label: "Filled", value: "filled" },
-                  { label: "Border", value: "border" },
-                  { label: "Ghost", value: "ghost" },
-                ]}
-                .value=${this.buttonVariant}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    buttonVariant: event.detail.value,
-                  })}
-              ></editor-radio-button>
-            </settings-section>
-            <settings-section title="Shape">
-              <editor-radio-button
-                .options=${[
-                  { label: "Rounded", value: "rounded" },
-                  { label: "Square", value: "square" },
-                  { label: "Border radius", value: "custom" },
-                ]}
-                .value=${this.buttonShape}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    buttonShape: event.detail.value,
-                  })}
-              ></editor-radio-button>
-              ${this.buttonShape === "custom"
-                ? html`
-                    <editor-text-input
-                      label="Radius"
-                      placeholder="12px"
-                      .value=${this.buttonRadiusCustom}
+              <settings-section
+                title="Theme"
+                ?overridden=${this.hasAnyOverriddenKeys("buttonTheme")}
+              >
+                <editor-select
+                  label="Theme color"
+                  .value=${this.buttonTheme}
+                  .options=${[
+                    { label: "Primary", value: "primary" },
+                    { label: "Secondary", value: "secondary" },
+                    { label: "Light", value: "light" },
+                    { label: "Dark", value: "dark" },
+                    { label: "Muted", value: "muted" },
+                  ]}
+                  @change=${(event) =>
+                    this.updateSettingsState({
+                      buttonTheme: event.detail.value,
+                    })}
+                ></editor-select>
+              </settings-section>
+              <settings-section title="Style">
+                <settings-section
+                  title="Style"
+                  ?overridden=${this.hasAnyOverriddenKeys("buttonVariant")}
+                >
+                  <editor-radio-button
+                    .options=${[
+                      { label: "Filled", value: "filled" },
+                      { label: "Border", value: "border" },
+                      { label: "Ghost", value: "ghost" },
+                    ]}
+                    .value=${this.buttonVariant}
+                    @change=${(event) =>
+                      this.updateSettingsState({
+                        buttonVariant: event.detail.value,
+                      })}
+                  ></editor-radio-button>
+                </settings-section>
+                <settings-section title="Shape">
+                  <settings-section
+                    title="Shape"
+                    ?overridden=${this.hasAnyOverriddenKeys(
+                      "buttonShape",
+                      "buttonRadiusCustom",
+                    )}
+                  >
+                    <editor-radio-button
+                      .options=${[
+                        { label: "Rounded", value: "rounded" },
+                        { label: "Square", value: "square" },
+                        { label: "Border radius", value: "custom" },
+                      ]}
+                      .value=${this.buttonShape}
                       @change=${(event) =>
                         this.updateSettingsState({
-                          buttonRadiusCustom: event.detail.value,
+                          buttonShape: event.detail.value,
                         })}
-                    ></editor-text-input>
-                  `
-                : null}
-            </settings-section>
+                    ></editor-radio-button>
+                    ${this.buttonShape === "custom"
+                      ? html`
+                          <editor-text-input
+                            label="Radius"
+                            placeholder="12px"
+                            .value=${this.buttonRadiusCustom}
+                            @change=${(event) =>
+                              this.updateSettingsState({
+                                buttonRadiusCustom: event.detail.value,
+                              })}
+                          ></editor-text-input>
+                        `
+                      : null}
+                  </settings-section>
+                </settings-section></settings-section
+              ></settings-section
+            >
           `;
         }
 

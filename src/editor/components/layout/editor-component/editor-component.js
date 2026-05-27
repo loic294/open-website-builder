@@ -15,6 +15,14 @@ import { linter, lintGutter } from "@codemirror/lint";
 import overlayStyles from "./styles-settings.css?inline";
 import blocksStyles from "./styles-blocks.css?inline";
 
+// Ordered widest-first. Each bucket inherits from all buckets before it.
+const RESPONSIVE_BUCKET_ORDER = [
+  "tabletHorizontal",
+  "mobileHorizontal",
+  "tabletVertical",
+  "mobileVertical",
+];
+
 const cssSyntaxLinter = linter((view) => {
   const diagnostics = [];
   const cursor = syntaxTree(view.state).cursor();
@@ -69,6 +77,8 @@ export class EditorComponent extends LitElement {
     isSettingsEditorOpen: { type: Boolean },
     settingCustomCss: { type: String },
     customCssError: { type: String },
+    activeViewportSize: { type: String },
+    activeViewportOrientation: { type: String },
   };
 
   static styles = unsafeCSS(blocksStyles);
@@ -91,11 +101,26 @@ export class EditorComponent extends LitElement {
     this.onOverlayPointerMove = this.onOverlayPointerMove.bind(this);
     this.onOverlayPointerUp = this.onOverlayPointerUp.bind(this);
     this.onFocusNodeRequest = this.onFocusNodeRequest.bind(this);
+    const initViewport = window.__owbViewport || {
+      size: "desktop",
+      orientation: "vertical",
+    };
+    this.activeViewportSize = initViewport.size;
+    this.activeViewportOrientation = initViewport.orientation;
   }
 
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("owb-focus-node", this.onFocusNodeRequest);
+    this._onViewportChange = (event) => {
+      this.activeViewportSize = event.detail.size;
+      this.activeViewportOrientation = event.detail.orientation;
+      this.syncSettingsStateFromNode(this.settingsDefaultState);
+      if (this.isSettingsEditorOpen) {
+        this.renderSettingsOverlay();
+      }
+    };
+    window.addEventListener("owb-viewport-change", this._onViewportChange);
   }
 
   willUpdate(changedProperties) {
@@ -761,6 +786,135 @@ export class EditorComponent extends LitElement {
     this.renderSettingsOverlay();
   }
 
+  get activeViewportBucket() {
+    const size = this.activeViewportSize || "desktop";
+    if (size === "desktop") return null;
+    const orientation = this.activeViewportOrientation || "vertical";
+    return `${size}${orientation.charAt(0).toUpperCase()}${orientation.slice(1)}`;
+  }
+
+  getOverriddenKeysForCurrentBucket() {
+    const bucket = this.activeViewportBucket;
+    if (!bucket) return new Set();
+    const overrides = this.node?.settings?.responsiveOverrides?.[bucket];
+    if (!overrides || typeof overrides !== "object") return new Set();
+    return new Set(Object.keys(overrides));
+  }
+
+  hasAnyOverriddenKeys(...keys) {
+    const overriddenKeys = this.getOverriddenKeysForCurrentBucket();
+    return keys.some((k) => overriddenKeys.has(k));
+  }
+
+  renderOverrideIndicator(settingKey) {
+    if (!this.activeViewportBucket) return html``;
+    const overriddenKeys = this.getOverriddenKeysForCurrentBucket();
+    if (!overriddenKeys.has(settingKey)) return html``;
+    return html`<button
+      type="button"
+      class="setting-override-clear"
+      title="Clear override — revert to desktop value"
+      @click=${(e) => {
+        e.stopPropagation();
+        this._clearSingleSettingOverride(settingKey);
+      }}
+    >
+      ×
+    </button>`;
+  }
+
+  _clearSingleSettingOverride(settingKey) {
+    const bucket = this.activeViewportBucket;
+    if (!bucket) return;
+    const currentSettings =
+      this.node && typeof this.node.settings === "object" && this.node.settings
+        ? this.node.settings
+        : {};
+    const currentOverrides = currentSettings.responsiveOverrides || {};
+    const currentBucket = { ...(currentOverrides[bucket] || {}) };
+    delete currentBucket[settingKey];
+    const nextOverrides = { ...currentOverrides };
+    if (Object.keys(currentBucket).length > 0) {
+      nextOverrides[bucket] = currentBucket;
+    } else {
+      delete nextOverrides[bucket];
+    }
+    const { responsiveOverrides: _removed, ...baseSettings } = currentSettings;
+    const nextSettings =
+      Object.keys(nextOverrides).length > 0
+        ? { ...baseSettings, responsiveOverrides: nextOverrides }
+        : { ...baseSettings };
+    if (Object.keys(nextSettings).length > 0) {
+      this.node.settings = nextSettings;
+    } else {
+      delete this.node.settings;
+    }
+    if (
+      this.pageConfig &&
+      Array.isArray(this.pageConfig.content) &&
+      this.node.id
+    ) {
+      const result = this.updateNodeSettingsInTree(
+        this.pageConfig.content,
+        this.node.id,
+        Object.keys(nextSettings).length > 0 ? nextSettings : {},
+      );
+      if (result.didChange) {
+        const nextPageConfig = {
+          ...this.pageConfig,
+          content: result.nextNodes,
+        };
+        this.pageConfig = nextPageConfig;
+        this.dispatchPageConfigUpdated(nextPageConfig);
+      }
+    }
+    this.syncSettingsStateFromNode(this.settingsDefaultState);
+    this.renderSettingsOverlay();
+  }
+
+  clearSettingOverrides() {
+    const bucket = this.activeViewportBucket;
+    if (!bucket) return;
+    const currentSettings =
+      this.node && typeof this.node.settings === "object" && this.node.settings
+        ? this.node.settings
+        : {};
+    const { responsiveOverrides: currentOverrides = {}, ...baseSettings } =
+      currentSettings;
+    const nextOverrides = { ...currentOverrides };
+    delete nextOverrides[bucket];
+    const nextSettings =
+      Object.keys(nextOverrides).length > 0
+        ? { ...baseSettings, responsiveOverrides: nextOverrides }
+        : { ...baseSettings };
+    if (Object.keys(nextSettings).length > 0) {
+      this.node.settings = nextSettings;
+    } else {
+      delete this.node.settings;
+    }
+    if (
+      this.pageConfig &&
+      Array.isArray(this.pageConfig.content) &&
+      this.node.id
+    ) {
+      const result = this.updateNodeSettingsInTree(
+        this.pageConfig.content,
+        this.node.id,
+        Object.keys(nextSettings).length > 0 ? nextSettings : {},
+      );
+      if (result.didChange) {
+        const nextPageConfig = {
+          ...this.pageConfig,
+          content: result.nextNodes,
+        };
+        this.pageConfig = nextPageConfig;
+        this.dispatchPageConfigUpdated(nextPageConfig);
+      }
+    }
+    this.syncSettingsStateFromNode(this.settingsDefaultState);
+    this.renderSettingsOverlay();
+  }
+
   dispatchPageConfigUpdated(nextPageConfig) {
     this.dispatchEvent(
       new CustomEvent("page-config-updated", {
@@ -782,13 +936,36 @@ export class EditorComponent extends LitElement {
         ? this.node.settings
         : {};
 
+    // Separate base settings from responsiveOverrides
+    const { responsiveOverrides, ...baseSettings } = nodeSettings;
+
+    // Merge in overrides for the current viewport bucket, cascading from parent buckets
+    const bucket = this.activeViewportBucket;
+    const bucketIndex = bucket ? RESPONSIVE_BUCKET_ORDER.indexOf(bucket) : -1;
+    const effectiveSettings = { ...baseSettings };
+    if (
+      bucketIndex >= 0 &&
+      responsiveOverrides &&
+      typeof responsiveOverrides === "object"
+    ) {
+      for (let i = 0; i <= bucketIndex; i++) {
+        const b = RESPONSIVE_BUCKET_ORDER[i];
+        if (
+          responsiveOverrides[b] &&
+          typeof responsiveOverrides[b] === "object"
+        ) {
+          Object.assign(effectiveSettings, responsiveOverrides[b]);
+        }
+      }
+    }
+
     for (const [key, fallbackValue] of Object.entries(
       this.settingsDefaultState,
     )) {
       const stateKey = key === "customCss" ? "settingCustomCss" : key;
       this[stateKey] =
-        key in nodeSettings && nodeSettings[key] !== undefined
-          ? nodeSettings[key]
+        key in effectiveSettings && effectiveSettings[key] !== undefined
+          ? effectiveSettings[key]
           : fallbackValue;
     }
 
@@ -811,26 +988,76 @@ export class EditorComponent extends LitElement {
         ? this.node.settings
         : {};
 
-    const nextPersistedSettings = {
-      ...currentSettings,
-      ...normalizedState,
-    };
-
     const defaults =
       this.settingsDefaultState && typeof this.settingsDefaultState === "object"
         ? this.settingsDefaultState
         : {};
 
-    for (const [key, defaultValue] of Object.entries(defaults)) {
-      if (
-        key in nextPersistedSettings &&
-        nextPersistedSettings[key] === defaultValue
-      ) {
-        delete nextPersistedSettings[key];
+    const { responsiveOverrides: currentOverrides = {}, ...baseSettings } =
+      currentSettings;
+
+    const bucket = this.activeViewportBucket;
+
+    if (!bucket) {
+      // Desktop: write directly to base settings (preserve existing responsiveOverrides)
+      const nextBase = { ...baseSettings, ...normalizedState };
+      for (const [key, defaultValue] of Object.entries(defaults)) {
+        const normalKey = key === "customCss" ? "customCss" : key;
+        if (normalKey in nextBase && nextBase[normalKey] === defaultValue) {
+          delete nextBase[normalKey];
+        }
+      }
+      const hasOverrides = Object.keys(currentOverrides).some(
+        (k) => Object.keys(currentOverrides[k] || {}).length > 0,
+      );
+      if (hasOverrides) nextBase.responsiveOverrides = currentOverrides;
+      return nextBase;
+    }
+
+    // Non-desktop: write to the current bucket's overrides only
+    const currentBucket = { ...(currentOverrides[bucket] || {}) };
+    const nextBucket = { ...currentBucket, ...normalizedState };
+
+    // Remove keys from the override that equal the inherited value (cascade from parent buckets)
+    const bucketIndex = RESPONSIVE_BUCKET_ORDER.indexOf(bucket);
+    const inheritedSettings = { ...baseSettings };
+    for (let i = 0; i < bucketIndex; i++) {
+      const b = RESPONSIVE_BUCKET_ORDER[i];
+      if (currentOverrides[b] && typeof currentOverrides[b] === "object") {
+        Object.assign(inheritedSettings, currentOverrides[b]);
+      }
+    }
+    for (const [key, value] of Object.entries(normalizedState)) {
+      const inheritedValue =
+        key in inheritedSettings
+          ? inheritedSettings[key]
+          : defaults[key === "customCss" ? "customCss" : key];
+      if (value === inheritedValue) {
+        delete nextBucket[key];
       }
     }
 
-    return nextPersistedSettings;
+    const nextOverrides = { ...currentOverrides };
+    if (Object.keys(nextBucket).length > 0) {
+      nextOverrides[bucket] = nextBucket;
+    } else {
+      delete nextOverrides[bucket];
+    }
+
+    // Strip default values from base (unchanged from original behavior)
+    const nextBase = { ...baseSettings };
+    for (const [key, defaultValue] of Object.entries(defaults)) {
+      const normalKey = key === "customCss" ? "customCss" : key;
+      if (normalKey in nextBase && nextBase[normalKey] === defaultValue) {
+        delete nextBase[normalKey];
+      }
+    }
+
+    if (Object.keys(nextOverrides).length > 0) {
+      nextBase.responsiveOverrides = nextOverrides;
+    }
+
+    return nextBase;
   }
 
   updateNodeSettingsInTree(nodes, targetNodeId, nextSettings) {
@@ -929,6 +1156,7 @@ export class EditorComponent extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener("owb-focus-node", this.onFocusNodeRequest);
+    window.removeEventListener("owb-viewport-change", this._onViewportChange);
     this.closeSettingsEditor();
     this.destroyCssEditor();
 
@@ -977,6 +1205,18 @@ export class EditorComponent extends LitElement {
 
     const parentCollection = this.findParentCollection();
 
+    const bucket = this.activeViewportBucket;
+    const VIEWPORT_LABELS = {
+      tabletHorizontal: "Tablet — Horizontal",
+      tabletVertical: "Tablet — Vertical",
+      mobileHorizontal: "Mobile — Horizontal",
+      mobileVertical: "Mobile — Vertical",
+    };
+    const viewportLabel = bucket ? VIEWPORT_LABELS[bucket] : null;
+    const overriddenCount = bucket
+      ? this.getOverriddenKeysForCurrentBucket().size
+      : 0;
+
     render(
       html`
         <style>
@@ -1017,6 +1257,23 @@ export class EditorComponent extends LitElement {
                 ${createElement(X)}
               </button>
             </div>
+            ${viewportLabel
+              ? html`<div class="settings-overlay-viewport-bar">
+                  <span class="settings-overlay-viewport-label"
+                    >${viewportLabel}</span
+                  >
+                  ${overriddenCount > 0
+                    ? html`<button
+                        type="button"
+                        class="settings-overlay-viewport-reset"
+                        title="Reset all overrides for this viewport"
+                        @click=${() => this.clearSettingOverrides()}
+                      >
+                        Reset ${overriddenCount}
+                      </button>`
+                    : null}
+                </div>`
+              : null}
             ${parentCollection
               ? html`
                   <div class="settings-overlay-collection-bar">

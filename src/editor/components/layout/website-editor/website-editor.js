@@ -367,14 +367,23 @@ class WebsiteEditor extends LitElement {
 
   onActiveSizeChange = (event) => {
     this.activeSize = event.detail.value;
+    this._dispatchViewportChange(event.detail.value, this.activeOrientation);
   };
 
   onActiveOrientationChange = (event) => {
     this.activeOrientation = event.detail.value;
+    this._dispatchViewportChange(this.activeSize, event.detail.value);
   };
 
   notifyDataChanged() {
     window.dispatchEvent(new CustomEvent("editor-data-changed"));
+  }
+
+  _dispatchViewportChange(size, orientation) {
+    window.__owbViewport = { size, orientation };
+    window.dispatchEvent(
+      new CustomEvent("owb-viewport-change", { detail: { size, orientation } }),
+    );
   }
 
   navigateToSelection(selection) {

@@ -487,111 +487,129 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
           return html`
             ${this.renderOverlayScopedStyles()}
             <settings-section title="Display mode">
-              <editor-radio-button
-                .options=${[
-                  { label: "Icon + text", value: "icon-text" },
-                  { label: "Icon only", value: "icon" },
-                  { label: "Text only", value: "text" },
-                ]}
-                .value=${this.socialDisplayMode}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    socialDisplayMode: event.detail.value,
-                  })}
-              ></editor-radio-button>
-            </settings-section>
-            <settings-section title="Button style">
-              <editor-select
-                label="Theme"
-                .value=${this.socialButtonTheme}
-                .options=${[
-                  { label: "Primary", value: "primary" },
-                  { label: "Secondary", value: "secondary" },
-                  { label: "Light", value: "light" },
-                  { label: "Dark", value: "dark" },
-                  { label: "Muted", value: "muted" },
-                ]}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    socialButtonTheme: event.detail.value,
-                  })}
-              ></editor-select>
-              <editor-radio-button
-                .options=${[
-                  { label: "Filled", value: "filled" },
-                  { label: "Border", value: "border" },
-                  { label: "Ghost", value: "ghost" },
-                ]}
-                .value=${this.socialButtonVariant}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    socialButtonVariant: event.detail.value,
-                  })}
-              ></editor-radio-button>
-              <editor-radio-button
-                .options=${[
-                  { label: "XS", value: "xs" },
-                  { label: "Small", value: "small" },
-                  { label: "Medium", value: "medium" },
-                  { label: "Large", value: "large" },
-                  { label: "XXL", value: "xxl" },
-                ]}
-                .value=${this.socialButtonSize}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    socialButtonSize: event.detail.value,
-                  })}
-              ></editor-radio-button>
-              <editor-radio-button
-                .options=${[
-                  { label: "Left", value: "left" },
-                  { label: "Center", value: "center" },
-                  { label: "Right", value: "right" },
-                ]}
-                .value=${this.socialButtonAlignment}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    socialButtonAlignment: event.detail.value,
-                  })}
-              ></editor-radio-button>
-              <editor-radio-button
-                .options=${[
-                  { label: "Brand icon color", value: "brand" },
-                  { label: "Text color", value: "text" },
-                ]}
-                .value=${this.socialIconColorMode}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    socialIconColorMode: event.detail.value,
-                  })}
-              ></editor-radio-button>
-              <editor-radio-button
-                .options=${[
-                  { label: "Rounded", value: "rounded" },
-                  { label: "Square", value: "square" },
-                  { label: "Border radius", value: "custom" },
-                ]}
-                .value=${this.socialButtonShape}
-                @change=${(event) =>
-                  this.updateSettingsState({
-                    socialButtonShape: event.detail.value,
-                  })}
-              ></editor-radio-button>
-              ${this.socialButtonShape === "custom"
-                ? html`
-                    <editor-text-input
-                      label="Radius"
-                      placeholder="12px"
-                      .value=${this.socialButtonRadiusCustom}
-                      @change=${(event) =>
-                        this.updateSettingsState({
-                          socialButtonRadiusCustom:
-                            this.getTextInputEventValue(event),
-                        })}
-                    ></editor-text-input>
-                  `
-                : null}
-            </settings-section>
+              <settings-section
+                title="Display mode"
+                ?overridden=${this.hasAnyOverriddenKeys("socialDisplayMode")}
+              >
+                <editor-radio-button
+                  .options=${[
+                    { label: "Icon + text", value: "icon-text" },
+                    { label: "Icon only", value: "icon" },
+                    { label: "Text only", value: "text" },
+                  ]}
+                  .value=${this.socialDisplayMode}
+                  @change=${(event) =>
+                    this.updateSettingsState({
+                      socialDisplayMode: event.detail.value,
+                    })}
+                ></editor-radio-button>
+              </settings-section>
+              <settings-section title="Button style">
+                <settings-section
+                  title="Button style"
+                  ?overridden=${this.hasAnyOverriddenKeys(
+                    "socialButtonTheme",
+                    "socialButtonVariant",
+                    "socialButtonSize",
+                    "socialButtonAlignment",
+                    "socialButtonIconColor",
+                    "socialButtonShape",
+                    "socialButtonShapeRadius",
+                  )}
+                >
+                  <editor-select
+                    label="Theme"
+                    .value=${this.socialButtonTheme}
+                    .options=${[
+                      { label: "Primary", value: "primary" },
+                      { label: "Secondary", value: "secondary" },
+                      { label: "Light", value: "light" },
+                      { label: "Dark", value: "dark" },
+                      { label: "Muted", value: "muted" },
+                    ]}
+                    @change=${(event) =>
+                      this.updateSettingsState({
+                        socialButtonTheme: event.detail.value,
+                      })}
+                  ></editor-select>
+                  <editor-radio-button
+                    .options=${[
+                      { label: "Filled", value: "filled" },
+                      { label: "Border", value: "border" },
+                      { label: "Ghost", value: "ghost" },
+                    ]}
+                    .value=${this.socialButtonVariant}
+                    @change=${(event) =>
+                      this.updateSettingsState({
+                        socialButtonVariant: event.detail.value,
+                      })}
+                  ></editor-radio-button>
+                  <editor-radio-button
+                    .options=${[
+                      { label: "XS", value: "xs" },
+                      { label: "Small", value: "small" },
+                      { label: "Medium", value: "medium" },
+                      { label: "Large", value: "large" },
+                      { label: "XXL", value: "xxl" },
+                    ]}
+                    .value=${this.socialButtonSize}
+                    @change=${(event) =>
+                      this.updateSettingsState({
+                        socialButtonSize: event.detail.value,
+                      })}
+                  ></editor-radio-button>
+                  <editor-radio-button
+                    .options=${[
+                      { label: "Left", value: "left" },
+                      { label: "Center", value: "center" },
+                      { label: "Right", value: "right" },
+                    ]}
+                    .value=${this.socialButtonAlignment}
+                    @change=${(event) =>
+                      this.updateSettingsState({
+                        socialButtonAlignment: event.detail.value,
+                      })}
+                  ></editor-radio-button>
+                  <editor-radio-button
+                    .options=${[
+                      { label: "Brand icon color", value: "brand" },
+                      { label: "Text color", value: "text" },
+                    ]}
+                    .value=${this.socialIconColorMode}
+                    @change=${(event) =>
+                      this.updateSettingsState({
+                        socialIconColorMode: event.detail.value,
+                      })}
+                  ></editor-radio-button>
+                  <editor-radio-button
+                    .options=${[
+                      { label: "Rounded", value: "rounded" },
+                      { label: "Square", value: "square" },
+                      { label: "Border radius", value: "custom" },
+                    ]}
+                    .value=${this.socialButtonShape}
+                    @change=${(event) =>
+                      this.updateSettingsState({
+                        socialButtonShape: event.detail.value,
+                      })}
+                  ></editor-radio-button>
+                  ${this.socialButtonShape === "custom"
+                    ? html`
+                        <editor-text-input
+                          label="Radius"
+                          placeholder="12px"
+                          .value=${this.socialButtonRadiusCustom}
+                          @change=${(event) =>
+                            this.updateSettingsState({
+                              socialButtonRadiusCustom:
+                                this.getTextInputEventValue(event),
+                            })}
+                        ></editor-text-input>
+                      `
+                    : null}
+                </settings-section>
+              </settings-section></settings-section
+            >
           `;
         }
 

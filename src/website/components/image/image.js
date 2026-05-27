@@ -143,6 +143,7 @@ class SiteImage extends withVariantConfig(EditorComponent) {
       content: () => html`
         <div>
           <settings-section title="Image">
+                      <settings-section title="Image" ?overridden=${this.hasAnyOverriddenKeys("imageSizeMode", "url")}>
             <editor-text-input
               label="URL"
               placeholder="https://example.com/image.jpg"
@@ -162,6 +163,7 @@ class SiteImage extends withVariantConfig(EditorComponent) {
             ></editor-radio-button>
           </settings-section>
           <settings-section title="Interaction">
+                      <settings-section title="Interaction" ?overridden=${this.hasAnyOverriddenKeys("imageClickAction", "imageLinkUrl", "imageLinkTarget")}>
             <editor-radio-button
               .options=${[
                 { label: "Do nothing", value: "none" },
@@ -176,32 +178,34 @@ class SiteImage extends withVariantConfig(EditorComponent) {
               }}
             ></editor-radio-button>
 
-            ${this.imageClickAction === "link"
-              ? html`
-                  <editor-text-input
-                    label="Link URL"
-                    placeholder="https://example.com"
-                    .value=${this.imageLinkUrl}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        imageLinkUrl: event.detail.value,
-                      });
-                    }}
-                  ></editor-text-input>
-                  <editor-radio-button
-                    .options=${[
-                      { label: "Open in current page", value: "current" },
-                      { label: "Open in new tab", value: "new" },
-                    ]}
-                    .value=${this.imageLinkTarget}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        imageLinkTarget: event.detail.value,
-                      });
-                    }}
-                  ></editor-radio-button>
-                `
-              : null}
+            ${
+              this.imageClickAction === "link"
+                ? html`
+                    <editor-text-input
+                      label="Link URL"
+                      placeholder="https://example.com"
+                      .value=${this.imageLinkUrl}
+                      @change=${(event) => {
+                        this.updateSettingsState({
+                          imageLinkUrl: event.detail.value,
+                        });
+                      }}
+                    ></editor-text-input>
+                    <editor-radio-button
+                      .options=${[
+                        { label: "Open in current page", value: "current" },
+                        { label: "Open in new tab", value: "new" },
+                      ]}
+                      .value=${this.imageLinkTarget}
+                      @change=${(event) => {
+                        this.updateSettingsState({
+                          imageLinkTarget: event.detail.value,
+                        });
+                      }}
+                    ></editor-radio-button>
+                  `
+                : null
+            }
           </settings-section>
         </div>
       `,

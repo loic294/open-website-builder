@@ -105,6 +105,7 @@ class SiteInput extends withVariantConfig(EditorComponent) {
       content: () => html`
         <div>
           <settings-section title="Field type">
+                      <settings-section title="Field type" ?overridden=${this.hasAnyOverriddenKeys("settingFieldType")}>
             <editor-select
               label="Type"
               .value=${this.settingFieldType}
@@ -122,6 +123,7 @@ class SiteInput extends withVariantConfig(EditorComponent) {
           </settings-section>
 
           <settings-section title="Field">
+                      <settings-section title="Field" ?overridden=${this.hasAnyOverriddenKeys("settingLabel", "settingName", "settingPlaceholder", "settingRequired")}>
             <editor-text-input
               label="Label"
               .value=${this.settingLabel}
@@ -164,101 +166,136 @@ class SiteInput extends withVariantConfig(EditorComponent) {
             ></editor-select>
           </settings-section>
 
-          ${this.settingFieldType === "number"
-            ? html`
-                <settings-section title="Number options">
-                  <editor-text-input
-                    label="Min"
-                    type="number"
-                    .value=${this.settingMin}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        settingMin: event.detail.value,
-                      });
-                    }}
-                  ></editor-text-input>
-                  <editor-text-input
-                    label="Max"
-                    type="number"
-                    .value=${this.settingMax}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        settingMax: event.detail.value,
-                      });
-                    }}
-                  ></editor-text-input>
-                  <editor-text-input
-                    label="Step"
-                    type="number"
-                    .value=${this.settingStep}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        settingStep: event.detail.value,
-                      });
-                    }}
-                  ></editor-text-input>
-                </settings-section>
-              `
-            : null}
-          ${this.settingFieldType === "textarea"
-            ? html`
-                <settings-section title="Textarea options">
-                  <editor-text-input
-                    label="Rows"
-                    type="number"
-                    .value=${this.settingRows}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        settingRows: event.detail.value,
-                      });
-                    }}
-                  ></editor-text-input>
-                </settings-section>
-              `
-            : null}
-          ${this.settingFieldType === "text" ||
-          this.settingFieldType === "textarea"
-            ? html`
-                <settings-section title="Validation">
-                  <editor-text-input
-                    label="Min length"
-                    type="number"
-                    .value=${this.settingMinLength}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        settingMinLength: event.detail.value,
-                      });
-                    }}
-                  ></editor-text-input>
-                  <editor-text-input
-                    label="Max length"
-                    type="number"
-                    .value=${this.settingMaxLength}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        settingMaxLength: event.detail.value,
-                      });
-                    }}
-                  ></editor-text-input>
-                </settings-section>
-              `
-            : null}
-          ${this.settingFieldType === "text"
-            ? html`
-                <settings-section title="Text options">
-                  <editor-text-input
-                    label="Pattern"
-                    placeholder="[A-Za-z]+"
-                    .value=${this.settingPattern}
-                    @change=${(event) => {
-                      this.updateSettingsState({
-                        settingPattern: event.detail.value,
-                      });
-                    }}
-                  ></editor-text-input>
-                </settings-section>
-              `
-            : null}
+          ${
+            this.settingFieldType === "number"
+              ? html`
+                  <settings-section title="Number options">
+                    <settings-section
+                      title="Number options"
+                      ?overridden=${this.hasAnyOverriddenKeys(
+                        "settingMin",
+                        "settingMax",
+                        "settingStep",
+                      )}
+                    >
+                      <editor-text-input
+                        label="Min"
+                        type="number"
+                        .value=${this.settingMin}
+                        @change=${(event) => {
+                          this.updateSettingsState({
+                            settingMin: event.detail.value,
+                          });
+                        }}
+                      ></editor-text-input>
+                      <editor-text-input
+                        label="Max"
+                        type="number"
+                        .value=${this.settingMax}
+                        @change=${(event) => {
+                          this.updateSettingsState({
+                            settingMax: event.detail.value,
+                          });
+                        }}
+                      ></editor-text-input>
+                      <editor-text-input
+                        label="Step"
+                        type="number"
+                        .value=${this.settingStep}
+                        @change=${(event) => {
+                          this.updateSettingsState({
+                            settingStep: event.detail.value,
+                          });
+                        }}
+                      ></editor-text-input>
+                    </settings-section>
+                  </settings-section>
+                `
+              : null
+          }
+          ${
+            this.settingFieldType === "textarea"
+              ? html`
+                  <settings-section title="Textarea options">
+                    <settings-section
+                      title="Textarea options"
+                      ?overridden=${this.hasAnyOverriddenKeys("settingRows")}
+                    >
+                      <editor-text-input
+                        label="Rows"
+                        type="number"
+                        .value=${this.settingRows}
+                        @change=${(event) => {
+                          this.updateSettingsState({
+                            settingRows: event.detail.value,
+                          });
+                        }}
+                      ></editor-text-input>
+                    </settings-section>
+                  </settings-section>
+                `
+              : null
+          }
+          ${
+            this.settingFieldType === "text" ||
+            this.settingFieldType === "textarea"
+              ? html`
+                  <settings-section title="Validation">
+                    <settings-section
+                      title="Validation"
+                      ?overridden=${this.hasAnyOverriddenKeys(
+                        "settingMinLength",
+                        "settingMaxLength",
+                      )}
+                    >
+                      <editor-text-input
+                        label="Min length"
+                        type="number"
+                        .value=${this.settingMinLength}
+                        @change=${(event) => {
+                          this.updateSettingsState({
+                            settingMinLength: event.detail.value,
+                          });
+                        }}
+                      ></editor-text-input>
+                      <editor-text-input
+                        label="Max length"
+                        type="number"
+                        .value=${this.settingMaxLength}
+                        @change=${(event) => {
+                          this.updateSettingsState({
+                            settingMaxLength: event.detail.value,
+                          });
+                        }}
+                      ></editor-text-input>
+                    </settings-section>
+                  </settings-section>
+                `
+              : null
+          }
+          ${
+            this.settingFieldType === "text"
+              ? html`
+                  <settings-section title="Text options">
+                    <settings-section
+                      title="Text options"
+                      ?overridden=${this.hasAnyOverriddenKeys("settingPattern")}
+                    >
+                      <editor-text-input
+                        label="Pattern"
+                        placeholder="[A-Za-z]+"
+                        .value=${this.settingPattern}
+                        @change=${(event) => {
+                          this.updateSettingsState({
+                            settingPattern: event.detail.value,
+                          });
+                        }}
+                      ></editor-text-input>
+                    </settings-section>
+                  </settings-section>
+                `
+              : null
+          }
         </div>
       `,
     });

@@ -1560,7 +1560,13 @@ export class SiteLayoutContainerBase extends withVariantConfig(
           ];
 
           return html`<div>
-            <settings-section title="Width">
+            <settings-section
+              title="Width"
+              ?overridden=${this.hasAnyOverriddenKeys(
+                "settingWidth",
+                "settingWidthCustomValue",
+              )}
+            >
               <editor-radio-button
                 .options=${options}
                 .value=${this.settingWidth}
@@ -1582,7 +1588,16 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                   ></editor-text-input>`
                 : null}
             </settings-section>
-            <settings-section title="Sizing">
+            <settings-section
+              title="Sizing"
+              ?overridden=${this.hasAnyOverriddenKeys(
+                "settingSizing",
+                "settingPaddingTop",
+                "settingPaddingRight",
+                "settingPaddingBottom",
+                "settingPaddingLeft",
+              )}
+            >
               <editor-radio-button
                 .options=${[
                   { label: "None", value: "none" },
@@ -1621,7 +1636,30 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                   `
                 : null}
             </settings-section>
-            <settings-section title="Alignment">
+            <settings-section
+              title="Alignment"
+              ?overridden=${this.hasAnyOverriddenKeys(
+                "settingAlignmentMode",
+                "settingGap",
+                "settingRowHeight",
+                "settingFlexDirection",
+                "settingFlexHorizontal",
+                "settingFlexVertical",
+                "settingFlexJustifyContent",
+                "settingFlexAlignItems",
+                "settingFlexAlignContent",
+                "settingGridRows",
+                "settingGridColumns",
+                "settingGridHorizontal",
+                "settingGridVertical",
+                "settingGridJustifyItems",
+                "settingGridAlignItems",
+                "settingGridJustifyContent",
+                "settingGridAlignContent",
+                "settingOtherAlignment",
+                "settingFixedHeight",
+              )}
+            >
               <editor-alignment-options
                 .value=${{
                   mode: this.settingAlignmentMode,
@@ -1730,7 +1768,10 @@ export class SiteLayoutContainerBase extends withVariantConfig(
 
         if (tab === "design") {
           return html`<div>
-            <settings-section title="Background color">
+            <settings-section
+              title="Background color"
+              ?overridden=${this.hasAnyOverriddenKeys("settingBackgroundColor")}
+            >
               <editor-color-dots
                 .options=${this.constructor.designColorVariables}
                 .value=${this.settingBackgroundColor}
@@ -1742,7 +1783,10 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                 }}
               ></editor-color-dots>
             </settings-section>
-            <settings-section title="Text color">
+            <settings-section
+              title="Text color"
+              ?overridden=${this.hasAnyOverriddenKeys("settingTextColor")}
+            >
               <editor-color-dots
                 .options=${this.constructor.designColorVariables}
                 .value=${this.settingTextColor}

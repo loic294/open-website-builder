@@ -556,7 +556,13 @@ class Text extends withVariantConfig(EditorComponent) {
                 ${this.renderGlobalTextToolButtons()}
               </div>
             </settings-section>
-            <settings-section title="Typography">
+            <settings-section
+              title="Typography"
+              ?overridden=${this.hasAnyOverriddenKeys(
+                "fontSize",
+                "headingStyle",
+              )}
+            >
               <editor-select
                 label="Font size"
                 .value=${this.getCurrentFontSize()}

@@ -143,6 +143,65 @@ function getSectionStyle(settings) {
   return parts.join("; ");
 }
 
+// Ordered widest-first so cascade works correctly.
+// mobileHorizontal (844) comes before tabletVertical (820) because 844 > 820.
+const RESPONSIVE_BREAKPOINTS = [
+  { bucket: "tabletHorizontal", maxWidth: 1180 },
+  { bucket: "mobileHorizontal", maxWidth: 844 },
+  { bucket: "tabletVertical", maxWidth: 820 },
+  { bucket: "mobileVertical", maxWidth: 390 },
+];
+
+// Builds media query CSS to embed inside a shadow DOM style block.
+// Uses !important so the media query rules override the inline styles already
+// on the section/container elements within the shadow DOM.
+function buildResponsiveSectionCss(
+  settings,
+  sectionSelector,
+  containerSelector,
+) {
+  const overrides = settings.responsiveOverrides;
+  if (!overrides || typeof overrides !== "object") return "";
+
+  const rules = RESPONSIVE_BREAKPOINTS.map(({ bucket, maxWidth }) => {
+    const bucketOverrides = overrides[bucket];
+    if (
+      !bucketOverrides ||
+      typeof bucketOverrides !== "object" ||
+      Object.keys(bucketOverrides).length === 0
+    ) {
+      return "";
+    }
+    const merged = { ...settings, ...bucketOverrides };
+    const sectionCss = getSectionStyle(merged)
+      .split(";")
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `${p} !important`)
+      .join("; ");
+    const containerCss = getSectionContainerStyle(merged)
+      .split(";")
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `${p} !important`)
+      .join("; ");
+    const parts = [];
+    if (sectionCss)
+      parts.push(
+        `@media (max-width: ${maxWidth}px) { ${sectionSelector} { ${sectionCss} } }`,
+      );
+    if (containerCss)
+      parts.push(
+        `@media (max-width: ${maxWidth}px) { ${containerSelector} { ${containerCss} } }`,
+      );
+    return parts.join(" ");
+  })
+    .filter(Boolean)
+    .join("\n");
+
+  return rules;
+}
+
 function getSectionContainerStyle(settings) {
   const parts = [];
   const mode = String(settings.settingAlignmentMode || "block");
@@ -585,9 +644,14 @@ class OwbSection extends HTMLElement {
           : "is-normal-width";
     const customCss = String(settings.customCss || "").trim();
 
+    const responsiveCss = buildResponsiveSectionCss(
+      settings,
+      "section",
+      ".container",
+    );
     renderShadow(
       this,
-      `<style>:host{display:block;}section .container{position:relative;padding:var(--section-padding-top, 7rem) var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);margin:0 auto;}section .container.is-normal-width{max-width:960px;}section .container.is-full-width{max-width:100%;}</style>${customCss ? `<style>${customCss}</style>` : ""}<section style="${getSectionStyle(settings)}"><div class="container ${widthClass}" style="${getSectionContainerStyle(settings)}"><slot></slot></div></section>`,
+      `<style>:host{display:block;}section .container{position:relative;padding:var(--section-padding-top, 7rem) var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);margin:0 auto;}section .container.is-normal-width{max-width:960px;}section .container.is-full-width{max-width:100%;}${responsiveCss}</style>${customCss ? `<style>${customCss}</style>` : ""}<section style="${getSectionStyle(settings)}"><div class="container ${widthClass}" style="${getSectionContainerStyle(settings)}"><slot></slot></div></section>`,
     );
   }
 }
@@ -604,9 +668,14 @@ class OwbContainer extends HTMLElement {
           : "is-normal-width";
     const customCss = String(settings.customCss || "").trim();
 
+    const responsiveCss = buildResponsiveSectionCss(
+      settings,
+      ".container",
+      ".container",
+    );
     renderShadow(
       this,
-      `<style>:host{display:block;} .container{position:relative;padding:var(--section-padding-top, 7rem) var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);margin:0 auto;} .container.is-normal-width{max-width:960px;} .container.is-full-width{max-width:100%;}</style>${customCss ? `<style>${customCss}</style>` : ""}<div class="container ${widthClass}" style="${getSectionStyle(settings)}; ${getSectionContainerStyle(settings)}"><slot></slot></div>`,
+      `<style>:host{display:block;} .container{position:relative;padding:var(--section-padding-top, 7rem) var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);margin:0 auto;} .container.is-normal-width{max-width:960px;} .container.is-full-width{max-width:100%;}${responsiveCss}</style>${customCss ? `<style>${customCss}</style>` : ""}<div class="container ${widthClass}" style="${getSectionStyle(settings)}; ${getSectionContainerStyle(settings)}"><slot></slot></div>`,
     );
   }
 }

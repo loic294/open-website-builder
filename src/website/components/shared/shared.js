@@ -121,7 +121,10 @@ class SharedComponent extends EditorComponent {
     this.openSettingsEditor({
       tabs: [{ id: "general", label: "General" }],
       content: () => html`
-        <settings-section title="Shared component">
+        <settings-section
+          title="Shared component"
+          ?overridden=${this.hasAnyOverriddenKeys("shared_component_id")}
+        >
           <editor-select
             label="Component"
             .value=${currentId}
