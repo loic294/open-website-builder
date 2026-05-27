@@ -426,12 +426,19 @@ export class EditorComponent extends LitElement {
         <settings-section
           title="Padding"
           ?overridden=${this.hasAnyOverriddenKeys(
-            "settingSpacingPaddingTop", "settingSpacingPaddingRight",
-            "settingSpacingPaddingBottom", "settingSpacingPaddingLeft",
+            "settingSpacingPaddingTop",
+            "settingSpacingPaddingRight",
+            "settingSpacingPaddingBottom",
+            "settingSpacingPaddingLeft",
           )}
         >
           <editor-padding-input
-            .value=${{ top: this.settingSpacingPaddingTop, right: this.settingSpacingPaddingRight, bottom: this.settingSpacingPaddingBottom, left: this.settingSpacingPaddingLeft }}
+            .value=${{
+              top: this.settingSpacingPaddingTop,
+              right: this.settingSpacingPaddingRight,
+              bottom: this.settingSpacingPaddingBottom,
+              left: this.settingSpacingPaddingLeft,
+            }}
             @change=${(e) => {
               const v = e.detail.value || {};
               this.updateSettingsState({
@@ -446,13 +453,25 @@ export class EditorComponent extends LitElement {
         <settings-section
           title="Margin"
           ?overridden=${this.hasAnyOverriddenKeys(
-            "settingSpacingMarginTop", "settingSpacingMarginRight",
-            "settingSpacingMarginBottom", "settingSpacingMarginLeft",
+            "settingSpacingMarginTop",
+            "settingSpacingMarginRight",
+            "settingSpacingMarginBottom",
+            "settingSpacingMarginLeft",
           )}
         >
           <editor-padding-input
-            .labels=${{ top: "Top", right: "Right", bottom: "Bottom", left: "Left" }}
-            .value=${{ top: this.settingSpacingMarginTop, right: this.settingSpacingMarginRight, bottom: this.settingSpacingMarginBottom, left: this.settingSpacingMarginLeft }}
+            .labels=${{
+              top: "Top",
+              right: "Right",
+              bottom: "Bottom",
+              left: "Left",
+            }}
+            .value=${{
+              top: this.settingSpacingMarginTop,
+              right: this.settingSpacingMarginRight,
+              bottom: this.settingSpacingMarginBottom,
+              left: this.settingSpacingMarginLeft,
+            }}
             @change=${(e) => {
               const v = e.detail.value || {};
               this.updateSettingsState({
@@ -1061,10 +1080,14 @@ export class EditorComponent extends LitElement {
 
     // Sync base-class spacing properties from effective settings
     for (const key of [
-      "settingSpacingPaddingTop", "settingSpacingPaddingRight",
-      "settingSpacingPaddingBottom", "settingSpacingPaddingLeft",
-      "settingSpacingMarginTop", "settingSpacingMarginRight",
-      "settingSpacingMarginBottom", "settingSpacingMarginLeft",
+      "settingSpacingPaddingTop",
+      "settingSpacingPaddingRight",
+      "settingSpacingPaddingBottom",
+      "settingSpacingPaddingLeft",
+      "settingSpacingMarginTop",
+      "settingSpacingMarginRight",
+      "settingSpacingMarginBottom",
+      "settingSpacingMarginLeft",
     ]) {
       this[key] = String(effectiveSettings[key] || "");
     }
@@ -1107,10 +1130,14 @@ export class EditorComponent extends LitElement {
       }
       // Strip empty spacing values
       for (const key of [
-        "settingSpacingPaddingTop", "settingSpacingPaddingRight",
-        "settingSpacingPaddingBottom", "settingSpacingPaddingLeft",
-        "settingSpacingMarginTop", "settingSpacingMarginRight",
-        "settingSpacingMarginBottom", "settingSpacingMarginLeft",
+        "settingSpacingPaddingTop",
+        "settingSpacingPaddingRight",
+        "settingSpacingPaddingBottom",
+        "settingSpacingPaddingLeft",
+        "settingSpacingMarginTop",
+        "settingSpacingMarginRight",
+        "settingSpacingMarginBottom",
+        "settingSpacingMarginLeft",
       ]) {
         if (key in nextBase && !String(nextBase[key] || "").trim()) {
           delete nextBase[key];

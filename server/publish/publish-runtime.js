@@ -79,7 +79,9 @@ function buildResponsiveSpacingCss(settings) {
       return `@media (max-width: ${maxWidth}px) { :host { ${importantDecls} } }`;
     });
     return important;
-  }).filter(Boolean).join("\n");
+  })
+    .filter(Boolean)
+    .join("\n");
   return rules;
 }
 
@@ -90,7 +92,9 @@ function renderShadow(host, markup) {
   const { settings = {} } = readConfig(host);
   const spacingCss = getSpacingCss(settings);
   const responsiveSpacingCss = buildResponsiveSpacingCss(settings);
-  const combinedSpacing = [spacingCss, responsiveSpacingCss].filter(Boolean).join("\n");
+  const combinedSpacing = [spacingCss, responsiveSpacingCss]
+    .filter(Boolean)
+    .join("\n");
   root.innerHTML = `<link rel="stylesheet" href="${SHADOW_STYLESHEET_HREF}" />${combinedSpacing ? `<style data-spacing>${combinedSpacing}</style>` : ""}${markup}`;
   return root;
 }
