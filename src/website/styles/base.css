@@ -36,7 +36,7 @@ body {
   margin: 0 0 1rem;
 }
 
-a[href] {
+.ProseMirror a[href] {
   color: var(--website-link-color);
   text-decoration: underline;
 }

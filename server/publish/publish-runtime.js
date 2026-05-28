@@ -1069,6 +1069,192 @@ if (!customElements.get("owb-gallery")) {
 if (!customElements.get("owb-slider")) {
   customElements.define("owb-slider", OwbSlider);
 }
+
+// ── OwbNavbar ────────────────────────────────────────────────────────────────
+
+class OwbNavbar extends HTMLElement {
+  constructor() {
+    super();
+    this._mobileOpen = false;
+    this._resizeHandler = null;
+  }
+
+  connectedCallback() {
+    this.render();
+
+    const root = this.shadowRoot;
+    if (root) {
+      root.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        if (target.closest("[data-navbar-toggle]")) {
+          this._mobileOpen = !this._mobileOpen;
+          this._updateMobileState();
+        } else if (target.closest("[data-navbar-close]")) {
+          this._mobileOpen = false;
+          this._updateMobileState();
+        }
+      });
+    }
+
+    this._resizeHandler = () => {
+      const config = readConfig(this);
+      const settings = config.settings || {};
+      const bp = Number.parseInt(
+        String(settings.navbarMobileBreakpoint || "768"),
+        10,
+      );
+      if (!Number.isNaN(bp) && window.innerWidth > bp) {
+        this._mobileOpen = false;
+        this._updateMobileState();
+      }
+    };
+    window.addEventListener("resize", this._resizeHandler);
+  }
+
+  disconnectedCallback() {
+    if (this._resizeHandler) {
+      window.removeEventListener("resize", this._resizeHandler);
+      this._resizeHandler = null;
+    }
+  }
+
+  _updateMobileState() {
+    const root = this.shadowRoot;
+    if (!root) return;
+    const menu = root.querySelector(".navbar-mobile-menu");
+    if (!menu) return;
+    if (this._mobileOpen) {
+      menu.classList.add("is-open");
+    } else {
+      menu.classList.remove("is-open");
+    }
+  }
+
+  render() {
+    const config = readConfig(this);
+    const links = Array.isArray(config.links) ? config.links : [];
+    const settings = config.settings || {};
+
+    const mobileOn =
+      settings.navbarMobileEnabled === true ||
+      settings.navbarMobileEnabled === "true";
+    const mobileType = String(settings.navbarMobileType || "dropdown");
+    const breakpoint = String(settings.navbarMobileBreakpoint || "768px");
+    const hasUnderline =
+      settings.navbarUnderlineOnHover === true ||
+      settings.navbarUnderlineOnHover === "true";
+    const hasUnderlineActive =
+      settings.navbarUnderlineActive === true ||
+      settings.navbarUnderlineActive === "true";
+    const currentPath = window.location.pathname;
+    const isActiveLink = (link) => {
+      const href = String(link.url || link.pageId || "").trim();
+      if (!href || href === "#") return false;
+      if (href === "/") return currentPath === "/";
+      return currentPath === href || currentPath.startsWith(href + "/");
+    };
+
+    const navVars = [
+      settings.navbarGap ? `--navbar-gap: ${settings.navbarGap}` : "",
+      settings.navbarFontFamily
+        ? `--navbar-font-family: ${settings.navbarFontFamily}`
+        : "",
+      settings.navbarFontSize
+        ? `--navbar-font-size: ${settings.navbarFontSize}`
+        : "",
+      settings.navbarFontWeight
+        ? `--navbar-font-weight: ${settings.navbarFontWeight}`
+        : "",
+      settings.navbarColor ? `--navbar-color: ${settings.navbarColor}` : "",
+      settings.navbarHoverColor
+        ? `--navbar-hover-color: ${settings.navbarHoverColor}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("; ");
+
+    const mobileVars = [
+      settings.navbarMobileBackgroundColor
+        ? `--navbar-mobile-bg: ${settings.navbarMobileBackgroundColor}`
+        : "",
+      settings.navbarMobileTextColor
+        ? `--navbar-mobile-color: ${settings.navbarMobileTextColor}`
+        : "",
+      settings.navbarMobileGap
+        ? `--navbar-mobile-gap: ${settings.navbarMobileGap}`
+        : "",
+      settings.navbarMobilePadding
+        ? `--navbar-mobile-padding: ${settings.navbarMobilePadding}`
+        : "",
+      settings.navbarMobileAlignH
+        ? `--navbar-mobile-align-h: ${settings.navbarMobileAlignH}`
+        : "",
+      settings.navbarMobileAlignV
+        ? `--navbar-mobile-justify-v: ${settings.navbarMobileAlignV}`
+        : "",
+      settings.navbarMobileFontSize
+        ? `--navbar-mobile-font-size: ${settings.navbarMobileFontSize}`
+        : "",
+      settings.navbarMobileFontWeight
+        ? `--navbar-mobile-font-weight: ${settings.navbarMobileFontWeight}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("; ");
+
+    const hamburger = (() => {
+      const icon = String(settings.navbarMobileMenuIcon || "hamburger").trim();
+      return icon === "hamburger" || !icon ? "&#9776;" : icon;
+    })();
+    const iconSize = String(settings.navbarMobileMenuIconSize || "").trim();
+
+    const esc = (s) =>
+      String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/"/g, "&quot;");
+
+    const linkHtml = (link, cls) => {
+      const active = isActiveLink(link) ? " is-active" : "";
+      return `<a class="${cls}${active}" href="${esc(link.url || link.pageId || "#")}" target="${esc(link.target || "_self")}">${esc(link.label || link.url || link.pageId || "")}</a>`;
+    };
+
+    const desktopLinks = links.map((l) => linkHtml(l, "navbar-link")).join("");
+    const mobileLinks = links
+      .map((l) => linkHtml(l, "navbar-mobile-link"))
+      .join("");
+
+    const mediaQuery = mobileOn
+      ? `<style>@media(max-width:${breakpoint}){.navbar{display:none!important}.navbar-mobile-toggle{display:flex!important}}</style>`
+      : "";
+
+    const closeBtn =
+      mobileType === "fullscreen"
+        ? `<button type="button" class="navbar-mobile-close" data-navbar-close>&#x2715;</button>`
+        : "";
+
+    const mobileHtml = mobileOn
+      ? `<button type="button" class="navbar-mobile-toggle" data-navbar-toggle${iconSize ? ` style="font-size:${iconSize}"` : ""}>${hamburger}</button>` +
+        `<div class="navbar-mobile-menu ${mobileType === "fullscreen" ? "is-fullscreen" : "is-dropdown"}" style="${mobileVars}">` +
+        closeBtn +
+        `<div class="navbar-mobile-links">${mobileLinks}</div>` +
+        `</div>`
+      : "";
+
+    const blockStyle = mobileOn ? ` style="${mobileVars}"` : "";
+
+    renderShadow(
+      this,
+      `${mediaQuery}<div class="navbar-block"${blockStyle}><nav class="navbar${hasUnderline ? " has-underline-hover" : ""}${hasUnderlineActive ? " has-underline-active" : ""}" style="${navVars}">${desktopLinks}</nav>${mobileHtml}</div>`,
+    );
+  }
+}
+
+if (!customElements.get("owb-navbar")) {
+  customElements.define("owb-navbar", OwbNavbar);
+}
+
 if (!customElements.get("owb-section")) {
   customElements.define("owb-section", OwbSection);
 }

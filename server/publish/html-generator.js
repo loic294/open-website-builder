@@ -294,6 +294,13 @@ function renderSlider(node) {
   })}</owb-slider>`;
 }
 
+function renderNavbar(node) {
+  return `<owb-navbar>${configScript({
+    links: node?.links ?? [],
+    settings: node?.settings ?? {},
+  })}</owb-navbar>`;
+}
+
 async function renderShared(node, context) {
   const componentId = String(node?.settings?.shared_component_id || "").trim();
   if (!componentId) {
@@ -534,6 +541,8 @@ async function renderNode(node, context) {
       return renderGallery(node);
     case "slider":
       return renderSlider(node);
+    case "navbar":
+      return renderNavbar(node);
     case "shared":
       return await renderShared(node, context);
     case "section":
@@ -577,6 +586,7 @@ function buildPageHtml({ title, bodyHtml }) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/x-icon" href="/images/favicon.png" />
     <title>${safeTitle}</title>
     <link rel="stylesheet" href="https://use.typekit.net/fsb3crk.css" />
     <link rel="stylesheet" href="./theme.css" />

@@ -133,12 +133,12 @@
   border-radius: 2px;
 }
 
-a[href] {
+.ProseMirror a[href] {
   color: var(--owb-section-child-text-color, var(--website-link-color));
   text-decoration: underline;
 }
 
-u {
+.ProseMirror u {
   text-decoration: underline;
   text-decoration-color: var(--editor-primary-color, #ffc700);
 }
