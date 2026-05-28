@@ -217,7 +217,9 @@ class ImporterShell extends LitElement {
             to the root folder of the downloaded static site.
           </p>
 
-          <label class="label" for="static-site-dir">Static site directory</label>
+          <label class="label" for="static-site-dir"
+            >Static site directory</label
+          >
           <input
             id="static-site-dir"
             type="text"
@@ -239,9 +241,7 @@ class ImporterShell extends LitElement {
           </div>
         </section>
 
-        ${this.htmlError
-          ? html`<p class="error">${this.htmlError}</p>`
-          : null}
+        ${this.htmlError ? html`<p class="error">${this.htmlError}</p>` : null}
         ${this.renderHtmlSummary()}
       </section>
     `;

@@ -344,7 +344,10 @@ class WebsiteEditor extends LitElement {
           this.pageConfig,
         );
       } else {
-        console.log("[OWB debug] saving page config for pageId:", this.currentSelection?.pageId || "index");
+        console.log(
+          "[OWB debug] saving page config for pageId:",
+          this.currentSelection?.pageId || "index",
+        );
         await dataLayer.savePageConfig(
           this.currentSelection?.pageId || "index",
           this.pageConfig,

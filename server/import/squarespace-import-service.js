@@ -792,7 +792,9 @@ async function copyLocalAssetIfNeeded({
   const relativeTargetPath = `/images/imported/${fileName}`;
 
   if (await exists(absoluteTargetPath)) {
-    assetManifest.value.bySourceUrl[manifestKey] = { localPath: relativeTargetPath };
+    assetManifest.value.bySourceUrl[manifestKey] = {
+      localPath: relativeTargetPath,
+    };
     report.assets.push({
       sourceUrl: manifestKey,
       localPath: relativeTargetPath,
@@ -805,7 +807,9 @@ async function copyLocalAssetIfNeeded({
   try {
     const buffer = await readFile(assetPath);
     await writeFile(absoluteTargetPath, buffer);
-    assetManifest.value.bySourceUrl[manifestKey] = { localPath: relativeTargetPath };
+    assetManifest.value.bySourceUrl[manifestKey] = {
+      localPath: relativeTargetPath,
+    };
     report.assets.push({
       sourceUrl: manifestKey,
       localPath: relativeTargetPath,
@@ -854,7 +858,9 @@ function extractSquarespaceContext(html) {
 function is404Page(context) {
   return (
     context?.collection?.fullUrl === "/404-page-not-found" ||
-    String(context?.collection?.title || "").toLowerCase().includes("page not found")
+    String(context?.collection?.title || "")
+      .toLowerCase()
+      .includes("page not found")
   );
 }
 
@@ -987,9 +993,7 @@ async function mapStaticPageToContent({
           sectionNodes.push(makeTextNode(innerHtml));
         }
       }
-      for (const imgEl of $(sectionEl)
-        .find(".sqs-block-image img")
-        .toArray()) {
+      for (const imgEl of $(sectionEl).find(".sqs-block-image img").toArray()) {
         const src = $(imgEl).attr("data-src") || $(imgEl).attr("src") || "";
         if (!src) continue;
         let localUrl;
@@ -1390,10 +1394,7 @@ export async function importSquarespaceStaticSiteDir({
     const finalId = await nextAvailableId(pagesDir, slug);
     page.id = finalId;
 
-    await writeFile(
-      resolve(pagesDir, `${finalId}.json`),
-      toJsonString(page),
-    );
+    await writeFile(resolve(pagesDir, `${finalId}.json`), toJsonString(page));
 
     report.summary.pagesCreated += 1;
     report.items.push({
