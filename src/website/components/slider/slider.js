@@ -42,7 +42,7 @@ class SiteSlider extends withVariantConfig(EditorComponent) {
     this.sliderItemWidth = "80%";
     this.sliderHeight = "400px";
     this.sliderGap = "12px";
-    this._currentIndex = 0;
+    this._currentSlot = 0;
     this._silentJumpCleanup = null;
   }
 
@@ -51,10 +51,12 @@ class SiteSlider extends withVariantConfig(EditorComponent) {
       this.sliderImages = Array.isArray(this.node?.images)
         ? this.node.images
         : [];
-      this._currentIndex = 0;
+      this._currentSlot = this.sliderImages.length;
 
       this.updateComplete.then(() =>
-        requestAnimationFrame(() => this._scrollToReal(0)),
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => this._doInitialScroll()),
+        ),
       );
 
       this.syncSettingsStateFromNode({
@@ -205,17 +207,43 @@ class SiteSlider extends withVariantConfig(EditorComponent) {
     return this.renderRoot.querySelector(".slider-track");
   }
 
-  _scrollToReal(realIndex) {
+  _scrollToSlot(slot, behavior = "instant") {
     const track = this._getTrack();
     if (!track) return;
     const slides = track.querySelectorAll(".slider-slide");
-    const slide = slides[realIndex + 1]; // +1 for the leading clone
+    const slide = slides[slot];
     if (!slide) return;
-    slide.scrollIntoView({
-      behavior: "instant",
-      inline: "center",
-      block: "nearest",
-    });
+    const scrollTarget =
+      slide.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2;
+    track.scrollTo({ left: Math.max(0, scrollTarget), behavior });
+  }
+
+  _doInitialScroll() {
+    const initialSlot = this._currentSlot;
+    const track = this._getTrack();
+    if (!track) return;
+    const slides = track.querySelectorAll(".slider-slide");
+
+    const tryScroll = () => {
+      let ready = true;
+      for (let i = 0; i <= initialSlot; i++) {
+        if (!slides[i] || slides[i].offsetWidth === 0) {
+          ready = false;
+          break;
+        }
+      }
+      if (ready) this._scrollToSlot(this._currentSlot);
+    };
+
+    tryScroll();
+
+    for (let i = 0; i <= initialSlot; i++) {
+      const img = slides[i]?.querySelector("img");
+      if (img && (!img.complete || img.naturalWidth === 0)) {
+        img.addEventListener("load", tryScroll, { once: true });
+        img.addEventListener("error", tryScroll, { once: true });
+      }
+    }
   }
 
   navigate(delta) {
@@ -227,42 +255,28 @@ class SiteSlider extends withVariantConfig(EditorComponent) {
       this._silentJumpCleanup = null;
     }
 
-    const nextRealIndex = (this._currentIndex + delta + n) % n;
-    this._currentIndex = nextRealIndex;
+    const nextSlot = this._currentSlot + delta;
+    this._currentSlot = nextSlot;
+    this._scrollToSlot(nextSlot, "smooth");
 
-    const track = this._getTrack();
-    if (!track) return;
-    const slides = track.querySelectorAll(".slider-slide");
-
-    const isForwardWrap = delta > 0 && nextRealIndex === 0;
-    const isBackwardWrap = delta < 0 && nextRealIndex === n - 1;
-    const scrollDomIndex = isForwardWrap
-      ? n + 1 // trailing clone of first
-      : isBackwardWrap
-        ? 0 // leading clone of last
-        : nextRealIndex + 1;
-
-    slides[scrollDomIndex]?.scrollIntoView({
-      behavior: "smooth",
-      inline: "center",
-      block: "nearest",
-    });
-
-    if (isForwardWrap || isBackwardWrap) {
+    if (nextSlot < n || nextSlot >= 2 * n) {
+      const track = this._getTrack();
       let done = false;
       const doJump = () => {
         if (done) return;
         done = true;
         clearTimeout(timer);
-        track.removeEventListener("scrollend", doJump);
-        this._scrollToReal(nextRealIndex);
+        track?.removeEventListener("scrollend", doJump);
+        const realSlot = ((nextSlot % n) + n) % n + n;
+        this._currentSlot = realSlot;
+        this._scrollToSlot(realSlot, "instant");
       };
-      track.addEventListener("scrollend", doJump, { once: true });
+      track?.addEventListener("scrollend", doJump, { once: true });
       const timer = setTimeout(doJump, 600);
       this._silentJumpCleanup = () => {
         done = true;
         clearTimeout(timer);
-        track.removeEventListener("scrollend", doJump);
+        track?.removeEventListener("scrollend", doJump);
       };
     }
   }
@@ -298,10 +312,8 @@ class SiteSlider extends withVariantConfig(EditorComponent) {
               <div class="slider-track-wrapper">
                 <div class="slider-track" style=${trackStyle}>
                   ${count > 1
-                    ? slideTemplate(this.sliderImages[count - 1])
-                    : null}
-                  ${this.sliderImages.map(slideTemplate)}
-                  ${count > 1 ? slideTemplate(this.sliderImages[0]) : null}
+                    ? [...this.sliderImages, ...this.sliderImages, ...this.sliderImages].map(slideTemplate)
+                    : this.sliderImages.map(slideTemplate)}
                 </div>
               </div>
               ${count > 1
@@ -373,7 +385,7 @@ class OwbSlider extends withVariantConfig(LitElement) {
 
   constructor() {
     super();
-    this._currentIndex = 0;
+    this._currentSlot = 0;
     this._silentJumpCleanup = null;
     this._onKeydown = this._onKeydown.bind(this);
   }
@@ -390,7 +402,11 @@ class OwbSlider extends withVariantConfig(LitElement) {
   }
 
   firstUpdated() {
-    requestAnimationFrame(() => this._scrollToReal(0));
+    const { images = [] } = this.config;
+    this._currentSlot = images.length;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => this._doInitialScroll()),
+    );
   }
 
   _onKeydown(event) {
@@ -402,17 +418,43 @@ class OwbSlider extends withVariantConfig(LitElement) {
     return this.renderRoot.querySelector(".slider-track");
   }
 
-  _scrollToReal(realIndex) {
+  _scrollToSlot(slot, behavior = "instant") {
     const track = this._getTrack();
     if (!track) return;
     const slides = track.querySelectorAll(".slider-slide");
-    const slide = slides[realIndex + 1];
+    const slide = slides[slot];
     if (!slide) return;
-    slide.scrollIntoView({
-      behavior: "instant",
-      inline: "center",
-      block: "nearest",
-    });
+    const scrollTarget =
+      slide.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2;
+    track.scrollTo({ left: Math.max(0, scrollTarget), behavior });
+  }
+
+  _doInitialScroll() {
+    const initialSlot = this._currentSlot;
+    const track = this._getTrack();
+    if (!track) return;
+    const slides = track.querySelectorAll(".slider-slide");
+
+    const tryScroll = () => {
+      let ready = true;
+      for (let i = 0; i <= initialSlot; i++) {
+        if (!slides[i] || slides[i].offsetWidth === 0) {
+          ready = false;
+          break;
+        }
+      }
+      if (ready) this._scrollToSlot(this._currentSlot);
+    };
+
+    tryScroll();
+
+    for (let i = 0; i <= initialSlot; i++) {
+      const img = slides[i]?.querySelector("img");
+      if (img && (!img.complete || img.naturalWidth === 0)) {
+        img.addEventListener("load", tryScroll, { once: true });
+        img.addEventListener("error", tryScroll, { once: true });
+      }
+    }
   }
 
   navigate(delta) {
@@ -425,42 +467,28 @@ class OwbSlider extends withVariantConfig(LitElement) {
       this._silentJumpCleanup = null;
     }
 
-    const nextRealIndex = (this._currentIndex + delta + n) % n;
-    this._currentIndex = nextRealIndex;
+    const nextSlot = this._currentSlot + delta;
+    this._currentSlot = nextSlot;
+    this._scrollToSlot(nextSlot, "smooth");
 
-    const track = this._getTrack();
-    if (!track) return;
-    const slides = track.querySelectorAll(".slider-slide");
-
-    const isForwardWrap = delta > 0 && nextRealIndex === 0;
-    const isBackwardWrap = delta < 0 && nextRealIndex === n - 1;
-    const scrollDomIndex = isForwardWrap
-      ? n + 1
-      : isBackwardWrap
-        ? 0
-        : nextRealIndex + 1;
-
-    slides[scrollDomIndex]?.scrollIntoView({
-      behavior: "smooth",
-      inline: "center",
-      block: "nearest",
-    });
-
-    if (isForwardWrap || isBackwardWrap) {
+    if (nextSlot < n || nextSlot >= 2 * n) {
+      const track = this._getTrack();
       let done = false;
       const doJump = () => {
         if (done) return;
         done = true;
         clearTimeout(timer);
-        track.removeEventListener("scrollend", doJump);
-        this._scrollToReal(nextRealIndex);
+        track?.removeEventListener("scrollend", doJump);
+        const realSlot = ((nextSlot % n) + n) % n + n;
+        this._currentSlot = realSlot;
+        this._scrollToSlot(realSlot, "instant");
       };
-      track.addEventListener("scrollend", doJump, { once: true });
+      track?.addEventListener("scrollend", doJump, { once: true });
       const timer = setTimeout(doJump, 600);
       this._silentJumpCleanup = () => {
         done = true;
         clearTimeout(timer);
-        track.removeEventListener("scrollend", doJump);
+        track?.removeEventListener("scrollend", doJump);
       };
     }
   }
@@ -495,9 +523,9 @@ class OwbSlider extends withVariantConfig(LitElement) {
       <div class="slider-block">
         <div class="slider-track-wrapper">
           <div class="slider-track" style="${trackStyle}">
-            ${count > 1 ? slideTemplate(images[count - 1]) : null}
-            ${images.map(slideTemplate)}
-            ${count > 1 ? slideTemplate(images[0]) : null}
+            ${count > 1
+              ? [...images, ...images, ...images].map(slideTemplate)
+              : images.map(slideTemplate)}
           </div>
         </div>
         ${count > 1

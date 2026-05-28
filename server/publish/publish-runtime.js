@@ -684,7 +684,7 @@ class OwbGallery extends HTMLElement {
 class OwbSlider extends HTMLElement {
   constructor() {
     super();
-    this._currentIndex = 0;
+    this._currentSlot = 0;
     this._silentJumpCleanup = null;
   }
 
@@ -694,7 +694,11 @@ class OwbSlider extends HTMLElement {
 
   connectedCallback() {
     this.render();
-    requestAnimationFrame(() => this._scrollToReal(0));
+    const { images = [] } = this.config;
+    this._currentSlot = images.length;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => this._doInitialScroll()),
+    );
 
     const root = this.shadowRoot;
     if (root) {
@@ -723,17 +727,43 @@ class OwbSlider extends HTMLElement {
     return this.shadowRoot?.querySelector(".slider-track") ?? null;
   }
 
-  _scrollToReal(realIndex) {
+  _scrollToSlot(slot, behavior = "instant") {
     const track = this._getTrack();
     if (!track) return;
     const slides = track.querySelectorAll(".slider-slide");
-    const slide = slides[realIndex + 1];
+    const slide = slides[slot];
     if (!slide) return;
-    slide.scrollIntoView({
-      behavior: "instant",
-      inline: "center",
-      block: "nearest",
-    });
+    const scrollTarget =
+      slide.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2;
+    track.scrollTo({ left: Math.max(0, scrollTarget), behavior });
+  }
+
+  _doInitialScroll() {
+    const initialSlot = this._currentSlot;
+    const track = this._getTrack();
+    if (!track) return;
+    const slides = track.querySelectorAll(".slider-slide");
+
+    const tryScroll = () => {
+      let ready = true;
+      for (let i = 0; i <= initialSlot; i++) {
+        if (!slides[i] || slides[i].offsetWidth === 0) {
+          ready = false;
+          break;
+        }
+      }
+      if (ready) this._scrollToSlot(this._currentSlot);
+    };
+
+    tryScroll();
+
+    for (let i = 0; i <= initialSlot; i++) {
+      const img = slides[i]?.querySelector("img");
+      if (img && (!img.complete || img.naturalWidth === 0)) {
+        img.addEventListener("load", tryScroll, { once: true });
+        img.addEventListener("error", tryScroll, { once: true });
+      }
+    }
   }
 
   navigate(delta) {
@@ -746,42 +776,28 @@ class OwbSlider extends HTMLElement {
       this._silentJumpCleanup = null;
     }
 
-    const nextRealIndex = (this._currentIndex + delta + n) % n;
-    this._currentIndex = nextRealIndex;
+    const nextSlot = this._currentSlot + delta;
+    this._currentSlot = nextSlot;
+    this._scrollToSlot(nextSlot, "smooth");
 
-    const track = this._getTrack();
-    if (!track) return;
-    const slides = track.querySelectorAll(".slider-slide");
-
-    const isForwardWrap = delta > 0 && nextRealIndex === 0;
-    const isBackwardWrap = delta < 0 && nextRealIndex === n - 1;
-    const scrollDomIndex = isForwardWrap
-      ? n + 1
-      : isBackwardWrap
-        ? 0
-        : nextRealIndex + 1;
-
-    slides[scrollDomIndex]?.scrollIntoView({
-      behavior: "smooth",
-      inline: "center",
-      block: "nearest",
-    });
-
-    if (isForwardWrap || isBackwardWrap) {
+    if (nextSlot < n || nextSlot >= 2 * n) {
+      const track = this._getTrack();
       let done = false;
       const doJump = () => {
         if (done) return;
         done = true;
         clearTimeout(timer);
-        track.removeEventListener("scrollend", doJump);
-        this._scrollToReal(nextRealIndex);
+        track?.removeEventListener("scrollend", doJump);
+        const realSlot = ((nextSlot % n) + n) % n + n;
+        this._currentSlot = realSlot;
+        this._scrollToSlot(realSlot, "instant");
       };
-      track.addEventListener("scrollend", doJump, { once: true });
+      track?.addEventListener("scrollend", doJump, { once: true });
       const timer = setTimeout(doJump, 600);
       this._silentJumpCleanup = () => {
         done = true;
         clearTimeout(timer);
-        track.removeEventListener("scrollend", doJump);
+        track?.removeEventListener("scrollend", doJump);
       };
     }
   }
@@ -813,9 +829,8 @@ class OwbSlider extends HTMLElement {
     const slideHtml = (url) =>
       `<div class="${slideClass}"><img src="${url}" alt="" loading="lazy" /></div>`;
 
-    const cloneLast = n > 1 ? slideHtml(images[n - 1]) : "";
-    const cloneFirst = n > 1 ? slideHtml(images[0]) : "";
     const realSlides = images.map(slideHtml).join("");
+    const allSlides = n > 1 ? realSlides + realSlides + realSlides : realSlides;
 
     const navHtml =
       n > 1
@@ -824,7 +839,7 @@ class OwbSlider extends HTMLElement {
 
     renderShadow(
       this,
-      `<div class="slider-block"><div class="slider-track-wrapper"><div class="slider-track" style="${trackStyle}">${cloneLast}${realSlides}${cloneFirst}</div></div>${navHtml}</div>`,
+      `<div class="slider-block"><div class="slider-track-wrapper"><div class="slider-track" style="${trackStyle}">${allSlides}</div></div>${navHtml}</div>`,
     );
   }
 }
