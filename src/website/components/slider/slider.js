@@ -267,7 +267,7 @@ class SiteSlider extends withVariantConfig(EditorComponent) {
         done = true;
         clearTimeout(timer);
         track?.removeEventListener("scrollend", doJump);
-        const realSlot = ((nextSlot % n) + n) % n + n;
+        const realSlot = (((nextSlot % n) + n) % n) + n;
         this._currentSlot = realSlot;
         this._scrollToSlot(realSlot, "instant");
       };
@@ -312,7 +312,11 @@ class SiteSlider extends withVariantConfig(EditorComponent) {
               <div class="slider-track-wrapper">
                 <div class="slider-track" style=${trackStyle}>
                   ${count > 1
-                    ? [...this.sliderImages, ...this.sliderImages, ...this.sliderImages].map(slideTemplate)
+                    ? [
+                        ...this.sliderImages,
+                        ...this.sliderImages,
+                        ...this.sliderImages,
+                      ].map(slideTemplate)
                     : this.sliderImages.map(slideTemplate)}
                 </div>
               </div>
@@ -479,7 +483,7 @@ class OwbSlider extends withVariantConfig(LitElement) {
         done = true;
         clearTimeout(timer);
         track?.removeEventListener("scrollend", doJump);
-        const realSlot = ((nextSlot % n) + n) % n + n;
+        const realSlot = (((nextSlot % n) + n) % n) + n;
         this._currentSlot = realSlot;
         this._scrollToSlot(realSlot, "instant");
       };

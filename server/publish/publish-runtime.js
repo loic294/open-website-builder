@@ -788,7 +788,7 @@ class OwbSlider extends HTMLElement {
         done = true;
         clearTimeout(timer);
         track?.removeEventListener("scrollend", doJump);
-        const realSlot = ((nextSlot % n) + n) % n + n;
+        const realSlot = (((nextSlot % n) + n) % n) + n;
         this._currentSlot = realSlot;
         this._scrollToSlot(realSlot, "instant");
       };
