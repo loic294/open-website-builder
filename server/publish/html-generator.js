@@ -541,7 +541,8 @@ function renderInput(node) {
 function renderCaptcha(node) {
   const s = node?.settings ?? {};
   return `<owb-captcha>${configScript({
-    captchaChallengeUrl: s.settingCaptchaChallengeUrl ?? s.captchaChallengeUrl ?? "",
+    captchaChallengeUrl:
+      s.settingCaptchaChallengeUrl ?? s.captchaChallengeUrl ?? "",
   })}</owb-captcha>`;
 }
 
@@ -551,7 +552,8 @@ function renderCheckbox(node) {
     checkboxLabel: s.settingCheckboxLabel ?? s.checkboxLabel ?? "",
     checkboxName: s.settingCheckboxName ?? s.checkboxName ?? "",
     checkboxValue: s.settingCheckboxValue ?? s.checkboxValue ?? "",
-    checkboxDefaultChecked: s.settingCheckboxDefaultChecked ?? s.checkboxDefaultChecked ?? false,
+    checkboxDefaultChecked:
+      s.settingCheckboxDefaultChecked ?? s.checkboxDefaultChecked ?? false,
     checkboxRequired: s.settingCheckboxRequired ?? s.checkboxRequired ?? false,
   })}</owb-checkbox>`;
 }

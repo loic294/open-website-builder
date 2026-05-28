@@ -53,7 +53,9 @@ class SiteCaptcha extends withVariantConfig(EditorComponent) {
           <settings-section title="Captcha">
             <settings-section
               title="Captcha"
-              ?overridden=${this.hasAnyOverriddenKeys("settingCaptchaChallengeUrl")}
+              ?overridden=${this.hasAnyOverriddenKeys(
+                "settingCaptchaChallengeUrl",
+              )}
             >
               <editor-text-input
                 label="Challenge URL"
@@ -107,8 +109,10 @@ class OwbCaptcha extends HTMLElement {
     }
 
     const challengeUrl = String(config.captchaChallengeUrl || "").trim();
-
-    if (!document.querySelector('script[data-altcha-script]')) {
+    if (!challengeUrl) {
+      return;
+    }
+    if (!document.querySelector("script[data-altcha-script]")) {
       const script = document.createElement("script");
       script.src =
         "https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist/altcha.min.js";
@@ -120,9 +124,7 @@ class OwbCaptcha extends HTMLElement {
     }
 
     const widget = document.createElement("altcha-widget");
-    if (challengeUrl) {
-      widget.setAttribute("challenge", challengeUrl);
-    }
+    widget.setAttribute("challengeurl", challengeUrl);
     this.appendChild(widget);
   }
 }

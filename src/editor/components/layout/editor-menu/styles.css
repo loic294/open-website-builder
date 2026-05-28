@@ -400,12 +400,23 @@
 }
 
 .layers-groups {
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.layers-groups .menu-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
 }
 
 .layers-scroll {
   max-height: none;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .layers-tree {

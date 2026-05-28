@@ -1060,6 +1060,10 @@ class OwbCaptcha extends HTMLElement {
     const config = readConfig(this);
     const challengeUrl = String(config.captchaChallengeUrl || "").trim();
 
+    if (!challengeUrl) {
+      return;
+    }
+
     if (!document.querySelector("script[data-altcha-script]")) {
       const script = document.createElement("script");
       script.src =
@@ -1072,9 +1076,7 @@ class OwbCaptcha extends HTMLElement {
     }
 
     const widget = document.createElement("altcha-widget");
-    if (challengeUrl) {
-      widget.setAttribute("challenge", challengeUrl);
-    }
+    widget.setAttribute("challengeurl", challengeUrl);
     this.appendChild(widget);
   }
 }
