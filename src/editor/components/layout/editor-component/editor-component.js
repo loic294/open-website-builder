@@ -87,6 +87,10 @@ export class EditorComponent extends LitElement {
     settingSpacingMarginRight: { type: String },
     settingSpacingMarginBottom: { type: String },
     settingSpacingMarginLeft: { type: String },
+    settingSpacingBorderRadius: { type: String },
+    settingSpacingTextColor: { type: String },
+    settingSpacingBackgroundColor: { type: String },
+    settingSpacingHidden: { type: Boolean },
   };
 
   static styles = unsafeCSS(blocksStyles);
@@ -110,6 +114,10 @@ export class EditorComponent extends LitElement {
     this.settingSpacingMarginRight = "";
     this.settingSpacingMarginBottom = "";
     this.settingSpacingMarginLeft = "";
+    this.settingSpacingBorderRadius = "";
+    this.settingSpacingTextColor = "";
+    this.settingSpacingBackgroundColor = "";
+    this.settingSpacingHidden = false;
     this.cssEditorView = null;
     this.isSyncingCssEditorUpdate = false;
     this.dragState = null;
@@ -140,6 +148,10 @@ export class EditorComponent extends LitElement {
   }
 
   willUpdate(changedProperties) {
+    // Always apply spacing styles before Lit renders so the <style data-spacing>
+    // element is placed before Lit's managed range and never wiped by re-renders.
+    this.applySpacingToRenderRoot();
+
     if (changedProperties.has("node")) {
       const cssFromNode = this.getNodeCustomCss();
       if (this.settingCustomCss !== cssFromNode) {
@@ -202,7 +214,7 @@ export class EditorComponent extends LitElement {
     this.ensureOverlayContainer();
     this.isSettingsEditorOpen = true;
 
-    const cssTab = { id: "css", label: "CSS" };
+    const cssTab = { id: "css", label: "Styles" };
     const moreTab = {
       id: "more",
       label: html`${createElement(Ellipsis)} More`,
@@ -392,10 +404,24 @@ export class EditorComponent extends LitElement {
       ["margin-right", this.settingSpacingMarginRight],
       ["margin-bottom", this.settingSpacingMarginBottom],
       ["margin-left", this.settingSpacingMarginLeft],
+      ["border-radius", this.settingSpacingBorderRadius],
     ];
     const parts = props
       .filter(([, v]) => String(v || "").trim())
       .map(([p, v]) => `${p}: ${v}`);
+
+    if (this.settingSpacingBackgroundColor) {
+      parts.push(
+        `background-color: var(${this.settingSpacingBackgroundColor})`,
+      );
+    }
+    if (this.settingSpacingTextColor) {
+      parts.push(`color: var(${this.settingSpacingTextColor})`);
+    }
+    if (this.settingSpacingHidden) {
+      parts.push("display: none !important");
+    }
+
     styleEl.textContent = parts.length ? `:host { ${parts.join("; ")} }` : "";
   }
 
@@ -482,6 +508,72 @@ export class EditorComponent extends LitElement {
               });
             }}
           ></editor-padding-input>
+        </settings-section>
+        <settings-section
+          title="Border radius"
+          ?overridden=${this.hasAnyOverriddenKeys("settingSpacingBorderRadius")}
+        >
+          <editor-text-input
+            label="Radius"
+            placeholder="e.g. 8px or 50%"
+            .value=${this.settingSpacingBorderRadius}
+            @change=${(e) => {
+              this.updateSettingsState({
+                settingSpacingBorderRadius: e.detail.value || "",
+              });
+            }}
+          ></editor-text-input>
+        </settings-section>
+        <settings-section
+          title="Background color"
+          ?overridden=${this.hasAnyOverriddenKeys(
+            "settingSpacingBackgroundColor",
+          )}
+        >
+          <editor-color-picker
+            .value=${this.settingSpacingBackgroundColor}
+            label="Background color"
+            @change=${(e) => {
+              this.updateSettingsState({
+                settingSpacingBackgroundColor: e.detail.value || "",
+              });
+            }}
+          ></editor-color-picker>
+        </settings-section>
+        <settings-section
+          title="Text color"
+          ?overridden=${this.hasAnyOverriddenKeys("settingSpacingTextColor")}
+        >
+          <editor-color-picker
+            .value=${this.settingSpacingTextColor}
+            label="Text color"
+            @change=${(e) => {
+              this.updateSettingsState({
+                settingSpacingTextColor: e.detail.value || "",
+              });
+            }}
+          ></editor-color-picker>
+        </settings-section>
+        <settings-section
+          title="Visibility"
+          ?overridden=${this.hasAnyOverriddenKeys("settingSpacingHidden")}
+        >
+          <label class="settings-toggle-label">
+            <input
+              type="checkbox"
+              .checked=${this.settingSpacingHidden}
+              @change=${(e) => {
+                this.updateSettingsState({
+                  settingSpacingHidden: e.target.checked,
+                });
+              }}
+            />
+            Hide this component
+          </label>
+          <p class="settings-css-help">
+            Applies <code>display: none</code> to this block. Use responsive
+            overrides to hide only on specific screen sizes.
+          </p>
         </settings-section>
         <settings-section title="Custom CSS">
           <label class="settings-css-label">CSS</label>
@@ -1088,9 +1180,13 @@ export class EditorComponent extends LitElement {
       "settingSpacingMarginRight",
       "settingSpacingMarginBottom",
       "settingSpacingMarginLeft",
+      "settingSpacingBorderRadius",
+      "settingSpacingTextColor",
+      "settingSpacingBackgroundColor",
     ]) {
       this[key] = String(effectiveSettings[key] || "");
     }
+    this.settingSpacingHidden = Boolean(effectiveSettings.settingSpacingHidden);
     this.applySpacingToRenderRoot();
   }
 
@@ -1138,10 +1234,19 @@ export class EditorComponent extends LitElement {
         "settingSpacingMarginRight",
         "settingSpacingMarginBottom",
         "settingSpacingMarginLeft",
+        "settingSpacingBorderRadius",
+        "settingSpacingTextColor",
+        "settingSpacingBackgroundColor",
       ]) {
         if (key in nextBase && !String(nextBase[key] || "").trim()) {
           delete nextBase[key];
         }
+      }
+      if (
+        "settingSpacingHidden" in nextBase &&
+        !nextBase.settingSpacingHidden
+      ) {
+        delete nextBase.settingSpacingHidden;
       }
       const hasOverrides = Object.keys(currentOverrides).some(
         (k) => Object.keys(currentOverrides[k] || {}).length > 0,
@@ -1253,6 +1358,16 @@ export class EditorComponent extends LitElement {
     if (this.node && typeof this.node === "object") {
       const nextPersistedSettings = this.getPersistedSettings(nextState);
 
+      console.log("[OWB debug] updateSettingsState", {
+        nodeId: this.node.id,
+        nodeType: this.node.type,
+        tagName: this.tagName,
+        nextState,
+        nextPersistedSettings,
+        hasPageConfig: !!this.pageConfig,
+        pageConfigContentLength: this.pageConfig?.content?.length,
+      });
+
       if (Object.keys(nextPersistedSettings).length > 0) {
         this.node.settings = nextPersistedSettings;
       } else {
@@ -1269,6 +1384,11 @@ export class EditorComponent extends LitElement {
           this.node.id,
           nextPersistedSettings,
         );
+
+        console.log("[OWB debug] updateNodeSettingsInTree result", {
+          didChange: result.didChange,
+          nodeId: this.node.id,
+        });
 
         if (result.didChange) {
           const nextPageConfig = {

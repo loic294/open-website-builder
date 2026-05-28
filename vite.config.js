@@ -6,7 +6,10 @@ import { createJsonDataResolvers } from "./server/data/json-data-resolvers.js";
 import { createDataApiMiddleware } from "./server/data/data-api-middleware.js";
 import { createImagesMiddleware } from "./server/data/images-middleware.js";
 import { publishSite } from "./server/publish/publish-site.js";
-import { importSquarespaceXml } from "./server/import/squarespace-import-service.js";
+import {
+  importSquarespaceXml,
+  importSquarespaceStaticSiteDir,
+} from "./server/import/squarespace-import-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contentRoot = resolve(__dirname, "../my-personal-website");
@@ -63,8 +66,9 @@ function createPublishedPreviewMiddleware({ publishedDir }) {
     if (pathName === "/") {
       candidates.push(resolve(publishedDir, "index.html"));
     } else {
-      const normalizedPath = pathName.replace(/^\/+/, "");
+      const normalizedPath = pathName.replace(/^\/+/, "").replace(/\/+$/, "");
       candidates.push(resolve(publishedDir, normalizedPath));
+      candidates.push(resolve(publishedDir, normalizedPath, "index.html"));
       candidates.push(resolve(publishedDir, `${normalizedPath}.html`));
     }
 
@@ -116,6 +120,12 @@ export default defineConfig({
             await importSquarespaceXml({
               xmlContent,
               sourceName,
+              options,
+              contentRoot,
+            }),
+          importSquarespaceStaticSiteDir: async ({ staticSiteDir, options }) =>
+            await importSquarespaceStaticSiteDir({
+              staticSiteDir,
               options,
               contentRoot,
             }),

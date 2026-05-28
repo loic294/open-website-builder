@@ -356,7 +356,16 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
     const pagePath = resolve(pagesDir, pageFileName);
     const pageConfig = await readJson(pagePath);
     const fileBaseName = toBaseName(pageFileName);
-    const outputPath = resolve(outputDir, `${fileBaseName}.html`);
+
+    const urlPath = normalizePublishedUrlPath(pageConfig?.url, fileBaseName);
+    let outputPath;
+    if (!urlPath) {
+      outputPath = resolve(outputDir, "index.html");
+    } else {
+      const outputDirectory = resolve(outputDir, urlPath);
+      await mkdir(outputDirectory, { recursive: true });
+      outputPath = resolve(outputDirectory, "index.html");
+    }
 
     const { html, warnings: pageWarnings } = await generatePageHtml({
       pageConfig,
@@ -375,12 +384,12 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
 
     published.push({
       pageId: pageConfig?.id || fileBaseName,
-      fileName: `${fileBaseName}.html`,
+      fileName: urlPath ? `${urlPath}/index.html` : "index.html",
       outputPath,
     });
 
     for (const warning of pageWarnings) {
-      warnings.push(`[${fileBaseName}] ${warning}`);
+      warnings.push(`[${urlPath || fileBaseName}] ${warning}`);
     }
   }
 

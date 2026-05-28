@@ -52,10 +52,24 @@ function getSpacingCss(settings) {
     ["margin-right", settings.settingSpacingMarginRight],
     ["margin-bottom", settings.settingSpacingMarginBottom],
     ["margin-left", settings.settingSpacingMarginLeft],
+    ["border-radius", settings.settingSpacingBorderRadius],
   ];
   const parts = props
     .filter(([, v]) => String(v || "").trim())
     .map(([p, v]) => `${p}: ${v}`);
+
+  if (settings.settingSpacingBackgroundColor) {
+    parts.push(
+      `background-color: var(${settings.settingSpacingBackgroundColor})`,
+    );
+  }
+  if (settings.settingSpacingTextColor) {
+    parts.push(`color: var(${settings.settingSpacingTextColor})`);
+  }
+  if (settings.settingSpacingHidden) {
+    parts.push("display: none !important");
+  }
+
   return parts.length ? `:host { ${parts.join("; ")} }` : "";
 }
 
@@ -89,7 +103,8 @@ const SHADOW_STYLESHEET_HREF = "/owb-components.css";
 
 function renderShadow(host, markup) {
   const root = host.shadowRoot || host.attachShadow({ mode: "open" });
-  const { settings = {} } = readConfig(host);
+  const raw = readConfig(host);
+  const settings = raw.settings ?? raw;
   const spacingCss = getSpacingCss(settings);
   const responsiveSpacingCss = buildResponsiveSpacingCss(settings);
   const combinedSpacing = [spacingCss, responsiveSpacingCss]
@@ -161,17 +176,12 @@ function getSectionPadding(settings) {
     large: { top: "8rem", right: "2rem", bottom: "8rem", left: "2rem" },
   };
 
-  const preset = presets[settings.settingSizing];
-  if (preset) {
-    return preset;
-  }
-
-  const fallback = presets.medium;
+  const preset = presets[settings.settingSizing] || presets.medium;
   return {
-    top: String(settings.settingPaddingTop || fallback.top),
-    right: String(settings.settingPaddingRight || fallback.right),
-    bottom: String(settings.settingPaddingBottom || fallback.bottom),
-    left: String(settings.settingPaddingLeft || fallback.left),
+    top: String(settings.settingPaddingTop || preset.top),
+    right: String(settings.settingPaddingRight || preset.right),
+    bottom: String(settings.settingPaddingBottom || preset.bottom),
+    left: String(settings.settingPaddingLeft || preset.left),
   };
 }
 

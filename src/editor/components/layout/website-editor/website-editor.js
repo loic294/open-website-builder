@@ -323,6 +323,12 @@ class WebsiteEditor extends LitElement {
     event.stopPropagation();
     this.pageConfig = event.detail;
 
+    console.log("[OWB debug] onPageConfigUpdated received", {
+      selectionType: this.currentSelection?.type,
+      pageId: this.currentSelection?.pageId,
+      contentLength: this.pageConfig?.content?.length,
+    });
+
     try {
       if (this.currentSelection?.type === "collection-config") {
         await this.saveCollectionConfig(this.pageConfig);
@@ -338,13 +344,15 @@ class WebsiteEditor extends LitElement {
           this.pageConfig,
         );
       } else {
+        console.log("[OWB debug] saving page config for pageId:", this.currentSelection?.pageId || "index");
         await dataLayer.savePageConfig(
           this.currentSelection?.pageId || "index",
           this.pageConfig,
         );
+        console.log("[OWB debug] savePageConfig done");
       }
     } catch (error) {
-      console.error(error);
+      console.error("[OWB debug] savePageConfig error:", error);
     }
   };
 

@@ -5,6 +5,7 @@ import "./editor/components/ui/color-dots/color-dots.js";
 import "./editor/components/ui/alignment-options/alignment-options.js";
 import "./editor/components/ui/text-input/text-input.js";
 import "./editor/components/ui/padding-input/padding-input.js";
+import "./editor/components/ui/color-picker/color-picker.js";
 import "./editor/components/ui/select/select.js";
 import "./editor/components/ui/settings-collapsable/settings-collapsable.js";
 import "./editor/components/ui/settings-section/settings-section.js";

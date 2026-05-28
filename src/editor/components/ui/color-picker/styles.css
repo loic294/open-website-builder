@@ -1,0 +1,95 @@
+.color-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.color-trigger {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  outline: none;
+}
+
+.color-trigger:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.color-trigger:focus-visible {
+  box-shadow: 0 0 0 3px var(--editor-primary-color, #1e1b16);
+}
+
+.color-trigger.is-empty {
+  background:
+    linear-gradient(
+      135deg,
+      transparent 45%,
+      #7a7366 45%,
+      #7a7366 55%,
+      transparent 55%
+    ),
+    #ffffff;
+}
+
+.color-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  background: var(--editor-surface-color, #fff);
+  border: 1px solid var(--editor-border-color, #e4e0db);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.13);
+  min-width: 180px;
+}
+
+.color-clear {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--editor-muted-text-color, #888);
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.color-clear:hover {
+  background: var(--editor-hover-surface, #f5f4f2);
+}
+
+.color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.color-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+
+.color-dot:hover {
+  transform: scale(1.1);
+}
+
+.color-dot.is-selected {
+  outline: 2px solid #1e1b16;
+  outline-offset: 2px;
+}

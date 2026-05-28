@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
 import { XMLParser } from "fast-xml-parser";
 import * as cheerio from "cheerio";
@@ -760,6 +760,342 @@ function buildCollectionId(metadata) {
   return postType || "posts";
 }
 
+async function copyLocalAssetIfNeeded({
+  assetPath,
+  contentRoot,
+  assetManifest,
+  report,
+}) {
+  const manifestKey = `file:${assetPath}`;
+  const known = assetManifest.value.bySourceUrl[manifestKey];
+  if (known?.localPath) {
+    const knownAbsolute = resolve(
+      contentRoot,
+      known.localPath.replace(/^\//, ""),
+    );
+    if (await exists(knownAbsolute)) {
+      report.assets.push({
+        sourceUrl: manifestKey,
+        localPath: known.localPath,
+        status: "skipped-existing",
+        reason: "manifest-hit",
+      });
+      return known.localPath;
+    }
+  }
+
+  const imagesDir = resolve(contentRoot, IMPORTED_IMAGES_DIR);
+  await ensureDir(imagesDir);
+
+  const fileName = basename(assetPath);
+  const absoluteTargetPath = resolve(imagesDir, fileName);
+  const relativeTargetPath = `/images/imported/${fileName}`;
+
+  if (await exists(absoluteTargetPath)) {
+    assetManifest.value.bySourceUrl[manifestKey] = { localPath: relativeTargetPath };
+    report.assets.push({
+      sourceUrl: manifestKey,
+      localPath: relativeTargetPath,
+      status: "skipped-existing",
+      reason: "name-exists",
+    });
+    return relativeTargetPath;
+  }
+
+  try {
+    const buffer = await readFile(assetPath);
+    await writeFile(absoluteTargetPath, buffer);
+    assetManifest.value.bySourceUrl[manifestKey] = { localPath: relativeTargetPath };
+    report.assets.push({
+      sourceUrl: manifestKey,
+      localPath: relativeTargetPath,
+      status: "copied",
+      reason: "new",
+    });
+    return relativeTargetPath;
+  } catch (error) {
+    report.assets.push({
+      sourceUrl: manifestKey,
+      localPath: "",
+      status: "failed",
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    report.issues.push({
+      severity: "warning",
+      type: "asset-copy",
+      message: `Failed to copy local asset: ${assetPath}`,
+      details: error instanceof Error ? error.message : String(error),
+    });
+    return "";
+  }
+}
+
+function extractSquarespaceContext(html) {
+  const $ = cheerio.load(html);
+  const scriptEl = $('script[data-name="static-context"]');
+  if (!scriptEl.length) return null;
+
+  const scriptContent = scriptEl.html() || "";
+  const marker = "Static.SQUARESPACE_CONTEXT = ";
+  const markerIdx = scriptContent.indexOf(marker);
+  if (markerIdx === -1) return null;
+
+  const jsonStart = scriptContent.indexOf("{", markerIdx + marker.length);
+  if (jsonStart === -1) return null;
+
+  const jsonStr = scriptContent.slice(jsonStart).replace(/;\s*$/, "");
+  try {
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+}
+
+function is404Page(context) {
+  return (
+    context?.collection?.fullUrl === "/404-page-not-found" ||
+    String(context?.collection?.title || "").toLowerCase().includes("page not found")
+  );
+}
+
+const STATIC_SITE_SKIP_DIRS = new Set([
+  "assets",
+  "af",
+  "css2",
+  "gtag",
+  "cart",
+  "shop",
+  "loc-bellemare-alford",
+]);
+
+async function findHtmlFiles(dir) {
+  const results = [];
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (STATIC_SITE_SKIP_DIRS.has(entry.name.toLowerCase())) {
+        continue;
+      }
+      const subResults = await findHtmlFiles(resolve(dir, entry.name));
+      results.push(...subResults);
+    } else if (entry.isFile() && entry.name === "index.html") {
+      results.push(resolve(dir, entry.name));
+    }
+  }
+  return results;
+}
+
+async function mapStaticPageToContent({
+  $,
+  htmlDir,
+  contentRoot,
+  assetManifest,
+  report,
+}) {
+  const resultSections = [];
+  const pageSections = $(
+    "main#page article.sections > section.page-section",
+  ).toArray();
+
+  if (pageSections.length === 0) {
+    return resultSections;
+  }
+
+  for (const sectionEl of pageSections) {
+    const sectionClass = ($(sectionEl).attr("class") || "").trim();
+    const sectionNodes = [];
+    const feBlocks = $(sectionEl).find(".fe-block").toArray();
+
+    if (feBlocks.length > 0) {
+      for (const blockEl of feBlocks) {
+        // Text block
+        const textBlockEl = $(blockEl)
+          .find(".sqs-block-html .sqs-html-content")
+          .first();
+        if (textBlockEl.length) {
+          const innerHtml = textBlockEl.html() || "";
+          if (hasTextContent(innerHtml)) {
+            sectionNodes.push(makeTextNode(innerHtml));
+          }
+          continue;
+        }
+
+        // Image block
+        const imgEl = $(blockEl)
+          .find(".fluid-image-container img, .sqs-block-image img")
+          .first();
+        if (imgEl.length) {
+          const src = imgEl.attr("data-src") || imgEl.attr("src") || "";
+          if (src) {
+            let localUrl;
+            if (/^https?:\/\//i.test(src)) {
+              localUrl = await downloadAssetIfNeeded({
+                sourceUrl: src,
+                contentRoot,
+                assetManifest,
+                report,
+              });
+            } else {
+              localUrl = await copyLocalAssetIfNeeded({
+                assetPath: resolve(htmlDir, src),
+                contentRoot,
+                assetManifest,
+                report,
+              });
+            }
+            if (localUrl) {
+              sectionNodes.push(makeImageNode(localUrl));
+            }
+          }
+          continue;
+        }
+
+        // Embed block
+        const embedEl = $(blockEl)
+          .find(".sqs-block-embed, .sqs-block-code, iframe")
+          .first();
+        if (embedEl.length) {
+          const embedHtml = $.html(embedEl);
+          if (embedHtml && embedHtml.trim()) {
+            sectionNodes.push(makeEmbedNode(embedHtml));
+          }
+          continue;
+        }
+
+        // Button block
+        const btnEl = $(blockEl)
+          .find(".sqs-block-button a, a.sqs-block-button-element")
+          .first();
+        if (btnEl.length) {
+          const href = btnEl.attr("href") || "";
+          const label = btnEl.text().trim();
+          if (label || href) {
+            sectionNodes.push(makeButtonNode(label, href));
+          }
+        }
+      }
+    } else {
+      // Fallback: older layout without .fe-block wrappers
+      for (const textEl of $(sectionEl).find(".sqs-html-content").toArray()) {
+        const innerHtml = $(textEl).html() || "";
+        if (hasTextContent(innerHtml)) {
+          sectionNodes.push(makeTextNode(innerHtml));
+        }
+      }
+      for (const imgEl of $(sectionEl)
+        .find(".sqs-block-image img")
+        .toArray()) {
+        const src = $(imgEl).attr("data-src") || $(imgEl).attr("src") || "";
+        if (!src) continue;
+        let localUrl;
+        if (/^https?:\/\//i.test(src)) {
+          localUrl = await downloadAssetIfNeeded({
+            sourceUrl: src,
+            contentRoot,
+            assetManifest,
+            report,
+          });
+        } else {
+          localUrl = await copyLocalAssetIfNeeded({
+            assetPath: resolve(htmlDir, src),
+            contentRoot,
+            assetManifest,
+            report,
+          });
+        }
+        if (localUrl) {
+          sectionNodes.push(makeImageNode(localUrl));
+        }
+      }
+    }
+
+    if (sectionNodes.length > 0) {
+      const section = ensureSection(sectionNodes);
+      if (sectionClass) {
+        section.settings.className = sectionClass;
+      }
+      resultSections.push(section);
+    }
+  }
+
+  return resultSections;
+}
+
+async function buildPageFromStaticHtml({
+  htmlContent,
+  htmlFilePath,
+  contentRoot,
+  assetManifest,
+  report,
+}) {
+  const context = extractSquarespaceContext(htmlContent);
+  if (!context) {
+    return null;
+  }
+
+  if (is404Page(context)) {
+    return null;
+  }
+
+  const fullUrl = String(context?.collection?.fullUrl || "/").trim();
+  const title = toTitle(context?.collection?.title || "");
+  const htmlDir = dirname(htmlFilePath);
+
+  const $ = cheerio.load(htmlContent);
+  const seoDescription = String(
+    $('meta[property="og:description"]').attr("content") ||
+      $('meta[name="description"]').attr("content") ||
+      "",
+  ).trim();
+
+  const content = await mapStaticPageToContent({
+    $,
+    htmlDir,
+    contentRoot,
+    assetManifest,
+    report,
+  });
+
+  if (content.length === 0) {
+    report.issues.push({
+      severity: "info",
+      type: "html-import",
+      message: `No page sections found in ${htmlFilePath} (url: ${fullUrl}) — skipped`,
+    });
+    return null;
+  }
+
+  const slug =
+    sanitizeId(fullUrl.replace(/^\//, "").replace(/\//g, "-")) ||
+    sanitizeId(basename(htmlDir)) ||
+    "page";
+
+  return {
+    slug,
+    page: {
+      type: "page",
+      id: slug,
+      title,
+      url: fullUrl,
+      metadata: {
+        sourceUrl: fullUrl,
+        seo: {
+          title,
+          description: seoDescription,
+        },
+        slug,
+        status: "publish",
+      },
+      content,
+    },
+  };
+}
+
 async function writeReport(contentRoot, report) {
   const reportsDir = resolve(contentRoot, REPORT_DIR);
   await ensureDir(reportsDir);
@@ -983,5 +1319,118 @@ export async function importSquarespaceXml({
     reportPath,
     items: report.items,
     assets: report.assets,
+  };
+}
+
+export async function importSquarespaceStaticSiteDir({
+  staticSiteDir,
+  options,
+  contentRoot,
+}) {
+  const trimmedDir = String(staticSiteDir || "").trim();
+  if (!trimmedDir) {
+    throw new Error("staticSiteDir is required");
+  }
+
+  const report = {
+    sourceName: trimmedDir,
+    createdAt: new Date().toISOString(),
+    options: options || {},
+    summary: {
+      totalFiles: 0,
+      pagesCreated: 0,
+      pagesSkipped: 0,
+      assetsDownloaded: 0,
+      assetsCopied: 0,
+      assetsSkipped: 0,
+      assetsFailed: 0,
+      warnings: 0,
+      errors: 0,
+    },
+    items: [],
+    assets: [],
+    issues: [],
+  };
+
+  const assetManifest = await loadAssetManifest(contentRoot);
+  const pagesDir = resolve(contentRoot, "pages");
+  await ensureDir(pagesDir);
+
+  const htmlFiles = await findHtmlFiles(trimmedDir);
+  report.summary.totalFiles = htmlFiles.length;
+
+  for (const htmlFilePath of htmlFiles) {
+    let htmlContent;
+    try {
+      htmlContent = await readFile(htmlFilePath, "utf8");
+    } catch (error) {
+      report.issues.push({
+        severity: "warning",
+        type: "html-import",
+        message: `Could not read ${htmlFilePath}`,
+        details: error instanceof Error ? error.message : String(error),
+      });
+      continue;
+    }
+
+    const result = await buildPageFromStaticHtml({
+      htmlContent,
+      htmlFilePath,
+      contentRoot,
+      assetManifest,
+      report,
+    });
+
+    if (!result) {
+      report.summary.pagesSkipped += 1;
+      continue;
+    }
+
+    const { slug, page } = result;
+    const finalId = await nextAvailableId(pagesDir, slug);
+    page.id = finalId;
+
+    await writeFile(
+      resolve(pagesDir, `${finalId}.json`),
+      toJsonString(page),
+    );
+
+    report.summary.pagesCreated += 1;
+    report.items.push({
+      title: page.title,
+      url: page.url,
+      destination: `pages/${finalId}.json`,
+      status: "imported",
+    });
+  }
+
+  await persistAssetManifest(assetManifest);
+
+  report.summary.assetsDownloaded = report.assets.filter(
+    (e) => e.status === "downloaded",
+  ).length;
+  report.summary.assetsCopied = report.assets.filter(
+    (e) => e.status === "copied",
+  ).length;
+  report.summary.assetsSkipped = report.assets.filter(
+    (e) => e.status === "skipped-existing",
+  ).length;
+  report.summary.assetsFailed = report.assets.filter(
+    (e) => e.status === "failed",
+  ).length;
+  report.summary.warnings = report.issues.filter(
+    (e) => e.severity === "warning",
+  ).length;
+  report.summary.errors = report.issues.filter(
+    (e) => e.severity === "error",
+  ).length;
+
+  const reportPath = await writeReport(contentRoot, report);
+
+  return {
+    ok: true,
+    summary: report.summary,
+    reportPath,
+    items: report.items,
   };
 }

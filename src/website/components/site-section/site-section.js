@@ -100,17 +100,14 @@ function getDefaultLayoutSettingsState() {
 }
 
 function getSectionPadding(settings = {}) {
-  const preset = SECTION_PADDING_PRESETS[settings.settingSizing];
-  if (preset) {
-    return preset;
-  }
-
-  const fallback = SECTION_PADDING_PRESETS.medium;
+  const preset =
+    SECTION_PADDING_PRESETS[settings.settingSizing] ||
+    SECTION_PADDING_PRESETS.medium;
   return {
-    top: String(settings.settingPaddingTop || fallback.top),
-    right: String(settings.settingPaddingRight || fallback.right),
-    bottom: String(settings.settingPaddingBottom || fallback.bottom),
-    left: String(settings.settingPaddingLeft || fallback.left),
+    top: String(settings.settingPaddingTop || preset.top),
+    right: String(settings.settingPaddingRight || preset.right),
+    bottom: String(settings.settingPaddingBottom || preset.bottom),
+    left: String(settings.settingPaddingLeft || preset.left),
   };
 }
 
@@ -822,22 +819,18 @@ export class SiteLayoutContainerBase extends withVariantConfig(
   }
 
   getSectionPaddingValues() {
-    const preset = SECTION_PADDING_PRESETS[this.settingSizing];
-    if (preset) {
-      return preset;
-    }
-
-    const fallback = SECTION_PADDING_PRESETS.medium;
+    const preset =
+      SECTION_PADDING_PRESETS[this.settingSizing] ||
+      SECTION_PADDING_PRESETS.medium;
     const sanitize = (value, fallbackValue) => {
       const raw = String(value || "").trim();
       return raw || fallbackValue;
     };
-
     return {
-      top: sanitize(this.settingPaddingTop, fallback.top),
-      right: sanitize(this.settingPaddingRight, fallback.right),
-      bottom: sanitize(this.settingPaddingBottom, fallback.bottom),
-      left: sanitize(this.settingPaddingLeft, fallback.left),
+      top: sanitize(this.settingPaddingTop, preset.top),
+      right: sanitize(this.settingPaddingRight, preset.right),
+      bottom: sanitize(this.settingPaddingBottom, preset.bottom),
+      left: sanitize(this.settingPaddingLeft, preset.left),
     };
   }
 

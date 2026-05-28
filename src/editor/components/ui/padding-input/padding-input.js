@@ -57,7 +57,10 @@ export class EditorPaddingInput extends LitElement {
         label=${this.labels[key] || key}
         placeholder=${placeholder}
         .value=${value}
-        @change=${(event) => this.emitChange(key, event.detail.value)}
+        @change=${(event) => {
+          event.stopPropagation();
+          this.emitChange(key, event.detail.value);
+        }}
       ></editor-text-input>
     `;
   }

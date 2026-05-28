@@ -185,6 +185,32 @@
   font-size: 12px;
 }
 
+.settings-css-help code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.settings-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--editor-text-color, #1e1b16);
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-toggle-label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--editor-primary-color, #ffc700);
+  flex-shrink: 0;
+}
+
 .settings-css-help {
   color: #6f675d;
 }

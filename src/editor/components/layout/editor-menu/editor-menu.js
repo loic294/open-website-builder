@@ -559,7 +559,7 @@ class EditorMenu extends LitElement {
     }
 
     await this.saveLayersContent(inserted.nextNodes);
-    this.focusLayerNode(sourceId);
+    this.activeLayerNodeId = sourceId;
   }
 
   getNodeTypeLabel(type) {
