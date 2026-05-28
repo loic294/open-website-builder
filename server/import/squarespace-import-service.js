@@ -324,6 +324,16 @@ async function persistAssetManifest(assetManifest) {
   await writeFile(assetManifest.path, toJsonString(assetManifest.value));
 }
 
+function hasManifestCollision(assetManifest, currentUrl, localPath) {
+  const bySourceUrl = assetManifest.value.bySourceUrl;
+  for (const [url, entry] of Object.entries(bySourceUrl)) {
+    if (url !== currentUrl && entry?.localPath === localPath) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function downloadAssetIfNeeded({
   sourceUrl,
   contentRoot,
@@ -346,13 +356,20 @@ async function downloadAssetIfNeeded({
       known.localPath.replace(/^\//, ""),
     );
     if (await exists(knownAbsolute)) {
-      report.assets.push({
-        sourceUrl: trimmed,
-        localPath: known.localPath,
-        status: "skipped-existing",
-        reason: "manifest-hit",
-      });
-      return known.localPath;
+      // If another URL also maps to this same file it was a collision — clear
+      // this entry so it gets re-derived with a unique hash-suffixed filename.
+      if (hasManifestCollision(assetManifest, trimmed, known.localPath)) {
+        delete assetManifest.value.bySourceUrl[trimmed];
+        // Fall through to re-derive below
+      } else {
+        report.assets.push({
+          sourceUrl: trimmed,
+          localPath: known.localPath,
+          status: "skipped-existing",
+          reason: "manifest-hit",
+        });
+        return known.localPath;
+      }
     }
   }
 
@@ -1237,11 +1254,14 @@ export async function importSquarespaceXml({
       }
     }
 
-    const globalCssPath = await writeGlobalStylesFile({
-      contentRoot,
-      baseName: metadata.slug || title,
-      cssBlocks: mapped.globalStyles,
-    });
+    const globalCssPath =
+      options?.createCssFiles !== false
+        ? await writeGlobalStylesFile({
+            contentRoot,
+            baseName: metadata.slug || title,
+            cssBlocks: mapped.globalStyles,
+          })
+        : "";
 
     if (globalCssPath) {
       metadata.globalCssFiles = [globalCssPath];

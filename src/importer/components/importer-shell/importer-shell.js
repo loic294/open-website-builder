@@ -9,6 +9,7 @@ class ImporterShell extends LitElement {
     isImporting: { state: true },
     result: { state: true },
     error: { state: true },
+    createCssFiles: { state: true },
     staticSiteDir: { state: true },
     isHtmlImporting: { state: true },
     htmlResult: { state: true },
@@ -24,6 +25,7 @@ class ImporterShell extends LitElement {
     this.isImporting = false;
     this.result = null;
     this.error = "";
+    this.createCssFiles = false;
     this.staticSiteDir = "";
     this.isHtmlImporting = false;
     this.htmlResult = null;
@@ -69,6 +71,7 @@ class ImporterShell extends LitElement {
         options: {
           strictAssetDedup: true,
           idConflictPolicy: "suffix",
+          createCssFiles: this.createCssFiles,
         },
       });
     } catch (error) {
@@ -199,6 +202,16 @@ class ImporterShell extends LitElement {
           ></textarea>
 
           <div class="actions">
+            <label class="settings-checkbox-label">
+              <input
+                type="checkbox"
+                .checked=${this.createCssFiles}
+                @change=${(e) => {
+                  this.createCssFiles = e.target.checked;
+                }}
+              />
+              Create CSS files from inline styles
+            </label>
             <editor-btn
               ?disabled=${this.isImporting}
               @click=${() => this.runImport()}
