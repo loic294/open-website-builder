@@ -216,6 +216,24 @@ function getSortedCollectionItems(items = [], sortMode = "disk") {
     return next;
   }
 
+  if (sortMode === "publishedAt-desc") {
+    next.sort(
+      (a, b) =>
+        new Date(b?.metadata?.metadata?.publishedAt || 0).getTime() -
+        new Date(a?.metadata?.metadata?.publishedAt || 0).getTime(),
+    );
+    return next;
+  }
+
+  if (sortMode === "publishedAt-asc") {
+    next.sort(
+      (a, b) =>
+        new Date(a?.metadata?.metadata?.publishedAt || 0).getTime() -
+        new Date(b?.metadata?.metadata?.publishedAt || 0).getTime(),
+    );
+    return next;
+  }
+
   return next;
 }
 

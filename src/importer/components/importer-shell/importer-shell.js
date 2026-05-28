@@ -213,18 +213,19 @@ class ImporterShell extends LitElement {
         <section class="panel">
           <h2>Static HTML Backup Import</h2>
           <p>
-            Import pages from a Squarespace static HTML backup directory. Point
-            to the root folder of the downloaded static site.
+            Import pages from a Squarespace static HTML backup. Point to a
+            directory to import all pages, or to a single HTML file to import
+            one page.
           </p>
 
           <label class="label" for="static-site-dir"
-            >Static site directory</label
+            >Directory or HTML file path</label
           >
           <input
             id="static-site-dir"
             type="text"
             .value=${this.staticSiteDir}
-            placeholder="/path/to/static_site"
+            placeholder="/path/to/static_site  or  /path/to/page/index.html"
             @input=${(e) => {
               this.staticSiteDir = e.target.value || "";
             }}

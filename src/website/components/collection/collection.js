@@ -23,6 +23,8 @@ const COLLECTION_SORT_OPTIONS = [
   { label: "Title Z-A", value: "title-desc" },
   { label: "Id A-Z", value: "id-asc" },
   { label: "Id Z-A", value: "id-desc" },
+  { label: "Date newest first", value: "publishedAt-desc" },
+  { label: "Date oldest first", value: "publishedAt-asc" },
 ];
 
 const BASE_DYNAMIC_FIELDS = [
@@ -322,6 +324,24 @@ class SiteCollection extends SiteLayoutContainerBase {
     if (sortMode === "id-desc") {
       nextItems.sort((a, b) =>
         String(b?.id || "").localeCompare(String(a?.id || "")),
+      );
+      return nextItems;
+    }
+
+    if (sortMode === "publishedAt-desc") {
+      nextItems.sort(
+        (a, b) =>
+          new Date(b?.metadata?.metadata?.publishedAt || 0).getTime() -
+          new Date(a?.metadata?.metadata?.publishedAt || 0).getTime(),
+      );
+      return nextItems;
+    }
+
+    if (sortMode === "publishedAt-asc") {
+      nextItems.sort(
+        (a, b) =>
+          new Date(a?.metadata?.metadata?.publishedAt || 0).getTime() -
+          new Date(b?.metadata?.metadata?.publishedAt || 0).getTime(),
       );
       return nextItems;
     }

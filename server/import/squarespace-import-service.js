@@ -359,9 +359,20 @@ async function downloadAssetIfNeeded({
   const imagesDir = resolve(contentRoot, IMPORTED_IMAGES_DIR);
   await ensureDir(imagesDir);
 
-  const fileName = normalizeFileNameFromUrl(trimmed);
-  const absoluteTargetPath = resolve(imagesDir, fileName);
-  const relativeTargetPath = `/images/imported/${fileName}`;
+  const baseFileName = normalizeFileNameFromUrl(trimmed);
+
+  // If a file with the same base name already exists from a *different* URL,
+  // append a short URL hash to avoid mapping this URL to the wrong image.
+  let uniqueFileName = baseFileName;
+  if (await exists(resolve(imagesDir, baseFileName))) {
+    const urlHash = hashUrl(trimmed).slice(0, 8);
+    const ext = extname(baseFileName);
+    const base = ext ? baseFileName.slice(0, -ext.length) : baseFileName;
+    uniqueFileName = `${base}-${urlHash}${ext}`;
+  }
+
+  const absoluteTargetPath = resolve(imagesDir, uniqueFileName);
+  const relativeTargetPath = `/images/imported/${uniqueFileName}`;
 
   if (await exists(absoluteTargetPath)) {
     assetManifest.value.bySourceUrl[trimmed] = {
@@ -1240,7 +1251,22 @@ export async function importSquarespaceXml({
     if (postType === "page") {
       const slugBase =
         sanitizeId(metadata.slug || parsedUrlPath || title) || "page";
-      const pageId = await nextAvailableId(pagesDir, slugBase);
+      const existingPath = resolve(pagesDir, `${slugBase}.json`);
+      let pageId = slugBase;
+      let pageContent = content;
+      let isUpdate = false;
+
+      if (await exists(existingPath)) {
+        const existing = await readJsonSafe(existingPath, null);
+        if (existing) {
+          pageContent = Array.isArray(existing.content)
+            ? existing.content
+            : content;
+          isUpdate = true;
+        }
+      } else {
+        pageId = await nextAvailableId(pagesDir, slugBase);
+      }
 
       const pagePayload = {
         type: "page",
@@ -1251,19 +1277,23 @@ export async function importSquarespaceXml({
           parsedUrlPath ||
           `/${pageId}`,
         metadata,
-        content,
+        content: pageContent,
       };
 
       await writeFile(
         resolve(pagesDir, `${pageId}.json`),
         toJsonString(pagePayload),
       );
-      report.summary.pagesCreated += 1;
+      if (isUpdate) {
+        report.summary.pagesUpdated = (report.summary.pagesUpdated || 0) + 1;
+      } else {
+        report.summary.pagesCreated += 1;
+      }
       report.items.push({
         title,
         postType,
         destination: `pages/${pageId}.json`,
-        status: "imported",
+        status: isUpdate ? "updated" : "imported",
       });
       continue;
     }
@@ -1273,7 +1303,22 @@ export async function importSquarespaceXml({
     const collectionDir = resolve(contentRoot, "collections", collectionId);
     const itemBase =
       sanitizeId(metadata.slug || title || `item-${Date.now()}`) || "item";
-    const itemId = await nextAvailableId(collectionDir, itemBase);
+    const existingItemPath = resolve(collectionDir, `${itemBase}.json`);
+    let itemId = itemBase;
+    let itemContent = content;
+    let isItemUpdate = false;
+
+    if (await exists(existingItemPath)) {
+      const existing = await readJsonSafe(existingItemPath, null);
+      if (existing) {
+        itemContent = Array.isArray(existing.content)
+          ? existing.content
+          : content;
+        isItemUpdate = true;
+      }
+    } else {
+      itemId = await nextAvailableId(collectionDir, itemBase);
+    }
 
     const itemPayload = {
       id: itemId,
@@ -1281,19 +1326,24 @@ export async function importSquarespaceXml({
       excerpt: metadata.excerpt || "",
       tags: metadata.tags || [],
       metadata,
-      content,
+      content: itemContent,
     };
 
     await writeFile(
       resolve(collectionDir, `${itemId}.json`),
       toJsonString(itemPayload),
     );
-    report.summary.collectionItemsCreated += 1;
+    if (isItemUpdate) {
+      report.summary.collectionItemsUpdated =
+        (report.summary.collectionItemsUpdated || 0) + 1;
+    } else {
+      report.summary.collectionItemsCreated += 1;
+    }
     report.items.push({
       title,
       postType,
       destination: `collections/${collectionId}/${itemId}.json`,
-      status: "imported",
+      status: isItemUpdate ? "updated" : "imported",
     });
   }
 
@@ -1360,7 +1410,10 @@ export async function importSquarespaceStaticSiteDir({
   const pagesDir = resolve(contentRoot, "pages");
   await ensureDir(pagesDir);
 
-  const htmlFiles = await findHtmlFiles(trimmedDir);
+  const pathStat = await stat(trimmedDir).catch(() => null);
+  const htmlFiles = pathStat?.isFile()
+    ? [trimmedDir]
+    : await findHtmlFiles(trimmedDir);
   report.summary.totalFiles = htmlFiles.length;
 
   for (const htmlFilePath of htmlFiles) {
