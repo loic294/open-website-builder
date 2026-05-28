@@ -718,7 +718,9 @@ class SiteNavbar extends withVariantConfig(EditorComponent) {
               <button
                 type="button"
                 class="navbar-mobile-toggle"
-                style="display:flex${this.navbarMobileMenuIconSize ? `;font-size:${this.navbarMobileMenuIconSize}` : ""}"
+                style="display:flex${this.navbarMobileMenuIconSize
+                  ? `;font-size:${this.navbarMobileMenuIconSize}`
+                  : ""}"
                 @click=${(e) => {
                   e.stopPropagation();
                   this._mobileMenuOpen = !this._mobileMenuOpen;
