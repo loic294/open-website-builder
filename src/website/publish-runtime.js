@@ -4,6 +4,7 @@ import "./components/button/button.js";
 import "./components/embed/embed.js";
 import "./components/social-media/social-media.js";
 import "./components/gallery/gallery.js";
+import "./components/slider/slider.js";
 import "./components/site-section/site-section.js";
 import "./components/container/container.js";
 import "./components/form/form.js";

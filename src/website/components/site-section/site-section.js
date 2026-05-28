@@ -57,6 +57,7 @@ const BLOCK_INSERT_OPTIONS = [
   { label: "Form", value: "form" },
   { label: "Social media", value: "social-media" },
   { label: "Gallery", value: "gallery" },
+  { label: "Slider", value: "slider" },
   { label: "Collection", value: "collection" },
   { label: "Collection content", value: "collection-content" },
   { label: "Shared component", value: "shared" },
@@ -1279,6 +1280,14 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       return {
         id: createNodeId("gallery"),
         type: "gallery",
+        images: [],
+      };
+    }
+
+    if (type === "slider") {
+      return {
+        id: createNodeId("slider"),
+        type: "slider",
         images: [],
       };
     }

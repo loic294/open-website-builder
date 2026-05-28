@@ -9,6 +9,7 @@ import { editorRenderButton } from "./button/button";
 import { editorRenderEmbed } from "./embed/embed";
 import { editorRenderSocialMedia } from "./social-media/social-media";
 import { editorRenderGallery } from "./gallery/gallery";
+import { editorRenderSlider } from "./slider/slider";
 import { editorRenderCollection } from "./collection/collection";
 import { editorRenderCollectionContent } from "./collection-content/collection-content";
 
@@ -24,6 +25,7 @@ renderComponents.set("button", editorRenderButton);
 renderComponents.set("embed", editorRenderEmbed);
 renderComponents.set("social-media", editorRenderSocialMedia);
 renderComponents.set("gallery", editorRenderGallery);
+renderComponents.set("slider", editorRenderSlider);
 renderComponents.set("collection", editorRenderCollection);
 renderComponents.set("collection-content", editorRenderCollectionContent);
 

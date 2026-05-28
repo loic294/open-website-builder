@@ -681,6 +681,154 @@ class OwbGallery extends HTMLElement {
   }
 }
 
+class OwbSlider extends HTMLElement {
+  constructor() {
+    super();
+    this._currentIndex = 0;
+    this._silentJumpCleanup = null;
+  }
+
+  get config() {
+    return readConfig(this);
+  }
+
+  connectedCallback() {
+    this.render();
+    requestAnimationFrame(() => this._scrollToReal(0));
+
+    const root = this.shadowRoot;
+    if (root) {
+      root.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        if (target.closest("[data-slider-prev]")) {
+          this.navigate(-1);
+        } else if (target.closest("[data-slider-next]")) {
+          this.navigate(1);
+        }
+      });
+    }
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") this.navigate(-1);
+      if (event.key === "ArrowRight") this.navigate(1);
+    });
+  }
+
+  disconnectedCallback() {
+    if (this._silentJumpCleanup) this._silentJumpCleanup();
+  }
+
+  _getTrack() {
+    return this.shadowRoot?.querySelector(".slider-track") ?? null;
+  }
+
+  _scrollToReal(realIndex) {
+    const track = this._getTrack();
+    if (!track) return;
+    const slides = track.querySelectorAll(".slider-slide");
+    const slide = slides[realIndex + 1];
+    if (!slide) return;
+    slide.scrollIntoView({
+      behavior: "instant",
+      inline: "center",
+      block: "nearest",
+    });
+  }
+
+  navigate(delta) {
+    const { images = [] } = this.config;
+    const n = images.length;
+    if (n <= 1) return;
+
+    if (this._silentJumpCleanup) {
+      this._silentJumpCleanup();
+      this._silentJumpCleanup = null;
+    }
+
+    const nextRealIndex = (this._currentIndex + delta + n) % n;
+    this._currentIndex = nextRealIndex;
+
+    const track = this._getTrack();
+    if (!track) return;
+    const slides = track.querySelectorAll(".slider-slide");
+
+    const isForwardWrap = delta > 0 && nextRealIndex === 0;
+    const isBackwardWrap = delta < 0 && nextRealIndex === n - 1;
+    const scrollDomIndex = isForwardWrap
+      ? n + 1
+      : isBackwardWrap
+        ? 0
+        : nextRealIndex + 1;
+
+    slides[scrollDomIndex]?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+
+    if (isForwardWrap || isBackwardWrap) {
+      let done = false;
+      const doJump = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        track.removeEventListener("scrollend", doJump);
+        this._scrollToReal(nextRealIndex);
+      };
+      track.addEventListener("scrollend", doJump, { once: true });
+      const timer = setTimeout(doJump, 600);
+      this._silentJumpCleanup = () => {
+        done = true;
+        clearTimeout(timer);
+        track.removeEventListener("scrollend", doJump);
+      };
+    }
+  }
+
+  render() {
+    const {
+      images = [],
+      format = "3 / 2",
+      itemWidth = "80%",
+      height = "400px",
+      gap = "12px",
+    } = this.config;
+    const n = images.length;
+
+    if (n === 0) {
+      renderShadow(
+        this,
+        `<div class="slider-empty">No slider images configured</div>`,
+      );
+      return;
+    }
+
+    const isAuto = format === "auto";
+    const slideClass = `slider-slide${isAuto ? " is-auto-ratio" : ""}`;
+    const trackStyle = `--slider-item-width: ${itemWidth}; --slider-gap: ${gap}; ${
+      isAuto ? `--slider-height: ${height};` : `--slider-ratio: ${format};`
+    }`;
+
+    const slideHtml = (url) =>
+      `<div class="${slideClass}"><img src="${url}" alt="" loading="lazy" /></div>`;
+
+    const cloneLast = n > 1 ? slideHtml(images[n - 1]) : "";
+    const cloneFirst = n > 1 ? slideHtml(images[0]) : "";
+    const realSlides = images.map(slideHtml).join("");
+
+    const navHtml =
+      n > 1
+        ? `<div class="slider-nav"><button type="button" class="slider-nav-btn" data-slider-prev>&#8249;</button><button type="button" class="slider-nav-btn" data-slider-next>&#8250;</button></div>`
+        : "";
+
+    renderShadow(
+      this,
+      `<div class="slider-block"><div class="slider-track-wrapper"><div class="slider-track" style="${trackStyle}">${cloneLast}${realSlides}${cloneFirst}</div></div>${navHtml}</div>`,
+    );
+  }
+}
+
 class OwbSection extends HTMLElement {
   connectedCallback() {
     const settings = readConfig(this);
@@ -764,6 +912,12 @@ class OwbForm extends HTMLElement {
       .owb-form-container.is-full-width { max-width: 100%; }
       .owb-form { display: grid; gap: 12px; }
       .owb-form-success { margin: 10px 0 0; color: var(--website-success-color, #267e3e); font-weight: 600; }
+      owb-input { box-sizing: border-box; }
+      .form-input-block { position: relative; width: 100%; margin-bottom: 16px; }
+      .form-input-label { display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; color: var(--owb-section-child-text-color, inherit); }
+      .form-input-required { color: #b42318; }
+      .form-input-field, .form-input-textarea { width: 100%; border: 1px solid color-mix(in srgb, #111111 22%, transparent); border-radius: 8px; padding: 10px 12px; font-size: 0.95rem; line-height: 1.4; background: var(--owb-section-child-background-color, #fff); color: var(--owb-section-child-text-color, inherit); font-family: inherit; box-sizing: border-box; }
+      .form-input-textarea { resize: vertical; }
     `;
 
     const containerEl = document.createElement("div");
@@ -911,6 +1065,9 @@ if (!customElements.get("owb-social-media")) {
 }
 if (!customElements.get("owb-gallery")) {
   customElements.define("owb-gallery", OwbGallery);
+}
+if (!customElements.get("owb-slider")) {
+  customElements.define("owb-slider", OwbSlider);
 }
 if (!customElements.get("owb-section")) {
   customElements.define("owb-section", OwbSection);

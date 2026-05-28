@@ -283,6 +283,17 @@ function renderGallery(node) {
   })}</owb-gallery>`;
 }
 
+function renderSlider(node) {
+  const settings = node?.settings ?? {};
+  return `<owb-slider>${configScript({
+    images: node?.images ?? [],
+    format: String(settings.sliderFormat || "3 / 2"),
+    itemWidth: String(settings.sliderItemWidth || "80%"),
+    height: String(settings.sliderHeight || "400px"),
+    gap: String(settings.sliderGap || "12px"),
+  })}</owb-slider>`;
+}
+
 async function renderShared(node, context) {
   const componentId = String(node?.settings?.shared_component_id || "").trim();
   if (!componentId) {
@@ -521,6 +532,8 @@ async function renderNode(node, context) {
       return renderSocialMedia(node);
     case "gallery":
       return renderGallery(node);
+    case "slider":
+      return renderSlider(node);
     case "shared":
       return await renderShared(node, context);
     case "section":

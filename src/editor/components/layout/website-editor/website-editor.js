@@ -20,6 +20,7 @@ import "../../../../website/components/button/button.js";
 import "../../../../website/components/embed/embed.js";
 import "../../../../website/components/social-media/social-media.js";
 import "../../../../website/components/gallery/gallery.js";
+import "../../../../website/components/slider/slider.js";
 import "../../../../website/components/collection/collection.js";
 import "../../../../website/components/collection-content/collection-content.js";
 

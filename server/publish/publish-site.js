@@ -172,6 +172,7 @@ async function buildPublishedComponentStyles(appRoot) {
     resolve(appRoot, "src/website/components/embed/styles.css"),
     resolve(appRoot, "src/website/components/social-media/styles.css"),
     resolve(appRoot, "src/website/components/gallery/styles.css"),
+    resolve(appRoot, "src/website/components/slider/styles.css"),
   ];
 
   const chunks = [];
