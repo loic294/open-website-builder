@@ -520,7 +520,40 @@ async function renderForm(node, context) {
 }
 
 function renderInput(node) {
-  return `<owb-input>${configScript({ settings: node?.settings ?? {} })}</owb-input>`;
+  const s = node?.settings ?? {};
+  return `<owb-input>${configScript({
+    fieldType: s.settingFieldType ?? s.fieldType ?? "text",
+    label: s.settingLabel ?? s.label ?? "",
+    name: s.settingName ?? s.name ?? "",
+    required: s.settingRequired ?? s.required ?? false,
+    placeholder: s.settingPlaceholder ?? s.placeholder ?? "",
+    min: s.settingMin ?? s.min ?? "",
+    max: s.settingMax ?? s.max ?? "",
+    step: s.settingStep ?? s.step ?? "",
+    rows: s.settingRows ?? s.rows ?? "4",
+    minLength: s.settingMinLength ?? s.minLength ?? "",
+    maxLength: s.settingMaxLength ?? s.maxLength ?? "",
+    pattern: s.settingPattern ?? s.pattern ?? "",
+    customCss: s.settingCustomCss ?? s.customCss ?? "",
+  })}</owb-input>`;
+}
+
+function renderCaptcha(node) {
+  const s = node?.settings ?? {};
+  return `<owb-captcha>${configScript({
+    captchaChallengeUrl: s.settingCaptchaChallengeUrl ?? s.captchaChallengeUrl ?? "",
+  })}</owb-captcha>`;
+}
+
+function renderCheckbox(node) {
+  const s = node?.settings ?? {};
+  return `<owb-checkbox>${configScript({
+    checkboxLabel: s.settingCheckboxLabel ?? s.checkboxLabel ?? "",
+    checkboxName: s.settingCheckboxName ?? s.checkboxName ?? "",
+    checkboxValue: s.settingCheckboxValue ?? s.checkboxValue ?? "",
+    checkboxDefaultChecked: s.settingCheckboxDefaultChecked ?? s.checkboxDefaultChecked ?? false,
+    checkboxRequired: s.settingCheckboxRequired ?? s.checkboxRequired ?? false,
+  })}</owb-checkbox>`;
 }
 
 async function renderNode(node, context) {
@@ -557,6 +590,10 @@ async function renderNode(node, context) {
       return await renderForm(node, context);
     case "input":
       return renderInput(node);
+    case "captcha":
+      return renderCaptcha(node);
+    case "checkbox":
+      return renderCheckbox(node);
     default:
       context.warnings.push(
         `Unsupported node type: ${String(node.type || "unknown")}`,

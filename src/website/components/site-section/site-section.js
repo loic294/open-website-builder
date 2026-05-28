@@ -50,6 +50,8 @@ const SECTION_PADDING_PRESETS = {
 const BLOCK_INSERT_OPTIONS = [
   { label: "Text", value: "text" },
   { label: "Input", value: "input" },
+  { label: "Checkbox", value: "checkbox" },
+  { label: "Captcha", value: "captcha" },
   { label: "Image", value: "image" },
   { label: "Button", value: "button" },
   { label: "Embed", value: "embed" },
@@ -1298,6 +1300,30 @@ export class SiteLayoutContainerBase extends withVariantConfig(
         id: createNodeId("navbar"),
         type: "navbar",
         links: [],
+      };
+    }
+
+    if (type === "captcha") {
+      return {
+        id: createNodeId("captcha"),
+        type: "captcha",
+        settings: {
+          captchaChallengeUrl: "",
+        },
+      };
+    }
+
+    if (type === "checkbox") {
+      return {
+        id: createNodeId("checkbox"),
+        type: "checkbox",
+        settings: {
+          checkboxLabel: "I agree to the terms",
+          checkboxName: "agreement",
+          checkboxValue: "",
+          checkboxDefaultChecked: false,
+          checkboxRequired: false,
+        },
       };
     }
 

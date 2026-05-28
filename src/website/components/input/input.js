@@ -343,11 +343,7 @@ class OwbInput extends HTMLElement {
 
     if (configEl) {
       try {
-        const parsed = JSON.parse(configEl.textContent || "{}");
-        settings =
-          parsed && typeof parsed.settings === "object"
-            ? parsed.settings
-            : parsed;
+        settings = JSON.parse(configEl.textContent || "{}");
       } catch (_error) {
         settings = {};
       }

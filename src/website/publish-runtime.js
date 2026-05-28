@@ -10,3 +10,5 @@ import "./components/site-section/site-section.js";
 import "./components/container/container.js";
 import "./components/form/form.js";
 import "./components/input/input.js";
+import "./components/captcha/captcha.js";
+import "./components/checkbox/checkbox.js";

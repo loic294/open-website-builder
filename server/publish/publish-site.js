@@ -169,6 +169,8 @@ async function buildPublishedComponentStyles(appRoot) {
     resolve(appRoot, "src/website/components/image/styles.css"),
     resolve(appRoot, "src/website/components/button/styles.css"),
     resolve(appRoot, "src/website/components/input/styles.css"),
+    resolve(appRoot, "src/website/components/checkbox/styles.css"),
+    resolve(appRoot, "src/website/components/captcha/styles.css"),
     resolve(appRoot, "src/website/components/embed/styles.css"),
     resolve(appRoot, "src/website/components/social-media/styles.css"),
     resolve(appRoot, "src/website/components/gallery/styles.css"),

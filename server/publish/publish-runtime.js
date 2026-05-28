@@ -978,9 +978,7 @@ class OwbForm extends HTMLElement {
 
 class OwbInput extends HTMLElement {
   connectedCallback() {
-    const parsed = readConfig(this);
-    const settings =
-      parsed && typeof parsed.settings === "object" ? parsed.settings : parsed;
+    const settings = readConfig(this);
     const fieldType = String(settings.fieldType || "text");
     const label = String(settings.label || "");
     const name = String(settings.name || "").trim();
@@ -1054,6 +1052,83 @@ class OwbInput extends HTMLElement {
 
     wrapper.appendChild(control);
     this.append(wrapper);
+  }
+}
+
+class OwbCaptcha extends HTMLElement {
+  connectedCallback() {
+    const config = readConfig(this);
+    const challengeUrl = String(config.captchaChallengeUrl || "").trim();
+
+    if (!document.querySelector("script[data-altcha-script]")) {
+      const script = document.createElement("script");
+      script.src =
+        "https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist/altcha.min.js";
+      script.type = "module";
+      script.async = true;
+      script.defer = true;
+      script.setAttribute("data-altcha-script", "");
+      document.head.appendChild(script);
+    }
+
+    const widget = document.createElement("altcha-widget");
+    if (challengeUrl) {
+      widget.setAttribute("challenge", challengeUrl);
+    }
+    this.appendChild(widget);
+  }
+}
+
+class OwbCheckbox extends HTMLElement {
+  connectedCallback() {
+    const config = readConfig(this);
+    const label = String(config.checkboxLabel || "").trim();
+    const name = String(config.checkboxName || "").trim();
+    const value = String(config.checkboxValue || "").trim();
+    const defaultChecked =
+      config.checkboxDefaultChecked === true ||
+      String(config.checkboxDefaultChecked || "") === "true";
+    const required =
+      config.checkboxRequired === true ||
+      String(config.checkboxRequired || "") === "true";
+
+    const uid = `owb-cb-${Math.random().toString(36).slice(2, 9)}`;
+
+    this.textContent = "";
+
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `
+      :host { display: block; }
+      .owb-checkbox-block { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 0.95rem; cursor: pointer; }
+      .owb-checkbox-block input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+    `;
+
+    const labelEl = document.createElement("label");
+    labelEl.className = "owb-checkbox-block";
+    labelEl.setAttribute("for", uid);
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.id = uid;
+    if (name) input.name = name;
+    if (value) input.value = value;
+    if (defaultChecked) input.checked = true;
+    if (required) input.required = true;
+
+    const span = document.createElement("span");
+    span.textContent = label;
+
+    if (required) {
+      const asterisk = document.createElement("span");
+      asterisk.style.color = "#b42318";
+      asterisk.style.marginLeft = "2px";
+      asterisk.textContent = "*";
+      span.appendChild(asterisk);
+    }
+
+    labelEl.appendChild(input);
+    labelEl.appendChild(span);
+    this.append(styleEl, labelEl);
   }
 }
 
@@ -1281,6 +1356,12 @@ if (!customElements.get("owb-form")) {
 }
 if (!customElements.get("owb-input")) {
   customElements.define("owb-input", OwbInput);
+}
+if (!customElements.get("owb-captcha")) {
+  customElements.define("owb-captcha", OwbCaptcha);
+}
+if (!customElements.get("owb-checkbox")) {
+  customElements.define("owb-checkbox", OwbCheckbox);
 }
 if (!customElements.get("owb-collection-content")) {
   customElements.define("owb-collection-content", OwbCollectionContent);
