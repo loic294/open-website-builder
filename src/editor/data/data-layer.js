@@ -73,9 +73,16 @@ export function createDataLayer(transport = createHttpTransport()) {
         options,
       });
     },
-    async importSquarespaceStaticSiteDir({ staticSiteDir, options = {} }) {
+    async importSquarespaceStaticSiteDir({
+      staticSiteDir,
+      htmlContent,
+      fileName,
+      options = {},
+    }) {
       return await transport.post("/import/squarespace-html", {
         staticSiteDir,
+        htmlContent,
+        fileName,
         options,
       });
     },

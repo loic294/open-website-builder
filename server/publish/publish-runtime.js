@@ -444,6 +444,7 @@ class OwbButton extends HTMLElement {
     const buttonType = String(settings.buttonType || "link");
     const shape = String(settings.buttonShape || "rounded");
     const customRadius = String(settings.buttonRadiusCustom || "12px");
+    const customCss = String(settings.customCss || "").trim();
 
     let sizeStyle =
       "--button-padding-y: 0.58rem; --button-padding-x: 1rem; --button-font-size: 0.95rem;";
@@ -487,7 +488,7 @@ class OwbButton extends HTMLElement {
 
     renderShadow(
       this,
-      `<div class="button-block"><div class="button-preview-wrap">${buttonMarkup}</div></div>`,
+      `${customCss ? `<style>${customCss}</style>` : ""}<div class="button-block"><div class="button-preview-wrap">${buttonMarkup}</div></div>`,
     );
   }
 }

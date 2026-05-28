@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "publish": "node ./server/publish/publish-cli.js"
+    "publish": "node ./server/publish/publish-cli.js",
+    "upload": "npx wrangler pages deploy ./dist-publish --project-name=loicbellemarealford"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",

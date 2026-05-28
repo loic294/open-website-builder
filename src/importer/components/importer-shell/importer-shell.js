@@ -11,6 +11,8 @@ class ImporterShell extends LitElement {
     error: { state: true },
     createCssFiles: { state: true },
     staticSiteDir: { state: true },
+    htmlFileContent: { state: true },
+    htmlFileName: { state: true },
     isHtmlImporting: { state: true },
     htmlResult: { state: true },
     htmlError: { state: true },
@@ -27,6 +29,8 @@ class ImporterShell extends LitElement {
     this.error = "";
     this.createCssFiles = false;
     this.staticSiteDir = "";
+    this.htmlFileContent = "";
+    this.htmlFileName = "";
     this.isHtmlImporting = false;
     this.htmlResult = null;
     this.htmlError = "";
@@ -83,9 +87,9 @@ class ImporterShell extends LitElement {
   }
 
   async runHtmlImport() {
-    const dir = String(this.staticSiteDir || "").trim();
-    if (!dir) {
-      this.htmlError = "Provide the path to the static site directory.";
+    const content = String(this.htmlFileContent || "").trim();
+    if (!content && !this.staticSiteDir.trim()) {
+      this.htmlError = "Select an HTML file or provide a directory path.";
       return;
     }
 
@@ -94,10 +98,18 @@ class ImporterShell extends LitElement {
     this.isHtmlImporting = true;
 
     try {
-      this.htmlResult = await dataLayer.importSquarespaceStaticSiteDir({
-        staticSiteDir: dir,
-        options: { idConflictPolicy: "suffix" },
-      });
+      this.htmlResult = await dataLayer.importSquarespaceStaticSiteDir(
+        content
+          ? {
+              htmlContent: content,
+              fileName: this.htmlFileName,
+              options: { idConflictPolicy: "suffix" },
+            }
+          : {
+              staticSiteDir: this.staticSiteDir,
+              options: { idConflictPolicy: "suffix" },
+            },
+      );
     } catch (error) {
       this.htmlError =
         error instanceof Error ? error.message : "Import failed unexpectedly";
@@ -226,19 +238,37 @@ class ImporterShell extends LitElement {
         <section class="panel">
           <h2>Static HTML Backup Import</h2>
           <p>
-            Import pages from a Squarespace static HTML backup. Point to a
-            directory to import all pages, or to a single HTML file to import
-            one page.
+            Upload a Squarespace static HTML page to import it directly, or
+            provide a server-side directory path to batch import.
           </p>
 
+          <label class="label" for="html-file-upload">Upload HTML file</label>
+          <input
+            id="html-file-upload"
+            type="file"
+            accept=".html,text/html"
+            @change=${async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              this.htmlFileName = file.name || "";
+              this.htmlError = "";
+              try {
+                this.htmlFileContent = await file.text();
+              } catch (err) {
+                this.htmlError =
+                  err instanceof Error ? err.message : "Failed to read file";
+              }
+            }}
+          />
+
           <label class="label" for="static-site-dir"
-            >Directory or HTML file path</label
+            >Or: server-side directory path</label
           >
           <input
             id="static-site-dir"
             type="text"
             .value=${this.staticSiteDir}
-            placeholder="/path/to/static_site  or  /path/to/page/index.html"
+            placeholder="/path/to/static_site"
             @input=${(e) => {
               this.staticSiteDir = e.target.value || "";
             }}

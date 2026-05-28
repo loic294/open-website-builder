@@ -1013,6 +1013,41 @@ async function mapStaticPageToContent({
           }
         }
       }
+    } else if (sectionClass.includes("gallery-section")) {
+      // Gallery album section — collect all unique gallery images
+      const galleryImages = [];
+      const seen = new Set();
+      for (const imgEl of $(sectionEl).find("img[data-image]").toArray()) {
+        const src =
+          $(imgEl).attr("data-image") ||
+          $(imgEl).attr("data-src") ||
+          $(imgEl).attr("src") ||
+          "";
+        if (!src || seen.has(src)) continue;
+        seen.add(src);
+        let localUrl;
+        if (/^https?:\/\//i.test(src)) {
+          localUrl = await downloadAssetIfNeeded({
+            sourceUrl: src,
+            contentRoot,
+            assetManifest,
+            report,
+          });
+        } else {
+          localUrl = await copyLocalAssetIfNeeded({
+            assetPath: resolve(htmlDir, src),
+            contentRoot,
+            assetManifest,
+            report,
+          });
+        }
+        if (localUrl) {
+          galleryImages.push(localUrl);
+        }
+      }
+      if (galleryImages.length > 0) {
+        sectionNodes.push(makeGalleryNode(galleryImages));
+      }
     } else {
       // Fallback: older layout without .fe-block wrappers
       for (const textEl of $(sectionEl).find(".sqs-html-content").toArray()) {
@@ -1067,15 +1102,34 @@ async function buildPageFromStaticHtml({
 }) {
   const context = extractSquarespaceContext(htmlContent);
   if (!context) {
+    report.issues.push({
+      severity: "info",
+      type: "html-import",
+      message: `No SQUARESPACE_CONTEXT found in ${htmlFilePath} — skipped`,
+    });
     return null;
   }
 
   if (is404Page(context)) {
+    report.issues.push({
+      severity: "info",
+      type: "html-import",
+      message: `404 page at ${htmlFilePath} (url: ${context?.collection?.fullUrl}) — skipped`,
+    });
     return null;
   }
 
-  const fullUrl = String(context?.collection?.fullUrl || "/").trim();
-  const title = toTitle(context?.collection?.title || "");
+  // Gallery album pages (pageType 50) have the real URL in item.fullUrl
+  const itemFullUrl = context?.item?.fullUrl;
+  const isGalleryItem = !!(
+    itemFullUrl && itemFullUrl !== context?.collection?.fullUrl
+  );
+  const fullUrl = String(
+    (isGalleryItem ? itemFullUrl : context?.collection?.fullUrl) || "/",
+  ).trim();
+  const title = toTitle(
+    (isGalleryItem ? context?.item?.title : context?.collection?.title) || "",
+  );
   const htmlDir = dirname(htmlFilePath);
 
   const $ = cheerio.load(htmlContent);
@@ -1398,16 +1452,21 @@ export async function importSquarespaceXml({
 
 export async function importSquarespaceStaticSiteDir({
   staticSiteDir,
+  htmlContent,
+  fileName,
   options,
   contentRoot,
 }) {
-  const trimmedDir = String(staticSiteDir || "").trim();
-  if (!trimmedDir) {
-    throw new Error("staticSiteDir is required");
+  const sourceName = htmlContent
+    ? String(fileName || "upload.html")
+    : String(staticSiteDir || "").trim();
+
+  if (!htmlContent && !sourceName) {
+    throw new Error("staticSiteDir or htmlContent is required");
   }
 
   const report = {
-    sourceName: trimmedDir,
+    sourceName,
     createdAt: new Date().toISOString(),
     options: options || {},
     summary: {
@@ -1430,28 +1489,38 @@ export async function importSquarespaceStaticSiteDir({
   const pagesDir = resolve(contentRoot, "pages");
   await ensureDir(pagesDir);
 
-  const pathStat = await stat(trimmedDir).catch(() => null);
-  const htmlFiles = pathStat?.isFile()
-    ? [trimmedDir]
-    : await findHtmlFiles(trimmedDir);
-  report.summary.totalFiles = htmlFiles.length;
+  // Build list of { htmlFilePath, content } pairs — either from uploaded content
+  // or by scanning the filesystem.
+  let htmlFilePairs;
+  if (htmlContent) {
+    htmlFilePairs = [{ htmlFilePath: sourceName, content: htmlContent }];
+  } else {
+    const pathStat = await stat(sourceName).catch(() => null);
+    const htmlFiles = pathStat?.isFile()
+      ? [sourceName]
+      : await findHtmlFiles(sourceName);
+    htmlFilePairs = htmlFiles.map((p) => ({ htmlFilePath: p, content: null }));
+  }
+  report.summary.totalFiles = htmlFilePairs.length;
 
-  for (const htmlFilePath of htmlFiles) {
-    let htmlContent;
-    try {
-      htmlContent = await readFile(htmlFilePath, "utf8");
-    } catch (error) {
-      report.issues.push({
-        severity: "warning",
-        type: "html-import",
-        message: `Could not read ${htmlFilePath}`,
-        details: error instanceof Error ? error.message : String(error),
-      });
-      continue;
+  for (const { htmlFilePath, content: pairContent } of htmlFilePairs) {
+    let fileContent = pairContent;
+    if (fileContent === null) {
+      try {
+        fileContent = await readFile(htmlFilePath, "utf8");
+      } catch (error) {
+        report.issues.push({
+          severity: "warning",
+          type: "html-import",
+          message: `Could not read ${htmlFilePath}`,
+          details: error instanceof Error ? error.message : String(error),
+        });
+        continue;
+      }
     }
 
     const result = await buildPageFromStaticHtml({
-      htmlContent,
+      htmlContent: fileContent,
       htmlFilePath,
       contentRoot,
       assetManifest,

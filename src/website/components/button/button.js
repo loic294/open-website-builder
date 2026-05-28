@@ -476,10 +476,16 @@ class OwbButton extends withVariantConfig(LitElement) {
     const buttonType = String(settings.buttonType || "link");
     const shape = String(settings.buttonShape || "rounded");
     const customRadius = String(settings.buttonRadiusCustom || "12px");
+    const customCss = String(settings.customCss || "").trim();
     const sizeStyle = getButtonSizeStyle(size, settings);
     const radius = getButtonShapeRadius(shape, customRadius);
 
     return html`
+      ${customCss
+        ? html`<style>
+            ${customCss}
+          </style>`
+        : null}
       <div class="button-block">
         <div class="button-preview-wrap">
           ${renderButtonPreview({

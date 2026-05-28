@@ -123,9 +123,16 @@ export default defineConfig({
               options,
               contentRoot,
             }),
-          importSquarespaceStaticSiteDir: async ({ staticSiteDir, options }) =>
+          importSquarespaceStaticSiteDir: async ({
+            staticSiteDir,
+            htmlContent,
+            fileName,
+            options,
+          }) =>
             await importSquarespaceStaticSiteDir({
               staticSiteDir,
+              htmlContent,
+              fileName,
               options,
               contentRoot,
             }),
