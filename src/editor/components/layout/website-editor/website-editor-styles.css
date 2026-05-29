@@ -92,11 +92,11 @@
 
 .website-viewport.size-mobile.orientation-horizontal {
   width: min(100%, 844px);
-  height: 390px;
+  height: 440px;
 }
 
 .website-viewport.size-mobile.orientation-vertical {
-  width: min(100%, 390px);
+  width: min(100%, 440px);
   height: 844px;
 }
 
