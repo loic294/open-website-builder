@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 import {
   getSectionInlineStyle,
   getContainerInlineStyle,
@@ -115,6 +116,7 @@ export class OwbContainer extends LitElement {
   render() {
     const settings = this.settings || {};
     const customCss = String(settings.customCss || "").trim();
+    const spacingCss = getSpacingStyleBlock(settings);
     const width = String(settings.settingWidth || "normal");
     const widthClass =
       width === "full"
@@ -126,6 +128,7 @@ export class OwbContainer extends LitElement {
 
     return html`
       ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
         class="container ${widthClass}"

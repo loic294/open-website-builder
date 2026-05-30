@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
 export const defaultButtonConfig = {
   type: "button",
@@ -140,6 +141,7 @@ export class OwbButton extends LitElement {
     const shape = String(settings.buttonShape || "rounded");
     const customRadius = String(settings.buttonRadiusCustom || "12px");
     const customCss = String(settings.customCss || "").trim();
+    const spacingCss = getSpacingStyleBlock(settings);
     const sizeStyle = getButtonSizeStyle(size, settings);
     const radius = getButtonShapeRadius(shape, customRadius);
 
@@ -147,6 +149,7 @@ export class OwbButton extends LitElement {
 
     return html`
       <link rel="stylesheet" href="/owb-styles/button.css" />
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
         class="button-block${isEditorMode && this.isSettingsEditorOpen

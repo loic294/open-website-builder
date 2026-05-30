@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 import {
   getSectionInlineStyle,
   getContainerInlineStyle,
@@ -103,6 +104,7 @@ export class OwbForm extends LitElement {
       settings.formSuccessMessage || "Thanks! Your form has been submitted.",
     );
     const customCss = String(settings.customCss || "").trim();
+    const spacingCss = getSpacingStyleBlock(settings);
     const width = String(settings.settingWidth || "normal");
     const widthClass =
       width === "full"
@@ -112,6 +114,7 @@ export class OwbForm extends LitElement {
           : "is-normal-width";
 
     return html`
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
         class="owb-form-container ${widthClass}"

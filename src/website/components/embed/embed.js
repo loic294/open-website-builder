@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
 export const defaultEmbedConfig = {
   type: "embed",
@@ -78,8 +79,11 @@ export class OwbEmbed extends LitElement {
 
   render() {
     const safeHtml = sanitizeEmbedHtml(this.html ?? "");
+    const settings = this.settings ?? {};
+    const spacingCss = getSpacingStyleBlock(settings);
     return html`
       <link rel="stylesheet" href="/owb-styles/embed.css" />
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${safeHtml.trim()
         ? html`<div class="embed-preview">${unsafeHTML(safeHtml)}</div>`
         : html`<div class="embed-placeholder">No embed content</div>`}

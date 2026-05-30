@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
 export const defaultImageConfig = {
   type: "image",
@@ -127,12 +128,14 @@ export class OwbImage extends LitElement {
     const settings = this.settings ?? {};
     const mode = getImageMode(settings?.imageSizeMode || "contained");
     const customCss = String(settings?.customCss || "").trim();
+    const spacingCss = getSpacingStyleBlock(settings);
     const clickAction = String(settings?.imageClickAction || "none");
     const linkUrl = String(settings?.imageLinkUrl || "").trim();
     const linkTarget = String(settings?.imageLinkTarget || "current");
 
     return html`
       <link rel="stylesheet" href="/owb-styles/image.css" />
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div class="image-block size-${mode}">
         ${this.renderImageWithAction(

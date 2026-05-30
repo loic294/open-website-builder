@@ -1,4 +1,6 @@
 import { LitElement, html, css } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
 export const defaultSliderConfig = {
   type: "slider",
@@ -156,10 +158,12 @@ export class OwbSlider extends LitElement {
     const height = String(settings.sliderHeight || "400px");
     const gap = String(settings.sliderGap || "12px");
     const count = images.length;
+    const spacingCss = getSpacingStyleBlock(settings);
 
     if (count === 0) {
       return html`
         <link rel="stylesheet" href="/owb-styles/slider.css" />
+        ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
         <div class="slider-empty">No slider images configured</div>
       `;
     }
@@ -177,6 +181,7 @@ export class OwbSlider extends LitElement {
 
     return html`
       <link rel="stylesheet" href="/owb-styles/slider.css" />
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       <div class="slider-block">
         <div class="slider-track-wrapper">
           <div class="slider-track" style="${trackStyle}">

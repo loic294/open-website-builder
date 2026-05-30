@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
 const bool = (v) => v === true || v === "true";
 
@@ -128,9 +129,11 @@ export class OwbNavbar extends LitElement {
 
     const navStyle = this._buildNavStyle(settings);
     const mobileStyle = this._buildMobileStyle(settings);
+    const spacingCss = getSpacingStyleBlock(settings);
 
     return html`
       <link rel="stylesheet" href="/owb-styles/navbar.css" />
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${mobileOn
         ? unsafeHTML(
             `<style>@media (max-width: ${breakpoint}) { .navbar { display: none !important; } .navbar-mobile-toggle { display: flex !important; } }</style>`,

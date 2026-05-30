@@ -1,4 +1,6 @@
 import { LitElement, html, css } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
 export const defaultGalleryConfig = {
   type: "gallery",
@@ -153,9 +155,11 @@ export class OwbGallery extends LitElement {
     const gap = String(settings.galleryGap || "8px");
     const activeImage =
       this.lightboxIndex >= 0 ? images[this.lightboxIndex] : "";
+    const spacingCss = getSpacingStyleBlock(settings);
 
     return html`
       <link rel="stylesheet" href="/owb-styles/gallery.css" />
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${images.length === 0
         ? html`<div class="gallery-empty">No gallery images configured</div>`
         : html`

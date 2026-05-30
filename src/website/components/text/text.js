@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
 export const defaultTextConfig = {
   type: "text",
@@ -64,9 +65,11 @@ export class OwbText extends LitElement {
     const content = this.content ?? "";
     const settings = this.settings ?? {};
     const customCss = String(settings.customCss || "").trim();
+    const spacingCss = getSpacingStyleBlock(settings);
     const normalizedContent = normalizeTextLinksToSameTab(content);
     return html`
       <link rel="stylesheet" href="/owb-styles/text.css" />
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div class="text-block ProseMirror">${unsafeHTML(normalizedContent)}</div>
     `;

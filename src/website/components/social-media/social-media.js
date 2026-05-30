@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 import * as simpleIcons from "simple-icons";
 
 export const defaultSocialMediaConfig = {
@@ -176,9 +177,11 @@ export class OwbSocialMedia extends LitElement {
     const items = Array.isArray(this.items) ? this.items : [];
     const settings = this.settings || {};
     const alignment = String(settings.socialButtonAlignment || "left");
+    const spacingCss = getSpacingStyleBlock(settings);
 
     return html`
       <link rel="stylesheet" href="/owb-styles/social-media.css" />
+      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
       ${items.length === 0
         ? html`<div class="social-empty">No social links configured</div>`
         : html`
