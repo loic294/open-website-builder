@@ -40,11 +40,34 @@ export const SIMPLE_ICON_MAP = new Map(
 );
 
 export const FEATURED_ICON_SLUGS = [
-  "x", "linkedin", "github", "instagram", "youtube", "facebook",
-  "tiktok", "discord", "mastodon", "bluesky", "medium", "reddit",
-  "whatsapp", "telegram", "dribbble", "behance", "pinterest",
-  "snapchat", "twitch", "vimeo", "spotify", "applemusic", "threads",
-  "notion", "figma", "slack", "substack", "rss",
+  "x",
+  "linkedin",
+  "github",
+  "instagram",
+  "youtube",
+  "facebook",
+  "tiktok",
+  "discord",
+  "mastodon",
+  "bluesky",
+  "medium",
+  "reddit",
+  "whatsapp",
+  "telegram",
+  "dribbble",
+  "behance",
+  "pinterest",
+  "snapchat",
+  "twitch",
+  "vimeo",
+  "spotify",
+  "applemusic",
+  "threads",
+  "notion",
+  "figma",
+  "slack",
+  "substack",
+  "rss",
 ];
 
 export const FEATURED_ICONS = FEATURED_ICON_SLUGS.map((slug) =>
@@ -52,7 +75,9 @@ export const FEATURED_ICONS = FEATURED_ICON_SLUGS.map((slug) =>
 ).filter(Boolean);
 
 export function normalizeIconSlug(value) {
-  const raw = String(value || "").trim().toLowerCase();
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase();
   if (!raw) return "";
   if (raw in LEGACY_ICON_VALUE_MAP) return LEGACY_ICON_VALUE_MAP[raw];
   return raw;

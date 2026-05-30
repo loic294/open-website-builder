@@ -26,8 +26,9 @@ export class OwbForm extends LitElement {
     }
     .owb-form-container {
       position: relative;
-      padding: var(--section-padding-top, 7rem) var(--section-padding-right, 2rem)
-        var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);
+      padding: var(--section-padding-top, 7rem)
+        var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem)
+        var(--section-padding-left, 2rem);
       margin: 0 auto;
     }
     .owb-form-container.is-normal-width {
@@ -114,7 +115,9 @@ export class OwbForm extends LitElement {
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
         class="owb-form-container ${widthClass}"
-        style="${getSectionInlineStyle(settings)}; ${getContainerInlineStyle(settings)}"
+        style="${getSectionInlineStyle(settings)}; ${getContainerInlineStyle(
+          settings,
+        )}"
       >
         ${this._submitted
           ? html`<p class="owb-form-success">${successMessage}</p>`

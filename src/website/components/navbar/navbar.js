@@ -33,7 +33,8 @@ export class OwbNavbar extends LitElement {
         const props = JSON.parse(dataProps);
         if (props.links !== undefined) this.links = props.links;
         if (props.settings !== undefined) this.settings = props.settings;
-        if (props.currentPath !== undefined) this.currentPath = props.currentPath;
+        if (props.currentPath !== undefined)
+          this.currentPath = props.currentPath;
       } catch (e) {}
     }
     super.connectedCallback();

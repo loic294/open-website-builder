@@ -70,8 +70,9 @@ export class OwbContainer extends LitElement {
     }
     .container {
       position: relative;
-      padding: var(--section-padding-top, 7rem) var(--section-padding-right, 2rem)
-        var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);
+      padding: var(--section-padding-top, 7rem)
+        var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem)
+        var(--section-padding-left, 2rem);
       margin: 0 auto;
     }
     .container.is-normal-width {
@@ -128,7 +129,9 @@ export class OwbContainer extends LitElement {
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
         class="container ${widthClass}"
-        style="${getSectionInlineStyle(settings)}; ${getContainerInlineStyle(settings)}"
+        style="${getSectionInlineStyle(settings)}; ${getContainerInlineStyle(
+          settings,
+        )}"
       >
         <slot></slot>
       </div>
