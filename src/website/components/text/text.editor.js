@@ -117,7 +117,9 @@ class Text extends withVariantConfig(EditorComponent) {
     }
 
     const { from, to } = this.lastSelectionRange || this.editor.state.selection;
-    buildChain(this.editor.chain().focus().setTextSelection({ from, to })).run();
+    buildChain(
+      this.editor.chain().focus().setTextSelection({ from, to }),
+    ).run();
   }
 
   requestAutoGrowGridRowSpan() {
