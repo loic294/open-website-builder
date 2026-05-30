@@ -178,7 +178,9 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
   }
 
   getFilteredIconResults() {
-    const query = String(this.iconSearchQuery || "").trim().toLowerCase();
+    const query = String(this.iconSearchQuery || "")
+      .trim()
+      .toLowerCase();
     const source = query ? SIMPLE_ICON_LIBRARY : FEATURED_ICONS;
     const filtered = query
       ? source.filter(

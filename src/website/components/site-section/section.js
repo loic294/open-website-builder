@@ -122,7 +122,11 @@ export function getContainerInlineStyle(settings = {}) {
   return parts.join("; ");
 }
 
-function buildResponsiveSectionCss(settings, sectionSelector, containerSelector) {
+function buildResponsiveSectionCss(
+  settings,
+  sectionSelector,
+  containerSelector,
+) {
   const overrides = settings.responsiveOverrides;
   if (!overrides || typeof overrides !== "object") return "";
 
@@ -174,8 +178,9 @@ export class OwbSection extends LitElement {
     }
     section .container {
       position: relative;
-      padding: var(--section-padding-top, 7rem) var(--section-padding-right, 2rem)
-        var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);
+      padding: var(--section-padding-top, 7rem)
+        var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem)
+        var(--section-padding-left, 2rem);
       margin: 0 auto;
     }
     section .container.is-normal-width {

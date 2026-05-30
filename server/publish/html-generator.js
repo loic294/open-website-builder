@@ -348,7 +348,9 @@ async function renderEmbed(node, context) {
     { html: node?.html ?? "", settings: node?.settings ?? {} },
     tokenValues,
   );
-  const ssrResult = ssrRender(litHtml`<owb-embed .html=${payload.html} .settings=${payload.settings}></owb-embed>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-embed .html=${payload.html} .settings=${payload.settings}></owb-embed>`,
+  );
   return await collectResult(ssrResult);
 }
 
@@ -358,7 +360,9 @@ async function renderSocialMedia(node, context) {
     { items: node?.items ?? [], settings: node?.settings ?? {} },
     tokenValues,
   );
-  const ssrResult = ssrRender(litHtml`<owb-social-media .items=${payload.items} .settings=${payload.settings}></owb-social-media>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-social-media .items=${payload.items} .settings=${payload.settings}></owb-social-media>`,
+  );
   return await collectResult(ssrResult);
 }
 
@@ -368,7 +372,9 @@ async function renderGallery(node, context) {
     { images: node?.images ?? [], settings: node?.settings ?? {} },
     tokenValues,
   );
-  const ssrResult = ssrRender(litHtml`<owb-gallery .images=${payload.images} .settings=${payload.settings}></owb-gallery>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-gallery .images=${payload.images} .settings=${payload.settings}></owb-gallery>`,
+  );
   return await collectResult(ssrResult);
 }
 
@@ -378,7 +384,9 @@ async function renderSlider(node, context) {
     { images: node?.images ?? [], settings: node?.settings ?? {} },
     tokenValues,
   );
-  const ssrResult = ssrRender(litHtml`<owb-slider .images=${payload.images} .settings=${payload.settings}></owb-slider>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-slider .images=${payload.images} .settings=${payload.settings}></owb-slider>`,
+  );
   return await collectResult(ssrResult);
 }
 
@@ -389,7 +397,9 @@ async function renderNavbar(node, context) {
     { links: node?.links ?? [], settings: node?.settings ?? {} },
     tokenValues,
   );
-  const ssrResult = ssrRender(litHtml`<owb-navbar .links=${payload.links} .settings=${payload.settings} .currentPath=${currentPath}></owb-navbar>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-navbar .links=${payload.links} .settings=${payload.settings} .currentPath=${currentPath}></owb-navbar>`,
+  );
   return await collectResult(ssrResult);
 }
 
@@ -483,7 +493,9 @@ async function renderSection(node, context) {
   }
 
   const childrenHtml = renderedChildren.join("\n");
-  const ssrResult = ssrRender(litHtml`<owb-section .settings=${settings}></owb-section>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-section .settings=${settings}></owb-section>`,
+  );
   const sectionHtml = await collectResult(ssrResult);
   const sectionInsert = sectionHtml.lastIndexOf("</owb-section>");
   return sectionInsert >= 0
@@ -513,11 +525,15 @@ async function renderContainer(node, context) {
   }
 
   const childrenHtml = renderedChildren.join("\n");
-  const ssrResult = ssrRender(litHtml`<owb-container .settings=${settings}></owb-container>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-container .settings=${settings}></owb-container>`,
+  );
   const containerHtml = await collectResult(ssrResult);
   const containerInsert = containerHtml.lastIndexOf("</owb-container>");
   return containerInsert >= 0
-    ? containerHtml.slice(0, containerInsert) + childrenHtml + "</owb-container>"
+    ? containerHtml.slice(0, containerInsert) +
+        childrenHtml +
+        "</owb-container>"
     : containerHtml + childrenHtml;
 }
 
@@ -597,11 +613,15 @@ async function renderCollection(node, context) {
   }
 
   const childrenHtml = renderedChildren.join("\n");
-  const ssrResult = ssrRender(litHtml`<owb-container .settings=${settings}></owb-container>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-container .settings=${settings}></owb-container>`,
+  );
   const containerHtml = await collectResult(ssrResult);
   const containerInsert = containerHtml.lastIndexOf("</owb-container>");
   return containerInsert >= 0
-    ? containerHtml.slice(0, containerInsert) + childrenHtml + "</owb-container>"
+    ? containerHtml.slice(0, containerInsert) +
+        childrenHtml +
+        "</owb-container>"
     : containerHtml + childrenHtml;
 }
 
@@ -627,7 +647,9 @@ async function renderForm(node, context) {
   }
 
   const childrenHtml = renderedChildren.join("\n");
-  const ssrResult = ssrRender(litHtml`<owb-form .settings=${settings}></owb-form>`);
+  const ssrResult = ssrRender(
+    litHtml`<owb-form .settings=${settings}></owb-form>`,
+  );
   const formHtml = await collectResult(ssrResult);
   const formInsert = formHtml.lastIndexOf("</owb-form>");
   return formInsert >= 0
