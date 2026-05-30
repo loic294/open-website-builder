@@ -43,6 +43,18 @@ export class OwbText extends LitElement {
     this.pageConfig = null;
   }
 
+  connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        if (props.content !== undefined) this.content = props.content;
+        if (props.settings !== undefined) this.settings = props.settings;
+      } catch (e) {}
+    }
+    super.connectedCallback();
+  }
+
   updated(changedProperties) {
     super.updated(changedProperties);
     OwbText.editorPlugin?.onUpdated?.(this, changedProperties);

@@ -62,6 +62,17 @@ export class OwbForm extends LitElement {
     this._submitted = false;
   }
 
+  connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        if (props.settings !== undefined) this.settings = props.settings;
+      } catch (e) {}
+    }
+    super.connectedCallback();
+  }
+
   updated(changedProperties) {
     super.updated(changedProperties);
     OwbForm.editorPlugin?.onUpdated?.(this, changedProperties);

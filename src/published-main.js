@@ -7,6 +7,10 @@
  * Only import *.js component files here — never *.editor.js sidecars.
  */
 
+// Must be imported first to enable proper DSD hydration (prevents Lit from
+// re-rendering over existing SSR shadow DOM content, avoiding duplicate output).
+import "@lit-labs/ssr-client/lit-element-hydrate-support.js";
+
 import { OwbButton } from "./website/components/button/button.js";
 import { OwbText } from "./website/components/text/text.js";
 import { OwbImage } from "./website/components/image/image.js";

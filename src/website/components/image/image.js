@@ -45,6 +45,14 @@ export class OwbImage extends LitElement {
   }
 
   connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        if (props.url !== undefined) this.url = props.url;
+        if (props.settings !== undefined) this.settings = props.settings;
+      } catch (e) {}
+    }
     super.connectedCallback();
     window.addEventListener("keydown", this.onWindowKeydown);
   }

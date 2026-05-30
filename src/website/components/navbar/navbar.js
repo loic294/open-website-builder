@@ -27,6 +27,15 @@ export class OwbNavbar extends LitElement {
   }
 
   connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        if (props.links !== undefined) this.links = props.links;
+        if (props.settings !== undefined) this.settings = props.settings;
+        if (props.currentPath !== undefined) this.currentPath = props.currentPath;
+      } catch (e) {}
+    }
     super.connectedCallback();
     if (typeof window !== "undefined") {
       window.addEventListener("resize", this._onResize);

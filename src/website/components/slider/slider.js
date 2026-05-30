@@ -33,6 +33,14 @@ export class OwbSlider extends LitElement {
   }
 
   connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        if (props.images !== undefined) this.images = props.images;
+        if (props.settings !== undefined) this.settings = props.settings;
+      } catch (e) {}
+    }
     super.connectedCallback();
     window.addEventListener("keydown", this._onKeydown);
   }

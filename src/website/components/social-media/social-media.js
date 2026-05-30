@@ -82,6 +82,18 @@ export class OwbSocialMedia extends LitElement {
     this.pageConfig = null;
   }
 
+  connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        if (props.items !== undefined) this.items = props.items;
+        if (props.settings !== undefined) this.settings = props.settings;
+      } catch (e) {}
+    }
+    super.connectedCallback();
+  }
+
   updated(changedProperties) {
     super.updated(changedProperties);
     OwbSocialMedia.editorPlugin?.onUpdated?.(this, changedProperties);

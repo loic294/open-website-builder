@@ -307,6 +307,7 @@ async function renderText(node, context) {
     litHtml`<owb-text
       .content=${payload.content}
       .settings=${payload.settings}
+      data-props=${JSON.stringify({ content: payload.content, settings: payload.settings })}
     ></owb-text>`,
   );
   return await collectResult(ssrResult);
@@ -322,6 +323,7 @@ async function renderImage(node, context) {
     litHtml`<owb-image
       .url=${payload.url}
       .settings=${payload.settings}
+      data-props=${JSON.stringify({ url: payload.url, settings: payload.settings })}
     ></owb-image>`,
   );
   return await collectResult(ssrResult);
@@ -337,6 +339,7 @@ async function renderButton(node, context) {
     litHtml`<owb-button
       .content=${payload.content}
       .settings=${payload.settings}
+      data-props=${JSON.stringify({ content: payload.content, settings: payload.settings })}
     ></owb-button>`,
   );
   return await collectResult(ssrResult);
@@ -349,7 +352,7 @@ async function renderEmbed(node, context) {
     tokenValues,
   );
   const ssrResult = ssrRender(
-    litHtml`<owb-embed .html=${payload.html} .settings=${payload.settings}></owb-embed>`,
+    litHtml`<owb-embed .html=${payload.html} .settings=${payload.settings} data-props=${JSON.stringify({ html: payload.html, settings: payload.settings })}></owb-embed>`,
   );
   return await collectResult(ssrResult);
 }
@@ -361,7 +364,7 @@ async function renderSocialMedia(node, context) {
     tokenValues,
   );
   const ssrResult = ssrRender(
-    litHtml`<owb-social-media .items=${payload.items} .settings=${payload.settings}></owb-social-media>`,
+    litHtml`<owb-social-media .items=${payload.items} .settings=${payload.settings} data-props=${JSON.stringify({ items: payload.items, settings: payload.settings })}></owb-social-media>`,
   );
   return await collectResult(ssrResult);
 }
@@ -373,7 +376,7 @@ async function renderGallery(node, context) {
     tokenValues,
   );
   const ssrResult = ssrRender(
-    litHtml`<owb-gallery .images=${payload.images} .settings=${payload.settings}></owb-gallery>`,
+    litHtml`<owb-gallery .images=${payload.images} .settings=${payload.settings} data-props=${JSON.stringify({ images: payload.images, settings: payload.settings })}></owb-gallery>`,
   );
   return await collectResult(ssrResult);
 }
@@ -385,7 +388,7 @@ async function renderSlider(node, context) {
     tokenValues,
   );
   const ssrResult = ssrRender(
-    litHtml`<owb-slider .images=${payload.images} .settings=${payload.settings}></owb-slider>`,
+    litHtml`<owb-slider .images=${payload.images} .settings=${payload.settings} data-props=${JSON.stringify({ images: payload.images, settings: payload.settings })}></owb-slider>`,
   );
   return await collectResult(ssrResult);
 }
@@ -398,7 +401,7 @@ async function renderNavbar(node, context) {
     tokenValues,
   );
   const ssrResult = ssrRender(
-    litHtml`<owb-navbar .links=${payload.links} .settings=${payload.settings} .currentPath=${currentPath}></owb-navbar>`,
+    litHtml`<owb-navbar .links=${payload.links} .settings=${payload.settings} .currentPath=${currentPath} data-props=${JSON.stringify({ links: payload.links, settings: payload.settings, currentPath })}></owb-navbar>`,
   );
   return await collectResult(ssrResult);
 }
@@ -494,7 +497,7 @@ async function renderSection(node, context) {
 
   const childrenHtml = renderedChildren.join("\n");
   const ssrResult = ssrRender(
-    litHtml`<owb-section .settings=${settings}></owb-section>`,
+    litHtml`<owb-section .settings=${settings} data-props=${JSON.stringify({ settings })}></owb-section>`,
   );
   const sectionHtml = await collectResult(ssrResult);
   const sectionInsert = sectionHtml.lastIndexOf("</owb-section>");
@@ -526,7 +529,7 @@ async function renderContainer(node, context) {
 
   const childrenHtml = renderedChildren.join("\n");
   const ssrResult = ssrRender(
-    litHtml`<owb-container .settings=${settings}></owb-container>`,
+    litHtml`<owb-container .settings=${settings} data-props=${JSON.stringify({ settings })}></owb-container>`,
   );
   const containerHtml = await collectResult(ssrResult);
   const containerInsert = containerHtml.lastIndexOf("</owb-container>");
@@ -614,7 +617,7 @@ async function renderCollection(node, context) {
 
   const childrenHtml = renderedChildren.join("\n");
   const ssrResult = ssrRender(
-    litHtml`<owb-container .settings=${settings}></owb-container>`,
+    litHtml`<owb-container .settings=${settings} data-props=${JSON.stringify({ settings })}></owb-container>`,
   );
   const containerHtml = await collectResult(ssrResult);
   const containerInsert = containerHtml.lastIndexOf("</owb-container>");
@@ -648,7 +651,7 @@ async function renderForm(node, context) {
 
   const childrenHtml = renderedChildren.join("\n");
   const ssrResult = ssrRender(
-    litHtml`<owb-form .settings=${settings}></owb-form>`,
+    litHtml`<owb-form .settings=${settings} data-props=${JSON.stringify({ settings })}></owb-form>`,
   );
   const formHtml = await collectResult(ssrResult);
   const formInsert = formHtml.lastIndexOf("</owb-form>");

@@ -59,6 +59,18 @@ export class OwbEmbed extends LitElement {
     this.pageConfig = null;
   }
 
+  connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        if (props.html !== undefined) this.html = props.html;
+        if (props.settings !== undefined) this.settings = props.settings;
+      } catch (e) {}
+    }
+    super.connectedCallback();
+  }
+
   updated(changedProperties) {
     super.updated(changedProperties);
     OwbEmbed.editorPlugin?.onUpdated?.(this, changedProperties);

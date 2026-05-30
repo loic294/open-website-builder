@@ -95,6 +95,17 @@ export class OwbContainer extends LitElement {
     this.pageConfig = null;
   }
 
+  connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        if (props.settings !== undefined) this.settings = props.settings;
+      } catch (e) {}
+    }
+    super.connectedCallback();
+  }
+
   updated(changedProperties) {
     super.updated(changedProperties);
     OwbContainer.editorPlugin?.onUpdated?.(this, changedProperties);
