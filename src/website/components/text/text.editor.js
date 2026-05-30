@@ -30,6 +30,7 @@ import {
 } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
+import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
 import styles from "./styles.css?inline";
 import { OwbText } from "./text.js";
@@ -623,179 +624,210 @@ class Text extends withVariantConfig(EditorComponent) {
     super.disconnectedCallback();
   }
 
+  // Spacing and custom CSS are rendered in this component's own template
+  // (matching owb-text's approach) rather than via imperative injection.
+  applySpacingToRenderRoot() {}
+  applyCustomCssToRenderRoot() {}
+
   render() {
-    return html`<div class="text-block">
-      <div data-editor data-editor-block></div>
-      <div class="menu menu-${this.node.id}">
-        <editor-btn
-          style="light icon"
-          title="Bold"
-          @click="${() => this.editor.commands.toggleBold()}"
-        >
-          ${createElement(Bold)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Italic"
-          @click="${() => this.editor.commands.toggleItalic()}"
-        >
-          ${createElement(Italic)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Underline"
-          @click="${() => this.editor.commands.toggleUnderline()}"
-        >
-          ${createElement(UnderlineIcon)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Link"
-          @click="${() => this.toggleLink()}"
-        >
-          ${createElement(Link2)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Text style"
-          @click="${() => this.toggleTextStyle()}"
-        >
-          ${createElement(TypeOutline)}
-        </editor-btn>
-        <select
-          class="toolbar-select"
-          @change="${(event) => this.setFontSize(event)}"
-          .value="${this.getCurrentFontSize()}"
-        >
-          <option value="">Font size</option>
-          <option value="12px">12</option>
-          <option value="14px">14</option>
-          <option value="16px">16</option>
-          <option value="18px">18</option>
-          <option value="20px">20</option>
-          <option value="24px">24</option>
-          <option value="32px">32</option>
-        </select>
-        <select
-          class="toolbar-select heading-style-select"
-          @change="${(event) => this.setHeadingStyle(event)}"
-          .value="${this.getCurrentHeadingStyle()}"
-        >
-          <option value="paragraph">Paragraph</option>
-          <option value="1">H1</option>
-          <option value="2">H2</option>
-          <option value="3">H3</option>
-          <option value="4">H4</option>
-          <option value="5">H5</option>
-          <option value="6">H6</option>
-        </select>
-        <editor-btn
-          style="light icon"
-          title="Strike"
-          @click="${() => this.editor.chain().focus().toggleStrike().run()}"
-        >
-          ${createElement(Strikethrough)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Bullet list"
-          @click="${() => this.editor.chain().focus().toggleBulletList().run()}"
-        >
-          ${createElement(List)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Blockquote"
-          @click="${() => this.editor.chain().focus().toggleBlockquote().run()}"
-        >
-          ${createElement(Quote)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Code block"
-          @click="${() => this.editor.chain().focus().toggleCodeBlock().run()}"
-        >
-          ${createElement(Code2)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Heading"
-          @click="${() =>
-            this.editor.chain().focus().toggleHeading({ level: 2 }).run()}"
-        >
-          ${createElement(Heading2)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="List item"
-          @click="${() =>
-            this.editor.chain().focus().splitListItem("listItem").run()}"
-        >
-          ${createElement(ListPlus)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Ordered list"
-          @click="${() =>
-            this.editor.chain().focus().toggleOrderedList().run()}"
-        >
-          ${createElement(ListOrdered)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Paragraph"
-          @click="${() => this.editor.chain().focus().setParagraph().run()}"
-        >
-          ${createElement(Pilcrow)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Align left"
-          @click="${() =>
-            this.editor.chain().focus().setTextAlign("left").run()}"
-        >
-          ${createElement(AlignLeft)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Align center"
-          @click="${() =>
-            this.editor.chain().focus().setTextAlign("center").run()}"
-        >
-          ${createElement(AlignCenter)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Align right"
-          @click="${() =>
-            this.editor.chain().focus().setTextAlign("right").run()}"
-        >
-          ${createElement(AlignRight)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Justify"
-          @click="${() =>
-            this.editor.chain().focus().setTextAlign("justify").run()}"
-        >
-          ${createElement(AlignJustify)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Undo"
-          @click="${() => this.editor.chain().focus().undo().run()}"
-        >
-          ${createElement(Undo2)}
-        </editor-btn>
-        <editor-btn
-          style="light icon"
-          title="Redo"
-          @click="${() => this.editor.chain().focus().redo().run()}"
-        >
-          ${createElement(Redo2)}
-        </editor-btn>
+    const spacingCss = getSpacingStyleBlock({
+      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
+      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
+      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
+      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
+      settingSpacingMarginTop: this.settingSpacingMarginTop,
+      settingSpacingMarginRight: this.settingSpacingMarginRight,
+      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
+      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
+      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
+      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
+      settingSpacingTextColor: this.settingSpacingTextColor,
+      settingSpacingHidden: this.settingSpacingHidden,
+    });
+    const customCss = String(this.settingCustomCss || "").trim();
+    return html`
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
+      ${customCss
+        ? unsafeHTML(`<style data-custom-css>${customCss}</style>`)
+        : null}
+      <div class="text-block">
+        <div data-editor data-editor-block></div>
+        <div class="menu menu-${this.node.id}">
+          <editor-btn
+            style="light icon"
+            title="Bold"
+            @click="${() => this.editor.commands.toggleBold()}"
+          >
+            ${createElement(Bold)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Italic"
+            @click="${() => this.editor.commands.toggleItalic()}"
+          >
+            ${createElement(Italic)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Underline"
+            @click="${() => this.editor.commands.toggleUnderline()}"
+          >
+            ${createElement(UnderlineIcon)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Link"
+            @click="${() => this.toggleLink()}"
+          >
+            ${createElement(Link2)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Text style"
+            @click="${() => this.toggleTextStyle()}"
+          >
+            ${createElement(TypeOutline)}
+          </editor-btn>
+          <select
+            class="toolbar-select"
+            @change="${(event) => this.setFontSize(event)}"
+            .value="${this.getCurrentFontSize()}"
+          >
+            <option value="">Font size</option>
+            <option value="12px">12</option>
+            <option value="14px">14</option>
+            <option value="16px">16</option>
+            <option value="18px">18</option>
+            <option value="20px">20</option>
+            <option value="24px">24</option>
+            <option value="32px">32</option>
+          </select>
+          <select
+            class="toolbar-select heading-style-select"
+            @change="${(event) => this.setHeadingStyle(event)}"
+            .value="${this.getCurrentHeadingStyle()}"
+          >
+            <option value="paragraph">Paragraph</option>
+            <option value="1">H1</option>
+            <option value="2">H2</option>
+            <option value="3">H3</option>
+            <option value="4">H4</option>
+            <option value="5">H5</option>
+            <option value="6">H6</option>
+          </select>
+          <editor-btn
+            style="light icon"
+            title="Strike"
+            @click="${() => this.editor.chain().focus().toggleStrike().run()}"
+          >
+            ${createElement(Strikethrough)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Bullet list"
+            @click="${() =>
+              this.editor.chain().focus().toggleBulletList().run()}"
+          >
+            ${createElement(List)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Blockquote"
+            @click="${() =>
+              this.editor.chain().focus().toggleBlockquote().run()}"
+          >
+            ${createElement(Quote)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Code block"
+            @click="${() =>
+              this.editor.chain().focus().toggleCodeBlock().run()}"
+          >
+            ${createElement(Code2)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Heading"
+            @click="${() =>
+              this.editor.chain().focus().toggleHeading({ level: 2 }).run()}"
+          >
+            ${createElement(Heading2)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="List item"
+            @click="${() =>
+              this.editor.chain().focus().splitListItem("listItem").run()}"
+          >
+            ${createElement(ListPlus)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Ordered list"
+            @click="${() =>
+              this.editor.chain().focus().toggleOrderedList().run()}"
+          >
+            ${createElement(ListOrdered)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Paragraph"
+            @click="${() => this.editor.chain().focus().setParagraph().run()}"
+          >
+            ${createElement(Pilcrow)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Align left"
+            @click="${() =>
+              this.editor.chain().focus().setTextAlign("left").run()}"
+          >
+            ${createElement(AlignLeft)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Align center"
+            @click="${() =>
+              this.editor.chain().focus().setTextAlign("center").run()}"
+          >
+            ${createElement(AlignCenter)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Align right"
+            @click="${() =>
+              this.editor.chain().focus().setTextAlign("right").run()}"
+          >
+            ${createElement(AlignRight)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Justify"
+            @click="${() =>
+              this.editor.chain().focus().setTextAlign("justify").run()}"
+          >
+            ${createElement(AlignJustify)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Undo"
+            @click="${() => this.editor.chain().focus().undo().run()}"
+          >
+            ${createElement(Undo2)}
+          </editor-btn>
+          <editor-btn
+            style="light icon"
+            title="Redo"
+            @click="${() => this.editor.chain().focus().redo().run()}"
+          >
+            ${createElement(Redo2)}
+          </editor-btn>
+        </div>
       </div>
-    </div>`;
+    `;
   }
 }
 

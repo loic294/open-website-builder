@@ -1,10 +1,8 @@
 import { html, unsafeCSS } from "lit";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { Code2, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
-import { OwbEmbed, sanitizeEmbedHtml, defaultEmbedConfig } from "./embed.js";
+import { OwbEmbed, defaultEmbedConfig } from "./embed.js";
 
 export { defaultEmbedConfig };
 
@@ -96,8 +94,26 @@ class SiteEmbed extends withVariantConfig(EditorComponent) {
     this.openEmbedSettings();
   }
 
+  // Spacing and custom CSS are rendered inside owb-embed, not in site-embed.
+  applySpacingToRenderRoot() {}
+  applyCustomCssToRenderRoot() {}
+
   render() {
-    const sanitizedHtml = sanitizeEmbedHtml(this.embedHtml);
+    const settings = {
+      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
+      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
+      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
+      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
+      settingSpacingMarginTop: this.settingSpacingMarginTop,
+      settingSpacingMarginRight: this.settingSpacingMarginRight,
+      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
+      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
+      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
+      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
+      settingSpacingTextColor: this.settingSpacingTextColor,
+      settingSpacingHidden: this.settingSpacingHidden,
+      customCss: this.settingCustomCss,
+    };
     return html`
       <div
         data-editor-block
@@ -106,14 +122,7 @@ class SiteEmbed extends withVariantConfig(EditorComponent) {
           ? "is-settings-open"
           : ""}"
       >
-        ${sanitizedHtml.trim()
-          ? html`<div class="embed-preview">${unsafeHTML(sanitizedHtml)}</div>`
-          : html`
-              <div class="embed-placeholder">
-                ${createElement(Code2)}
-                <span>Add HTML in settings to preview embed content.</span>
-              </div>
-            `}
+        <owb-embed .html=${this.embedHtml} .settings=${settings}></owb-embed>
       </div>
     `;
   }

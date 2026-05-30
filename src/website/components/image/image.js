@@ -87,6 +87,9 @@ export class OwbImage extends LitElement {
   }
 
   renderImageWithAction(url, mode, clickAction, linkUrl, linkTarget) {
+    const isEditorMode = OwbImage.editorPlugin !== null;
+    if (isEditorMode) return renderImageFrame(url, mode);
+
     const normalizedAction =
       clickAction === "link" || clickAction === "lightbox"
         ? clickAction

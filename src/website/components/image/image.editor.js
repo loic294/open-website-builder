@@ -2,7 +2,6 @@ import { LitElement, html, unsafeCSS } from "lit";
 import { Image as ImageIcon, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
-import styles from "./styles.css?inline";
 import { OwbImage, getImageMode } from "./image.js";
 
 OwbImage.editorPlugin = {};
@@ -18,7 +17,7 @@ class SiteImage extends withVariantConfig(EditorComponent) {
     imageLinkTarget: { type: String },
   };
 
-  static styles = [super.styles, unsafeCSS(styles)];
+  static styles = [super.styles];
 
   constructor() {
     super();
@@ -201,27 +200,37 @@ class SiteImage extends withVariantConfig(EditorComponent) {
     this.openImageSettings();
   }
 
+  // Spacing and custom CSS are rendered inside owb-image, not in site-image.
+  applySpacingToRenderRoot() {}
+  applyCustomCssToRenderRoot() {}
+
   render() {
+    const settings = {
+      imageSizeMode: this.imageSizeMode,
+      imageClickAction: this.imageClickAction,
+      imageLinkUrl: this.imageLinkUrl,
+      imageLinkTarget: this.imageLinkTarget,
+      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
+      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
+      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
+      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
+      settingSpacingMarginTop: this.settingSpacingMarginTop,
+      settingSpacingMarginRight: this.settingSpacingMarginRight,
+      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
+      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
+      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
+      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
+      settingSpacingTextColor: this.settingSpacingTextColor,
+      settingSpacingHidden: this.settingSpacingHidden,
+      customCss: this.settingCustomCss,
+    };
     return html`
-      <div
+      <owb-image
         data-editor-block
         @pointerdown=${() => this.openImageSettingsIfNeeded()}
-        class="image-block size-${this.imageSizeMode} ${this
-          .isSettingsEditorOpen
-          ? "is-settings-open"
-          : ""}"
-      >
-        <div class="image-frame size-${this.imageSizeMode}">
-          ${this.imageUrl
-            ? html`<img src=${this.imageUrl} alt="" loading="lazy" />`
-            : html`
-                <div class="image-placeholder">
-                  ${createElement(ImageIcon)}
-                  <span>Add an image URL in settings</span>
-                </div>
-              `}
-        </div>
-      </div>
+        class="${this.isSettingsEditorOpen ? "is-settings-open" : ""}"
+        .settings=${settings}
+      ></owb-image>
     `;
   }
 }
@@ -234,8 +243,6 @@ export const editorRenderImage = (
   renderOptions = {},
 ) => {
   return html`<site-image
-    class=${renderOptions.hostClass || ""}
-    style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
     .pageConfig=${pageConfig}

@@ -501,38 +501,34 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
     this.openSocialSettings();
   }
 
-  renderSocialButton(item) {
-    const icon = this.getSocialIcon(item);
-    const showIcon = this.socialDisplayMode !== "text";
-    const showText = this.socialDisplayMode !== "icon";
-
-    return html`
-      <a
-        class="social-button size-${this.socialButtonSize} theme-${this
-          .socialButtonTheme} variant-${this.socialButtonVariant}"
-        href=${item.link || "#"}
-        target="_blank"
-        rel="noopener noreferrer"
-        style=${`--social-button-radius: ${this.getButtonShapeRadius()};`}
-        @click=${(event) => {
-          if (!item.link) event.preventDefault();
-        }}
-      >
-        ${showIcon
-          ? html`<span class="social-icon"
-              >${this.renderSimpleIcon(
-                icon,
-                "is-button",
-                this.socialIconColorMode,
-              )}</span
-            >`
-          : null}
-        ${showText ? html`<span>${item.name || "Social"}</span>` : null}
-      </a>
-    `;
-  }
+  // Spacing and custom CSS are rendered inside owb-social-media, not in site-social-media.
+  applySpacingToRenderRoot() {}
+  applyCustomCssToRenderRoot() {}
 
   render() {
+    const settings = {
+      socialDisplayMode: this.socialDisplayMode,
+      socialButtonTheme: this.socialButtonTheme,
+      socialButtonVariant: this.socialButtonVariant,
+      socialButtonSize: this.socialButtonSize,
+      socialButtonAlignment: this.socialButtonAlignment,
+      socialButtonShape: this.socialButtonShape,
+      socialButtonRadiusCustom: this.socialButtonRadiusCustom,
+      socialIconColorMode: this.socialIconColorMode,
+      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
+      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
+      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
+      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
+      settingSpacingMarginTop: this.settingSpacingMarginTop,
+      settingSpacingMarginRight: this.settingSpacingMarginRight,
+      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
+      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
+      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
+      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
+      settingSpacingTextColor: this.settingSpacingTextColor,
+      settingSpacingHidden: this.settingSpacingHidden,
+      customCss: this.settingCustomCss,
+    };
     return html`
       <div
         data-editor-block
@@ -541,19 +537,10 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
           ? "is-settings-open"
           : ""}"
       >
-        ${this.socialItems.length > 0
-          ? html`
-              <div
-                class="social-buttons-grid align-${this.socialButtonAlignment}"
-              >
-                ${this.socialItems.map((item) => this.renderSocialButton(item))}
-              </div>
-            `
-          : html`
-              <div class="social-empty">
-                Add social media entries in settings.
-              </div>
-            `}
+        <owb-social-media
+          .items=${this.socialItems}
+          .settings=${settings}
+        ></owb-social-media>
       </div>
     `;
   }

@@ -105,7 +105,6 @@ class SiteNavbar extends withVariantConfig(EditorComponent) {
     _addLinkUrl: { state: true },
     _addLinkPageId: { state: true },
     _addLinkTarget: { state: true },
-    _mobileMenuOpen: { state: true },
   };
 
   static styles = [super.styles, unsafeCSS(styles)];
@@ -122,7 +121,6 @@ class SiteNavbar extends withVariantConfig(EditorComponent) {
     this._addLinkUrl = "";
     this._addLinkPageId = "";
     this._addLinkTarget = "_self";
-    this._mobileMenuOpen = false;
     Object.assign(this, DEFAULT_SETTINGS);
   }
 
@@ -602,58 +600,49 @@ class SiteNavbar extends withVariantConfig(EditorComponent) {
     `;
   }
 
-  // ── Style builders ────────────────────────────────────────────────────────
-
-  _buildNavStyle() {
-    return [
-      this.navbarGap && `--navbar-gap: ${this.navbarGap}`,
-      this.navbarFontFamily && `--navbar-font-family: ${this.navbarFontFamily}`,
-      this.navbarFontSize && `--navbar-font-size: ${this.navbarFontSize}`,
-      this.navbarFontWeight && `--navbar-font-weight: ${this.navbarFontWeight}`,
-      this.navbarColor && `--navbar-color: ${this.navbarColor}`,
-      this.navbarHoverColor && `--navbar-hover-color: ${this.navbarHoverColor}`,
-    ]
-      .filter(Boolean)
-      .join("; ");
-  }
-
-  _buildMobileStyle() {
-    return [
-      this.navbarMobileBackgroundColor &&
-        `--navbar-mobile-bg: ${this.navbarMobileBackgroundColor}`,
-      this.navbarMobileTextColor &&
-        `--navbar-mobile-color: ${this.navbarMobileTextColor}`,
-      this.navbarMobileGap && `--navbar-mobile-gap: ${this.navbarMobileGap}`,
-      this.navbarMobilePadding &&
-        `--navbar-mobile-padding: ${this.navbarMobilePadding}`,
-      this.navbarMobileAlignH &&
-        `--navbar-mobile-align-h: ${this.navbarMobileAlignH}`,
-      this.navbarMobileAlignV &&
-        `--navbar-mobile-justify-v: ${this.navbarMobileAlignV}`,
-      this.navbarMobileFontSize &&
-        `--navbar-mobile-font-size: ${this.navbarMobileFontSize}`,
-      this.navbarMobileFontWeight &&
-        `--navbar-mobile-font-weight: ${this.navbarMobileFontWeight}`,
-    ]
-      .filter(Boolean)
-      .join("; ");
-  }
-
-  _hamburgerIcon() {
-    const icon = String(this.navbarMobileMenuIcon || "hamburger").trim();
-    return icon === "hamburger" || !icon ? "☰" : icon;
-  }
-
   // ── Render ───────────────────────────────────────────────────────────────
 
-  render() {
-    const links = this.navbarLinks;
-    const mobileOn = bool(this.navbarMobileEnabled);
-    const mobileType = this.navbarMobileType || "dropdown";
-    const navStyle = this._buildNavStyle();
-    const mobileStyle = this._buildMobileStyle();
-    const currentPath = this.pageConfig?.url || "";
+  // Spacing and custom CSS are rendered inside owb-navbar, not in site-navbar.
+  applySpacingToRenderRoot() {}
+  applyCustomCssToRenderRoot() {}
 
+  render() {
+    const settings = {
+      navbarFontFamily: this.navbarFontFamily,
+      navbarFontSize: this.navbarFontSize,
+      navbarFontWeight: this.navbarFontWeight,
+      navbarColor: this.navbarColor,
+      navbarGap: this.navbarGap,
+      navbarHoverColor: this.navbarHoverColor,
+      navbarUnderlineOnHover: this.navbarUnderlineOnHover,
+      navbarUnderlineActive: this.navbarUnderlineActive,
+      navbarMobileEnabled: this.navbarMobileEnabled,
+      navbarMobileType: this.navbarMobileType,
+      navbarMobileBackgroundColor: this.navbarMobileBackgroundColor,
+      navbarMobileTextColor: this.navbarMobileTextColor,
+      navbarMobileAlignH: this.navbarMobileAlignH,
+      navbarMobileAlignV: this.navbarMobileAlignV,
+      navbarMobileFontSize: this.navbarMobileFontSize,
+      navbarMobileFontWeight: this.navbarMobileFontWeight,
+      navbarMobileGap: this.navbarMobileGap,
+      navbarMobileBreakpoint: this.navbarMobileBreakpoint,
+      navbarMobilePadding: this.navbarMobilePadding,
+      navbarMobileMenuIcon: this.navbarMobileMenuIcon,
+      navbarMobileMenuIconSize: this.navbarMobileMenuIconSize,
+      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
+      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
+      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
+      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
+      settingSpacingMarginTop: this.settingSpacingMarginTop,
+      settingSpacingMarginRight: this.settingSpacingMarginRight,
+      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
+      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
+      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
+      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
+      settingSpacingTextColor: this.settingSpacingTextColor,
+      settingSpacingHidden: this.settingSpacingHidden,
+      customCss: this.settingCustomCss,
+    };
     return html`
       <div
         data-editor-block
@@ -661,113 +650,12 @@ class SiteNavbar extends withVariantConfig(EditorComponent) {
           if (!this.isSettingsEditorOpen) this._openNavbarSettings();
         }}
         class="navbar-block"
-        style=${mobileOn ? mobileStyle : ""}
       >
-        ${links.length > 0
-          ? html`
-              <nav
-                class="navbar${bool(this.navbarUnderlineOnHover)
-                  ? " has-underline-hover"
-                  : ""}${bool(this.navbarUnderlineActive)
-                  ? " has-underline-active"
-                  : ""}"
-                style=${navStyle}
-              >
-                ${links.map((link) => {
-                  const href = (link.url || link.pageId || "").trim();
-                  const isActive =
-                    href &&
-                    href !== "#" &&
-                    (href === "/"
-                      ? currentPath === "/" || currentPath === ""
-                      : currentPath === href ||
-                        currentPath.startsWith(href + "/"));
-                  return html`
-                    <a
-                      class="navbar-link${isActive ? " is-active" : ""}"
-                      href=${link.url || link.pageId || "#"}
-                      target=${link.target || "_self"}
-                      @click=${(e) => e.preventDefault()}
-                      >${link.label || link.url || link.pageId}</a
-                    >
-                  `;
-                })}
-              </nav>
-            `
-          : html`
-              <div class="navbar-empty">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path
-                    d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-                  />
-                  <path
-                    d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-                  />
-                </svg>
-                <span>Add links in settings.</span>
-              </div>
-            `}
-        ${mobileOn
-          ? html`
-              <button
-                type="button"
-                class="navbar-mobile-toggle"
-                style="display:flex${this.navbarMobileMenuIconSize
-                  ? `;font-size:${this.navbarMobileMenuIconSize}`
-                  : ""}"
-                @click=${(e) => {
-                  e.stopPropagation();
-                  this._mobileMenuOpen = !this._mobileMenuOpen;
-                }}
-              >
-                ${this._hamburgerIcon()}
-              </button>
-              <div
-                class="navbar-mobile-menu ${mobileType === "fullscreen"
-                  ? "is-fullscreen"
-                  : "is-dropdown"}${this._mobileMenuOpen ? " is-open" : ""}"
-                style=${mobileStyle}
-              >
-                ${mobileType === "fullscreen"
-                  ? html`
-                      <button
-                        type="button"
-                        class="navbar-mobile-close"
-                        @click=${(e) => {
-                          e.stopPropagation();
-                          this._mobileMenuOpen = false;
-                        }}
-                      >
-                        ✕
-                      </button>
-                    `
-                  : null}
-                <div class="navbar-mobile-links">
-                  ${links.map(
-                    (link) => html`
-                      <a
-                        class="navbar-mobile-link"
-                        href=${link.url || link.pageId || "#"}
-                        target=${link.target || "_self"}
-                        @click=${(e) => e.preventDefault()}
-                        >${link.label || link.url || link.pageId}</a
-                      >
-                    `,
-                  )}
-                </div>
-              </div>
-            `
-          : null}
+        <owb-navbar
+          .links=${this.navbarLinks}
+          .settings=${settings}
+          .currentPath=${this.pageConfig?.url || ""}
+        ></owb-navbar>
       </div>
       ${this.renderSettingsOverlay()}
     `;

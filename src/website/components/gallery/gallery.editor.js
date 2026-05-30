@@ -1,5 +1,5 @@
 import { html, unsafeCSS } from "lit";
-import { ChevronLeft, ChevronRight, Image, X, createElement } from "lucide";
+
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import styles from "./styles.css?inline";
@@ -27,7 +27,6 @@ class SiteGallery extends withVariantConfig(EditorComponent) {
     galleryColumns: { type: Number },
     galleryFormat: { type: String },
     galleryGap: { type: String },
-    lightboxIndex: { type: Number },
   };
 
   static styles = [super.styles, unsafeCSS(styles)];
@@ -40,18 +39,6 @@ class SiteGallery extends withVariantConfig(EditorComponent) {
     this.galleryColumns = 3;
     this.galleryFormat = "1 / 1";
     this.galleryGap = "8px";
-    this.lightboxIndex = -1;
-    this.onWindowKeydown = this.onWindowKeydown.bind(this);
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.onWindowKeydown);
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener("keydown", this.onWindowKeydown);
-    super.disconnectedCallback();
   }
 
   updated(changedProperties) {
@@ -65,24 +52,6 @@ class SiteGallery extends withVariantConfig(EditorComponent) {
         galleryFormat: "1 / 1",
         galleryGap: "8px",
       });
-    }
-  }
-
-  onWindowKeydown(event) {
-    if (this.lightboxIndex < 0) {
-      return;
-    }
-
-    if (event.key === "Escape") {
-      this.closeLightbox();
-    }
-
-    if (event.key === "ArrowRight") {
-      this.navigateLightbox(1);
-    }
-
-    if (event.key === "ArrowLeft") {
-      this.navigateLightbox(-1);
     }
   }
 
@@ -206,33 +175,29 @@ class SiteGallery extends withVariantConfig(EditorComponent) {
     this.openGallerySettings();
   }
 
-  openLightbox(index) {
-    if (index < 0 || index >= this.galleryImages.length) {
-      return;
-    }
-    this.lightboxIndex = index;
-  }
-
-  closeLightbox() {
-    this.lightboxIndex = -1;
-  }
-
-  navigateLightbox(delta) {
-    if (this.galleryImages.length === 0 || this.lightboxIndex < 0) {
-      return;
-    }
-    const nextIndex =
-      (this.lightboxIndex + delta + this.galleryImages.length) %
-      this.galleryImages.length;
-    this.lightboxIndex = nextIndex;
-  }
+  // Spacing and custom CSS are rendered inside owb-gallery, not in site-gallery.
+  applySpacingToRenderRoot() {}
+  applyCustomCssToRenderRoot() {}
 
   render() {
-    const columns = Math.max(1, Number.parseInt(this.galleryColumns, 10) || 1);
-    const gap = String(this.galleryGap || "8px").trim() || "8px";
-    const activeImage =
-      this.lightboxIndex >= 0 ? this.galleryImages[this.lightboxIndex] : "";
-
+    const settings = {
+      galleryColumns: this.galleryColumns,
+      galleryGap: this.galleryGap,
+      galleryFormat: this.galleryFormat,
+      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
+      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
+      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
+      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
+      settingSpacingMarginTop: this.settingSpacingMarginTop,
+      settingSpacingMarginRight: this.settingSpacingMarginRight,
+      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
+      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
+      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
+      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
+      settingSpacingTextColor: this.settingSpacingTextColor,
+      settingSpacingHidden: this.settingSpacingHidden,
+      customCss: this.settingCustomCss,
+    };
     return html`
       <div
         data-editor-block
@@ -241,72 +206,10 @@ class SiteGallery extends withVariantConfig(EditorComponent) {
           ? "is-settings-open"
           : ""}"
       >
-        ${this.galleryImages.length > 0
-          ? html`
-              <div
-                class="gallery-grid"
-                style=${`--gallery-columns: ${columns}; --gallery-gap: ${gap}; --gallery-ratio: ${this.galleryFormat};`}
-              >
-                ${this.galleryImages.map(
-                  (url, index) => html`
-                    <button
-                      type="button"
-                      class="gallery-thumb"
-                      title="Open image"
-                      @click=${() => this.openLightbox(index)}
-                    >
-                      <img src=${url} alt="" loading="lazy" />
-                    </button>
-                  `,
-                )}
-              </div>
-            `
-          : html`
-              <div class="gallery-empty">
-                ${createElement(Image)}
-                <span>Add image URLs in settings.</span>
-              </div>
-            `}
-        ${this.lightboxIndex >= 0
-          ? html`
-              <div
-                class="gallery-lightbox"
-                @click=${() => this.closeLightbox()}
-              >
-                <button
-                  class="gallery-lightbox-close"
-                  type="button"
-                  @click=${(event) => {
-                    event.stopPropagation();
-                    this.closeLightbox();
-                  }}
-                >
-                  ${createElement(X)}
-                </button>
-                <button
-                  class="gallery-lightbox-nav is-prev"
-                  type="button"
-                  @click=${(event) => {
-                    event.stopPropagation();
-                    this.navigateLightbox(-1);
-                  }}
-                >
-                  ${createElement(ChevronLeft)}
-                </button>
-                <img class="gallery-lightbox-image" src=${activeImage} alt="" />
-                <button
-                  class="gallery-lightbox-nav is-next"
-                  type="button"
-                  @click=${(event) => {
-                    event.stopPropagation();
-                    this.navigateLightbox(1);
-                  }}
-                >
-                  ${createElement(ChevronRight)}
-                </button>
-              </div>
-            `
-          : null}
+        <owb-gallery
+          .images=${this.galleryImages}
+          .settings=${settings}
+        ></owb-gallery>
       </div>
     `;
   }

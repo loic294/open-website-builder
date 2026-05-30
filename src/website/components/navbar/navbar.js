@@ -130,6 +130,7 @@ export class OwbNavbar extends LitElement {
     const navStyle = this._buildNavStyle(settings);
     const mobileStyle = this._buildMobileStyle(settings);
     const spacingCss = getSpacingStyleBlock(settings);
+    const isEditorMode = OwbNavbar.editorPlugin !== null;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/navbar.css" />
@@ -154,6 +155,7 @@ export class OwbNavbar extends LitElement {
                 class="navbar-link${isActive(link) ? " is-active" : ""}"
                 href=${link.url || link.pageId || "#"}
                 target=${link.target || "_self"}
+                @click=${isEditorMode ? (e) => e.preventDefault() : null}
                 >${link.label || link.url || link.pageId}</a
               >
             `,
@@ -197,6 +199,9 @@ export class OwbNavbar extends LitElement {
                         class="navbar-mobile-link"
                         href=${link.url || link.pageId || "#"}
                         target=${link.target || "_self"}
+                        @click=${isEditorMode
+                          ? (e) => e.preventDefault()
+                          : null}
                         >${link.label || link.url || link.pageId}</a
                       >
                     `,

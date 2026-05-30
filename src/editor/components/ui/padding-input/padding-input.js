@@ -68,9 +68,8 @@ export class EditorPaddingInput extends LitElement {
   render() {
     return html`
       <div class="padding-input-grid">
-        ${this.renderField("top", "7rem")} ${this.renderField("right", "2rem")}
-        ${this.renderField("bottom", "6rem")}
-        ${this.renderField("left", "2rem")}
+        ${this.renderField("top", "")} ${this.renderField("right", "")}
+        ${this.renderField("bottom", "")} ${this.renderField("left", "")}
       </div>
     `;
   }

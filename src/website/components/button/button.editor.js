@@ -318,9 +318,15 @@ class SiteButton extends withVariantConfig(EditorComponent) {
     this.openButtonSettings();
   }
 
+  // Spacing and custom CSS are rendered inside owb-button, not in site-button.
+  applySpacingToRenderRoot() {}
+  applyCustomCssToRenderRoot() {}
+
   render() {
     // Delegate all visual rendering to OwbButton. SiteButton only provides the
     // editor chrome (data-editor-block wrapper, settings overlay lifecycle).
+    // Pass spacing and customCss through so owb-button renders them, matching
+    // the published site where owb-button is the outermost component.
     const settings = {
       buttonLink: this.buttonLink,
       buttonSize: this.buttonSize,
@@ -333,6 +339,19 @@ class SiteButton extends withVariantConfig(EditorComponent) {
       buttonPaddingRight: this.buttonPaddingRight,
       buttonPaddingBottom: this.buttonPaddingBottom,
       buttonPaddingLeft: this.buttonPaddingLeft,
+      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
+      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
+      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
+      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
+      settingSpacingMarginTop: this.settingSpacingMarginTop,
+      settingSpacingMarginRight: this.settingSpacingMarginRight,
+      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
+      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
+      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
+      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
+      settingSpacingTextColor: this.settingSpacingTextColor,
+      settingSpacingHidden: this.settingSpacingHidden,
+      customCss: this.settingCustomCss,
     };
 
     return html`
