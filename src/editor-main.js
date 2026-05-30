@@ -1,3 +1,4 @@
+import { EditorComponent } from "./editor/components/layout/editor-component/editor-component.js";
 import "./website/components/button/button.editor.js";
 import "./website/components/text/text.editor.js";
 import "./website/components/image/image.editor.js";
@@ -19,3 +20,10 @@ import "./editor/components/ui/color-picker/color-picker.js";
 import "./editor/components/ui/select/select.js";
 import "./editor/components/ui/settings-collapsable/settings-collapsable.js";
 import "./editor/components/ui/settings-section/settings-section.js";
+
+// Mount the EditorComponent singleton once at body level.
+// All plugin-based components call EditorComponent.openFor(element, options)
+// instead of extending EditorComponent themselves.
+const editorRoot = document.createElement("editor-root");
+document.body.appendChild(editorRoot);
+EditorComponent.instance = editorRoot;

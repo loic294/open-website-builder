@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 import {
@@ -88,6 +88,7 @@ export class OwbContainer extends LitElement {
     settings: { type: Object },
     node: { type: Object },
     pageConfig: { type: Object },
+    isSettingsOpen: { state: true },
   };
 
   constructor() {
@@ -95,6 +96,8 @@ export class OwbContainer extends LitElement {
     this.settings = {};
     this.node = null;
     this.pageConfig = null;
+    this.isSettingsOpen = false;
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
   connectedCallback() {
@@ -106,6 +109,41 @@ export class OwbContainer extends LitElement {
       } catch (e) {}
     }
     super.connectedCallback();
+    if (OwbContainer.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbContainer.editorPlugin.onConnected?.(this);
+    }
+  }
+
+  disconnectedCallback() {
+    if (OwbContainer.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbContainer.editorPlugin.onDisconnected?.(this);
+    }
+    super.disconnectedCallback();
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   updated(changedProperties) {
@@ -125,6 +163,7 @@ export class OwbContainer extends LitElement {
           ? ""
           : "is-normal-width";
     const responsiveCss = buildResponsiveContainerCss(settings);
+    const isEditorMode = OwbContainer.editorPlugin !== null;
 
     return html`
       ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
@@ -133,10 +172,16 @@ export class OwbContainer extends LitElement {
         : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
-        class="container ${widthClass}"
+        class="container ${widthClass}${isEditorMode && this.isSettingsOpen
+          ? " is-settings-open"
+          : ""}"
         style="${getSectionInlineStyle(settings)}; ${getContainerInlineStyle(
           settings,
         )}"
+        data-editor-block=${isEditorMode ? "" : nothing}
+        @pointerdown=${isEditorMode
+          ? () => OwbContainer.editorPlugin?.onPointerDown?.(this)
+          : nothing}
       >
         <slot></slot>
       </div>

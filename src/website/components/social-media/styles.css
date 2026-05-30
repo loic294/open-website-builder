@@ -1,3 +1,7 @@
+:host {
+  position: relative;
+}
+
 .social-block {
   display: grid;
   gap: 8px;

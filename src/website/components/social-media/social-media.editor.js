@@ -2,9 +2,7 @@ import { html, unsafeCSS } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { Globe, Plus, Trash, createElement } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
-import { withVariantConfig } from "../variant-component-base.js";
-import styles from "./styles.css?inline";
-
+import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import {
   OwbSocialMedia,
   defaultSocialMediaConfig,
@@ -14,54 +12,169 @@ import {
   SIMPLE_ICON_LIBRARY,
   FEATURED_ICONS,
 } from "./social-media.js";
-
-OwbSocialMedia.editorPlugin = {};
+import styles from "./styles.css?inline";
+import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 export { defaultSocialMediaConfig };
 
-class SiteSocialMedia extends withVariantConfig(EditorComponent) {
-  static properties = {
-    node: { type: Object },
-    pageConfig: { type: Object },
-    socialItems: { type: Array },
-    socialDisplayMode: { type: String },
-    socialButtonTheme: { type: String },
-    socialButtonVariant: { type: String },
-    socialButtonSize: { type: String },
-    socialButtonAlignment: { type: String },
-    socialButtonShape: { type: String },
-    socialButtonRadiusCustom: { type: String },
-    socialIconColorMode: { type: String },
-    activeIconPickerItemId: { type: String },
-    iconSearchQuery: { type: String },
-  };
+OwbSocialMedia.styles = [unsafeCSS(blocksStyles), unsafeCSS(styles)];
 
-  static styles = [super.styles, unsafeCSS(styles)];
+// ---------------------------------------------------------------------------
+// Helpers: update items in the content tree
+// ---------------------------------------------------------------------------
+function updateItemsInTree(nodes, targetNodeId, nextItems) {
+  return nodes.map((currentNode) => {
+    if (
+      currentNode?.id === targetNodeId &&
+      currentNode?.type === "social-media"
+    ) {
+      return { ...currentNode, items: nextItems };
+    }
+    if (Array.isArray(currentNode?.content)) {
+      return {
+        ...currentNode,
+        content: updateItemsInTree(
+          currentNode.content,
+          targetNodeId,
+          nextItems,
+        ),
+      };
+    }
+    return currentNode;
+  });
+}
 
-  constructor() {
-    super();
-    this.node = null;
-    this.pageConfig = null;
-    this.socialItems = [];
-    this.socialDisplayMode = "icon-text";
-    this.socialButtonTheme = "primary";
-    this.socialButtonVariant = "filled";
-    this.socialButtonSize = "medium";
-    this.socialButtonAlignment = "left";
-    this.socialButtonShape = "rounded";
-    this.socialButtonRadiusCustom = "12px";
-    this.socialIconColorMode = "brand";
-    this.activeIconPickerItemId = "";
-    this.iconSearchQuery = "";
+function commitItems(element, nextItems) {
+  element.items = nextItems;
+  if (!element.pageConfig || !element.node?.id) return;
+  const nextContent = updateItemsInTree(
+    Array.isArray(element.pageConfig.content) ? element.pageConfig.content : [],
+    element.node.id,
+    nextItems,
+  );
+  element.node = { ...element.node, items: nextItems };
+  const nextPageConfig = { ...element.pageConfig, content: nextContent };
+  element.pageConfig = nextPageConfig;
+  element.dispatchPageConfigUpdated(nextPageConfig);
+  // Refresh the settings overlay
+  const editor = EditorComponent.instance;
+  if (editor && EditorComponent.activeSettingsOwner === element) {
+    editor.updateSettingsState({});
   }
+}
 
-  updated(changedProperties) {
-    if (changedProperties.has("node")) {
-      this.socialItems = Array.isArray(this.node?.items)
-        ? this.node.items.map((item) => ({ ...item }))
-        : [];
+function getTextInputEventValue(event) {
+  if (typeof event?.detail?.value === "string") return event.detail.value;
+  if (typeof event?.target?.value === "string") return event.target.value;
+  return "";
+}
 
-      this.syncSettingsStateFromNode({
+function renderSimpleIcon(icon, sizeClass = "", colorMode = "brand") {
+  if (!icon) {
+    return html`<span class="social-fallback-icon ${sizeClass}"
+      >${createElement(Globe)}</span
+    >`;
+  }
+  const useTextColor = colorMode === "text";
+  return html`<span
+    class="simple-icon ${sizeClass} ${useTextColor ? "use-text-color" : ""}"
+    style=${`--simple-icon-color: #${icon.hex || "777777"};`}
+    >${unsafeHTML(icon.svg)}</span
+  >`;
+}
+
+function getFilteredIconResults(iconSearchQuery) {
+  const query = String(iconSearchQuery || "")
+    .trim()
+    .toLowerCase();
+  const source = query ? SIMPLE_ICON_LIBRARY : FEATURED_ICONS;
+  const filtered = query
+    ? source.filter(
+        (icon) =>
+          icon.title.toLowerCase().includes(query) ||
+          icon.slug.toLowerCase().includes(query),
+      )
+    : source;
+  return filtered.slice(0, 300);
+}
+
+function renderIconPicker(item, element) {
+  const results = getFilteredIconResults(element._iconSearchQuery);
+  const currentSlug = normalizeIconSlug(item?.icon);
+  const editor = EditorComponent.instance;
+
+  return html`
+    <div
+      class="social-icon-picker-panel"
+      @click=${(event) => event.stopPropagation()}
+    >
+      <div class="social-icon-picker-search-row">
+        <editor-text-input
+          label="Search icons"
+          placeholder="github, linkedin, youtube..."
+          .value=${element._iconSearchQuery}
+          @input=${(event) => {
+            element._iconSearchQuery = getTextInputEventValue(event);
+            editor?.updateSettingsState({});
+          }}
+          @change=${(event) => {
+            element._iconSearchQuery = getTextInputEventValue(event);
+            editor?.updateSettingsState({});
+          }}
+        ></editor-text-input>
+      </div>
+      <div
+        class="social-icon-picker-grid"
+        role="listbox"
+        aria-label="Platform icons"
+      >
+        ${results.map((icon) => {
+          const isActive = currentSlug === icon.slug;
+          return html`
+            <button
+              type="button"
+              class="social-icon-option ${isActive ? "is-active" : ""}"
+              title=${icon.title}
+              aria-label=${icon.title}
+              @click=${() => {
+                const nextItems = element.items.map((i) =>
+                  i.id === item.id ? { ...i, icon: icon.slug } : i,
+                );
+                commitItems(element, nextItems);
+                element._activeIconPickerItemId = "";
+                element._iconSearchQuery = "";
+                editor?.updateSettingsState({});
+              }}
+            >
+              ${renderSimpleIcon(icon, "is-small")}
+            </button>
+          `;
+        })}
+      </div>
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Editor plugin
+// ---------------------------------------------------------------------------
+installEditorPlugin(OwbSocialMedia, {
+  onUpdated(element, changedProperties) {
+    if (!changedProperties.has("node")) return;
+    element.items = Array.isArray(element.node?.items)
+      ? element.node.items.map((item) => ({ ...item }))
+      : [];
+    element.settings = element.node?.settings ?? {};
+  },
+
+  onPointerDown(element) {
+    if (EditorComponent.activeSettingsOwner === element) return;
+    // Initialize transient UI state
+    element._activeIconPickerItemId = element._activeIconPickerItemId ?? "";
+    element._iconSearchQuery = element._iconSearchQuery ?? "";
+
+    EditorComponent.openFor(element, {
+      defaultState: {
         socialDisplayMode: "icon-text",
         socialButtonTheme: "primary",
         socialButtonVariant: "filled",
@@ -70,237 +183,37 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
         socialButtonShape: "rounded",
         socialButtonRadiusCustom: "12px",
         socialIconColorMode: "brand",
-      });
-    }
-  }
-
-  refreshSettingsOverlay() {
-    if (this.isSettingsEditorOpen) {
-      this.renderSettingsOverlay();
-    }
-  }
-
-  updateNodeItems(nodes, targetNodeId, nextItems) {
-    return nodes.map((currentNode) => {
-      if (
-        currentNode?.id === targetNodeId &&
-        currentNode?.type === "social-media"
-      ) {
-        return { ...currentNode, items: nextItems };
-      }
-
-      if (Array.isArray(currentNode?.content)) {
-        return {
-          ...currentNode,
-          content: this.updateNodeItems(
-            currentNode.content,
-            targetNodeId,
-            nextItems,
-          ),
-        };
-      }
-
-      return currentNode;
-    });
-  }
-
-  commitItems(nextItems) {
-    this.socialItems = nextItems;
-
-    if (!this.pageConfig || !this.node?.id) {
-      return;
-    }
-
-    const nextPageConfig = {
-      ...this.pageConfig,
-      content: this.updateNodeItems(
-        Array.isArray(this.pageConfig.content) ? this.pageConfig.content : [],
-        this.node.id,
-        nextItems,
-      ),
-    };
-
-    this.node = { ...this.node, items: nextItems };
-    this.pageConfig = nextPageConfig;
-    this.dispatchPageConfigUpdated(nextPageConfig);
-  }
-
-  addSocialItem() {
-    const nextItem = {
-      id: `social-item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      name: "Social",
-      link: "",
-      icon: "github",
-    };
-
-    const nextItems = [...this.socialItems, nextItem];
-    this.activeIconPickerItemId = nextItem.id;
-    this.commitItems(nextItems);
-    this.refreshSettingsOverlay();
-  }
-
-  updateSocialItem(itemId, patch) {
-    const nextItems = this.socialItems.map((item) => {
-      if (item.id !== itemId) return item;
-      return { ...item, ...patch };
-    });
-    this.commitItems(nextItems);
-  }
-
-  removeSocialItem(itemId) {
-    if (this.activeIconPickerItemId === itemId) {
-      this.activeIconPickerItemId = "";
-    }
-    this.commitItems(this.socialItems.filter((item) => item.id !== itemId));
-    this.refreshSettingsOverlay();
-  }
-
-  toggleIconPicker(itemId) {
-    if (this.activeIconPickerItemId !== itemId) {
-      this.iconSearchQuery = "";
-    }
-    this.activeIconPickerItemId =
-      this.activeIconPickerItemId === itemId ? "" : itemId;
-    this.refreshSettingsOverlay();
-  }
-
-  selectIcon(itemId, iconSlug) {
-    this.updateSocialItem(itemId, { icon: iconSlug });
-    this.activeIconPickerItemId = "";
-    this.iconSearchQuery = "";
-    this.refreshSettingsOverlay();
-  }
-
-  getSocialIcon(item) {
-    const iconSlug = normalizeIconSlug(item?.icon);
-    if (!iconSlug) return null;
-    return SIMPLE_ICON_MAP.get(iconSlug) || null;
-  }
-
-  getFilteredIconResults() {
-    const query = String(this.iconSearchQuery || "")
-      .trim()
-      .toLowerCase();
-    const source = query ? SIMPLE_ICON_LIBRARY : FEATURED_ICONS;
-    const filtered = query
-      ? source.filter(
-          (icon) =>
-            icon.title.toLowerCase().includes(query) ||
-            icon.slug.toLowerCase().includes(query),
-        )
-      : source;
-    return filtered.slice(0, 300);
-  }
-
-  getTextInputEventValue(event) {
-    if (typeof event?.detail?.value === "string") return event.detail.value;
-    if (typeof event?.target?.value === "string") return event.target.value;
-    return "";
-  }
-
-  renderSimpleIcon(icon, sizeClass = "", colorMode = "brand") {
-    if (!icon) {
-      return html`<span class="social-fallback-icon ${sizeClass}"
-        >${createElement(Globe)}</span
-      >`;
-    }
-
-    const useTextColor = colorMode === "text";
-    return html`<span
-      class="simple-icon ${sizeClass} ${useTextColor ? "use-text-color" : ""}"
-      style=${`--simple-icon-color: #${icon.hex || "777777"};`}
-      >${unsafeHTML(icon.svg)}</span
-    >`;
-  }
-
-  renderIconPicker(item) {
-    const results = this.getFilteredIconResults();
-    const currentSlug = normalizeIconSlug(item?.icon);
-
-    return html`
-      <div
-        class="social-icon-picker-panel"
-        @click=${(event) => event.stopPropagation()}
-      >
-        <div class="social-icon-picker-search-row">
-          <editor-text-input
-            label="Search icons"
-            placeholder="github, linkedin, youtube..."
-            .value=${this.iconSearchQuery}
-            @input=${(event) => {
-              this.iconSearchQuery = this.getTextInputEventValue(event);
-              this.refreshSettingsOverlay();
-            }}
-            @change=${(event) => {
-              this.iconSearchQuery = this.getTextInputEventValue(event);
-              this.refreshSettingsOverlay();
-            }}
-          ></editor-text-input>
-        </div>
-        <div
-          class="social-icon-picker-grid"
-          role="listbox"
-          aria-label="Platform icons"
-        >
-          ${results.map((icon) => {
-            const isActive = currentSlug === icon.slug;
-            return html`
-              <button
-                type="button"
-                class="social-icon-option ${isActive ? "is-active" : ""}"
-                title=${icon.title}
-                aria-label=${icon.title}
-                @click=${() => this.selectIcon(item.id, icon.slug)}
-              >
-                ${this.renderSimpleIcon(icon, "is-small")}
-              </button>
-            `;
-          })}
-        </div>
-      </div>
-    `;
-  }
-
-  getButtonShapeRadius() {
-    return getSocialButtonShapeRadius(
-      this.socialButtonShape,
-      this.socialButtonRadiusCustom,
-    );
-  }
-
-  renderOverlayScopedStyles() {
-    return html`<style>
-      ${styles}
-    </style>`;
-  }
-
-  openSocialSettings() {
-    this.syncSettingsStateFromNode({
-      socialDisplayMode: "icon-text",
-      socialButtonTheme: "primary",
-      socialButtonVariant: "filled",
-      socialButtonSize: "medium",
-      socialButtonAlignment: "left",
-      socialButtonShape: "rounded",
-      socialButtonRadiusCustom: "12px",
-      socialIconColorMode: "brand",
-    });
-
-    this.openSettingsEditor({
+      },
       tabs: [
         { id: "items", label: "Items" },
         { id: "buttons", label: "Buttons" },
       ],
       content: (tab) => {
+        const editor = EditorComponent.instance;
+
         if (tab === "items") {
           return html`
-            ${this.renderOverlayScopedStyles()}
+            <style>
+              ${styles}
+            </style>
             <settings-section title="Platforms">
-              <editor-btn style="light" @click=${() => this.addSocialItem()}
+              <editor-btn
+                style="light"
+                @click=${() => {
+                  const nextItem = {
+                    id: `social-item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                    name: "Social",
+                    link: "",
+                    icon: "github",
+                  };
+                  element._activeIconPickerItemId = nextItem.id;
+                  element._iconSearchQuery = "";
+                  commitItems(element, [...element.items, nextItem]);
+                }}
                 >${createElement(Plus)} Add platform</editor-btn
               >
               <div class="social-settings-list">
-                ${this.socialItems.map(
+                ${element.items.map(
                   (item, index) => html`
                     <div class="social-settings-item">
                       <div class="social-settings-item-header">
@@ -311,10 +224,24 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
                           type="button"
                           class="social-icon-picker-trigger"
                           title="Choose icon"
-                          @click=${() => this.toggleIconPicker(item.id)}
+                          @click=${() => {
+                            if (element._activeIconPickerItemId !== item.id) {
+                              element._iconSearchQuery = "";
+                            }
+                            element._activeIconPickerItemId =
+                              element._activeIconPickerItemId === item.id
+                                ? ""
+                                : item.id;
+                            editor?.updateSettingsState({});
+                          }}
                         >
-                          ${this.renderSimpleIcon(
-                            this.getSocialIcon(item),
+                          ${renderSimpleIcon(
+                            (() => {
+                              const slug = normalizeIconSlug(item?.icon);
+                              return slug
+                                ? SIMPLE_ICON_MAP.get(slug) || null
+                                : null;
+                            })(),
                             "is-medium",
                           )}
                         </button>
@@ -322,33 +249,62 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
                           label="Name"
                           placeholder="GitHub"
                           .value=${item.name || ""}
-                          @input=${(event) =>
-                            this.updateSocialItem(item.id, {
-                              name: this.getTextInputEventValue(event),
-                            })}
-                          @change=${(event) =>
-                            this.updateSocialItem(item.id, {
-                              name: this.getTextInputEventValue(event),
-                            })}
+                          @input=${(event) => {
+                            const nextItems = element.items.map((i) =>
+                              i.id === item.id
+                                ? {
+                                    ...i,
+                                    name: getTextInputEventValue(event),
+                                  }
+                                : i,
+                            );
+                            commitItems(element, nextItems);
+                          }}
+                          @change=${(event) => {
+                            const nextItems = element.items.map((i) =>
+                              i.id === item.id
+                                ? {
+                                    ...i,
+                                    name: getTextInputEventValue(event),
+                                  }
+                                : i,
+                            );
+                            commitItems(element, nextItems);
+                          }}
                         ></editor-text-input>
                       </div>
-                      ${this.activeIconPickerItemId === item.id
-                        ? this.renderIconPicker(item)
+                      ${element._activeIconPickerItemId === item.id
+                        ? renderIconPicker(item, element)
                         : null}
                       <editor-text-input
                         label="Link"
                         placeholder="https://..."
                         .value=${item.link || ""}
-                        @change=${(event) =>
-                          this.updateSocialItem(item.id, {
-                            link: this.getTextInputEventValue(event),
-                          })}
+                        @change=${(event) => {
+                          const nextItems = element.items.map((i) =>
+                            i.id === item.id
+                              ? {
+                                  ...i,
+                                  link: getTextInputEventValue(event),
+                                }
+                              : i,
+                          );
+                          commitItems(element, nextItems);
+                        }}
                       ></editor-text-input>
                       <div class="social-item-remove-row">
                         <button
                           type="button"
                           class="social-remove-button"
-                          @click=${() => this.removeSocialItem(item.id)}
+                          @click=${() => {
+                            if (element._activeIconPickerItemId === item.id) {
+                              element._activeIconPickerItemId = "";
+                            }
+                            commitItems(
+                              element,
+                              element.items.filter((i) => i.id !== item.id),
+                            );
+                          }}
                         >
                           ${createElement(Trash)} Remove platform
                         </button>
@@ -363,11 +319,10 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
 
         if (tab === "buttons") {
           return html`
-            ${this.renderOverlayScopedStyles()}
             <settings-section title="Display mode">
               <settings-section
                 title="Display mode"
-                ?overridden=${this.hasAnyOverriddenKeys("socialDisplayMode")}
+                ?overridden=${editor.hasAnyOverriddenKeys("socialDisplayMode")}
               >
                 <editor-radio-button
                   .options=${[
@@ -375,177 +330,168 @@ class SiteSocialMedia extends withVariantConfig(EditorComponent) {
                     { label: "Icon only", value: "icon" },
                     { label: "Text only", value: "text" },
                   ]}
-                  .value=${this.socialDisplayMode}
+                  .value=${editor.socialDisplayMode}
                   @change=${(event) =>
-                    this.updateSettingsState({
+                    editor.updateSettingsState({
                       socialDisplayMode: event.detail.value,
                     })}
                 ></editor-radio-button>
               </settings-section>
-              <settings-section title="Button style">
-                <settings-section
-                  title="Button style"
-                  ?overridden=${this.hasAnyOverriddenKeys(
-                    "socialButtonTheme",
-                    "socialButtonVariant",
-                    "socialButtonSize",
-                    "socialButtonAlignment",
-                    "socialButtonIconColor",
-                    "socialButtonShape",
-                    "socialButtonShapeRadius",
-                  )}
-                >
-                  <editor-select
-                    label="Theme"
-                    .value=${this.socialButtonTheme}
-                    .options=${[
-                      { label: "Primary", value: "primary" },
-                      { label: "Secondary", value: "secondary" },
-                      { label: "Light", value: "light" },
-                      { label: "Dark", value: "dark" },
-                      { label: "Muted", value: "muted" },
-                    ]}
-                    @change=${(event) =>
-                      this.updateSettingsState({
-                        socialButtonTheme: event.detail.value,
-                      })}
-                  ></editor-select>
-                  <editor-radio-button
-                    .options=${[
-                      { label: "Filled", value: "filled" },
-                      { label: "Border", value: "border" },
-                      { label: "Ghost", value: "ghost" },
-                    ]}
-                    .value=${this.socialButtonVariant}
-                    @change=${(event) =>
-                      this.updateSettingsState({
-                        socialButtonVariant: event.detail.value,
-                      })}
-                  ></editor-radio-button>
-                  <editor-radio-button
-                    .options=${[
-                      { label: "XS", value: "xs" },
-                      { label: "Small", value: "small" },
-                      { label: "Medium", value: "medium" },
-                      { label: "Large", value: "large" },
-                      { label: "XXL", value: "xxl" },
-                    ]}
-                    .value=${this.socialButtonSize}
-                    @change=${(event) =>
-                      this.updateSettingsState({
-                        socialButtonSize: event.detail.value,
-                      })}
-                  ></editor-radio-button>
-                  <editor-radio-button
-                    .options=${[
-                      { label: "Left", value: "left" },
-                      { label: "Center", value: "center" },
-                      { label: "Right", value: "right" },
-                    ]}
-                    .value=${this.socialButtonAlignment}
-                    @change=${(event) =>
-                      this.updateSettingsState({
-                        socialButtonAlignment: event.detail.value,
-                      })}
-                  ></editor-radio-button>
-                  <editor-radio-button
-                    .options=${[
-                      { label: "Brand icon color", value: "brand" },
-                      { label: "Text color", value: "text" },
-                    ]}
-                    .value=${this.socialIconColorMode}
-                    @change=${(event) =>
-                      this.updateSettingsState({
-                        socialIconColorMode: event.detail.value,
-                      })}
-                  ></editor-radio-button>
-                  <editor-radio-button
-                    .options=${[
-                      { label: "Rounded", value: "rounded" },
-                      { label: "Square", value: "square" },
-                      { label: "Border radius", value: "custom" },
-                    ]}
-                    .value=${this.socialButtonShape}
-                    @change=${(event) =>
-                      this.updateSettingsState({
-                        socialButtonShape: event.detail.value,
-                      })}
-                  ></editor-radio-button>
-                  ${this.socialButtonShape === "custom"
-                    ? html`
-                        <editor-text-input
-                          label="Radius"
-                          placeholder="12px"
-                          .value=${this.socialButtonRadiusCustom}
-                          @change=${(event) =>
-                            this.updateSettingsState({
-                              socialButtonRadiusCustom:
-                                this.getTextInputEventValue(event),
-                            })}
-                        ></editor-text-input>
-                      `
-                    : null}
-                </settings-section>
-              </settings-section></settings-section
-            >
+              <settings-section
+                title="Button style"
+                ?overridden=${editor.hasAnyOverriddenKeys(
+                  "socialButtonTheme",
+                  "socialButtonVariant",
+                  "socialButtonSize",
+                  "socialButtonAlignment",
+                  "socialIconColorMode",
+                  "socialButtonShape",
+                  "socialButtonRadiusCustom",
+                )}
+              >
+                <editor-select
+                  label="Theme"
+                  .value=${editor.socialButtonTheme}
+                  .options=${[
+                    { label: "Primary", value: "primary" },
+                    { label: "Secondary", value: "secondary" },
+                    { label: "Light", value: "light" },
+                    { label: "Dark", value: "dark" },
+                    { label: "Muted", value: "muted" },
+                  ]}
+                  @change=${(event) =>
+                    editor.updateSettingsState({
+                      socialButtonTheme: event.detail.value,
+                    })}
+                ></editor-select>
+                <editor-radio-button
+                  .options=${[
+                    { label: "Filled", value: "filled" },
+                    { label: "Border", value: "border" },
+                    { label: "Ghost", value: "ghost" },
+                  ]}
+                  .value=${editor.socialButtonVariant}
+                  @change=${(event) =>
+                    editor.updateSettingsState({
+                      socialButtonVariant: event.detail.value,
+                    })}
+                ></editor-radio-button>
+                <editor-radio-button
+                  .options=${[
+                    { label: "XS", value: "xs" },
+                    { label: "Small", value: "small" },
+                    { label: "Medium", value: "medium" },
+                    { label: "Large", value: "large" },
+                    { label: "XXL", value: "xxl" },
+                  ]}
+                  .value=${editor.socialButtonSize}
+                  @change=${(event) =>
+                    editor.updateSettingsState({
+                      socialButtonSize: event.detail.value,
+                    })}
+                ></editor-radio-button>
+                <editor-radio-button
+                  .options=${[
+                    { label: "Left", value: "left" },
+                    { label: "Center", value: "center" },
+                    { label: "Right", value: "right" },
+                  ]}
+                  .value=${editor.socialButtonAlignment}
+                  @change=${(event) =>
+                    editor.updateSettingsState({
+                      socialButtonAlignment: event.detail.value,
+                    })}
+                ></editor-radio-button>
+                <editor-radio-button
+                  .options=${[
+                    { label: "Brand icon color", value: "brand" },
+                    { label: "Text color", value: "text" },
+                  ]}
+                  .value=${editor.socialIconColorMode}
+                  @change=${(event) =>
+                    editor.updateSettingsState({
+                      socialIconColorMode: event.detail.value,
+                    })}
+                ></editor-radio-button>
+                <editor-radio-button
+                  .options=${[
+                    { label: "Rounded", value: "rounded" },
+                    { label: "Square", value: "square" },
+                    { label: "Border radius", value: "custom" },
+                  ]}
+                  .value=${editor.socialButtonShape}
+                  @change=${(event) =>
+                    editor.updateSettingsState({
+                      socialButtonShape: event.detail.value,
+                    })}
+                ></editor-radio-button>
+                ${editor.socialButtonShape === "custom"
+                  ? html`
+                      <editor-text-input
+                        label="Radius"
+                        placeholder="12px"
+                        .value=${editor.socialButtonRadiusCustom}
+                        @change=${(event) =>
+                          editor.updateSettingsState({
+                            socialButtonRadiusCustom:
+                              getTextInputEventValue(event),
+                          })}
+                      ></editor-text-input>
+                    `
+                  : null}
+              </settings-section>
+            </settings-section>
           `;
         }
 
         return html``;
       },
     });
-  }
+  },
 
-  openSocialSettingsIfNeeded() {
-    if (this.isSettingsEditorOpen) return;
-    this.openSocialSettings();
-  }
-
-  // Spacing and custom CSS are rendered inside owb-social-media, not in site-social-media.
-  applySpacingToRenderRoot() {}
-  applyCustomCssToRenderRoot() {}
-
-  render() {
-    const settings = {
-      socialDisplayMode: this.socialDisplayMode,
-      socialButtonTheme: this.socialButtonTheme,
-      socialButtonVariant: this.socialButtonVariant,
-      socialButtonSize: this.socialButtonSize,
-      socialButtonAlignment: this.socialButtonAlignment,
-      socialButtonShape: this.socialButtonShape,
-      socialButtonRadiusCustom: this.socialButtonRadiusCustom,
-      socialIconColorMode: this.socialIconColorMode,
-      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
-      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
-      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
-      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
-      settingSpacingMarginTop: this.settingSpacingMarginTop,
-      settingSpacingMarginRight: this.settingSpacingMarginRight,
-      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
-      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
-      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
-      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
-      settingSpacingTextColor: this.settingSpacingTextColor,
-      settingSpacingHidden: this.settingSpacingHidden,
-      customCss: this.settingCustomCss,
+  onConnected(element) {
+    element._activeIconPickerItemId = "";
+    element._iconSearchQuery = "";
+    element._onFocusNodeRequest = (event) => {
+      const requestedNodeId = String(event?.detail?.nodeId || "");
+      if (
+        !requestedNodeId ||
+        String(element.node?.id || "") !== requestedNodeId
+      ) {
+        return;
+      }
+      element.scrollIntoView({ block: "center", behavior: "smooth" });
+      const editorBlock = element.renderRoot?.querySelector(
+        "[data-editor-block]",
+      );
+      if (editorBlock instanceof HTMLElement) {
+        editorBlock.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+            pointerId: 1,
+            isPrimary: true,
+          }),
+        );
+        return;
+      }
+      OwbSocialMedia.editorPlugin?.onPointerDown?.(element);
     };
-    return html`
-      <div
-        data-editor-block
-        @pointerdown=${() => this.openSocialSettingsIfNeeded()}
-        class="social-block ${this.isSettingsEditorOpen
-          ? "is-settings-open"
-          : ""}"
-      >
-        <owb-social-media
-          .items=${this.socialItems}
-          .settings=${settings}
-        ></owb-social-media>
-      </div>
-    `;
-  }
-}
+    window.addEventListener("owb-focus-node", element._onFocusNodeRequest);
+  },
 
+  onDisconnected(element) {
+    if (element._onFocusNodeRequest) {
+      window.removeEventListener("owb-focus-node", element._onFocusNodeRequest);
+      element._onFocusNodeRequest = null;
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Render function — returns owb-social-media directly (no site-social-media wrapper)
+// ---------------------------------------------------------------------------
 export const editorRenderSocialMedia = (
   node,
   pageConfig,
@@ -553,19 +499,15 @@ export const editorRenderSocialMedia = (
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<site-social-media
+  return html`<owb-social-media
     class=${renderOptions.hostClass || ""}
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
     .pageConfig=${pageConfig}
     @page-config-updated=${onPageConfigUpdated}
-  ></site-social-media>`;
+  ></owb-social-media>`;
 };
-
-if (!customElements.get("site-social-media")) {
-  customElements.define("site-social-media", SiteSocialMedia);
-}
 
 if (!customElements.get("owb-social-media")) {
   customElements.define("owb-social-media", OwbSocialMedia);

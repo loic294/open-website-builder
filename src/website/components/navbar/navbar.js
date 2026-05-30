@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
@@ -14,6 +14,7 @@ export class OwbNavbar extends LitElement {
     node: { type: Object },
     pageConfig: { type: Object },
     _mobileOpen: { state: true },
+    isSettingsOpen: { state: true },
   };
 
   constructor() {
@@ -25,6 +26,8 @@ export class OwbNavbar extends LitElement {
     this.pageConfig = null;
     this._mobileOpen = false;
     this._onResize = this._onResize.bind(this);
+    this.isSettingsOpen = false;
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
   connectedCallback() {
@@ -45,13 +48,44 @@ export class OwbNavbar extends LitElement {
         this.currentPath = window.location.pathname;
       }
     }
+    if (OwbNavbar.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbNavbar.editorPlugin.onConnected?.(this);
+    }
   }
 
   disconnectedCallback() {
     if (typeof window !== "undefined") {
       window.removeEventListener("resize", this._onResize);
     }
+    if (OwbNavbar.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbNavbar.editorPlugin.onDisconnected?.(this);
+    }
     super.disconnectedCallback();
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   _onResize() {
@@ -142,7 +176,16 @@ export class OwbNavbar extends LitElement {
             `<style>@media (max-width: ${breakpoint}) { .navbar { display: none !important; } .navbar-mobile-toggle { display: flex !important; } }</style>`,
           )
         : null}
-      <div class="navbar-block" style=${mobileOn ? mobileStyle : ""}>
+      <div
+        class="navbar-block${isEditorMode && this.isSettingsOpen
+          ? " is-settings-open"
+          : ""}"
+        style=${mobileOn ? mobileStyle : ""}
+        data-editor-block=${isEditorMode ? "" : nothing}
+        @pointerdown=${isEditorMode
+          ? () => OwbNavbar.editorPlugin?.onPointerDown?.(this)
+          : nothing}
+      >
         <nav
           class="navbar${hasUnderline
             ? " has-underline-hover"

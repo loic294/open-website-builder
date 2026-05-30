@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 import {
@@ -54,6 +54,7 @@ export class OwbForm extends LitElement {
     node: { type: Object },
     pageConfig: { type: Object },
     _submitted: { state: true },
+    isSettingsOpen: { state: true },
   };
 
   constructor() {
@@ -62,6 +63,8 @@ export class OwbForm extends LitElement {
     this.node = null;
     this.pageConfig = null;
     this._submitted = false;
+    this.isSettingsOpen = false;
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
   connectedCallback() {
@@ -73,6 +76,41 @@ export class OwbForm extends LitElement {
       } catch (e) {}
     }
     super.connectedCallback();
+    if (OwbForm.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbForm.editorPlugin.onConnected?.(this);
+    }
+  }
+
+  disconnectedCallback() {
+    if (OwbForm.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbForm.editorPlugin.onDisconnected?.(this);
+    }
+    super.disconnectedCallback();
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   updated(changedProperties) {
@@ -112,6 +150,7 @@ export class OwbForm extends LitElement {
         : width === "custom"
           ? ""
           : "is-normal-width";
+    const isEditorMode = OwbForm.editorPlugin !== null;
 
     return html`
       ${spacingCss
@@ -119,10 +158,17 @@ export class OwbForm extends LitElement {
         : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
-        class="owb-form-container ${widthClass}"
+        class="owb-form-container ${widthClass}${isEditorMode &&
+        this.isSettingsOpen
+          ? " is-settings-open"
+          : ""}"
         style="${getSectionInlineStyle(settings)}; ${getContainerInlineStyle(
           settings,
         )}"
+        data-editor-block=${isEditorMode ? "" : nothing}
+        @pointerdown=${isEditorMode
+          ? () => OwbForm.editorPlugin?.onPointerDown?.(this)
+          : nothing}
       >
         ${this._submitted
           ? html`<p class="owb-form-success">${successMessage}</p>`

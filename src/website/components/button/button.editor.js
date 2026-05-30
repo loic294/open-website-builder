@@ -1,57 +1,64 @@
-import { html } from "lit";
+import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
-import { withVariantConfig } from "../variant-component-base.js";
+import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbButton, SIZE_OPTIONS } from "./button.js";
+import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
-// Signal to OwbButton that it is running inside the editor.
-OwbButton.editorPlugin = {};
+OwbButton.styles = [unsafeCSS(blocksStyles)];
 
-class SiteButton extends withVariantConfig(EditorComponent) {
-  static properties = {
-    node: { type: Object },
-    pageConfig: { type: Object },
-    buttonText: { type: String },
-    buttonLink: { type: String },
-    buttonSize: { type: String },
-    buttonTheme: { type: String },
-    buttonVariant: { type: String },
-    buttonType: { type: String },
-    buttonShape: { type: String },
-    buttonRadiusCustom: { type: String },
-    buttonPaddingTop: { type: String },
-    buttonPaddingRight: { type: String },
-    buttonPaddingBottom: { type: String },
-    buttonPaddingLeft: { type: String },
-  };
+// ---------------------------------------------------------------------------
+// Helper: recursively update content on a node in the content tree
+// ---------------------------------------------------------------------------
+function updateContentInTree(nodes, targetNodeId, nextContent) {
+  return nodes.map((currentNode) => {
+    if (currentNode?.id === targetNodeId && currentNode?.type === "button") {
+      return { ...currentNode, content: nextContent };
+    }
+    if (Array.isArray(currentNode?.content)) {
+      return {
+        ...currentNode,
+        content: updateContentInTree(
+          currentNode.content,
+          targetNodeId,
+          nextContent,
+        ),
+      };
+    }
+    return currentNode;
+  });
+}
 
-  static styles = super.styles;
+function updateButtonContent(element, nextText) {
+  element.content = nextText;
+  if (!element.pageConfig || !element.node?.id) return;
+  const nextContent = updateContentInTree(
+    Array.isArray(element.pageConfig.content) ? element.pageConfig.content : [],
+    element.node.id,
+    nextText,
+  );
+  element.node = { ...element.node, content: nextText };
+  const nextPageConfig = { ...element.pageConfig, content: nextContent };
+  element.pageConfig = nextPageConfig;
+  element.dispatchPageConfigUpdated(nextPageConfig);
+}
 
-  constructor() {
-    super();
-    this.node = null;
-    this.pageConfig = null;
-    this.buttonText = "Button";
-    this.buttonLink = "";
-    this.buttonSize = "m";
-    this.buttonTheme = "primary";
-    this.buttonVariant = "filled";
-    this.buttonType = "link";
-    this.buttonShape = "rounded";
-    this.buttonRadiusCustom = "12px";
-    this.buttonPaddingTop = "";
-    this.buttonPaddingRight = "";
-    this.buttonPaddingBottom = "";
-    this.buttonPaddingLeft = "";
-  }
+// ---------------------------------------------------------------------------
+// Editor plugin
+// ---------------------------------------------------------------------------
+installEditorPlugin(OwbButton, {
+  onUpdated(element, changedProperties) {
+    if (!changedProperties.has("node")) return;
+    element.content =
+      element.node && typeof element.node.content === "string"
+        ? element.node.content
+        : "Button";
+    element.settings = element.node?.settings ?? {};
+  },
 
-  updated(changedProperties) {
-    if (changedProperties.has("node")) {
-      this.buttonText =
-        this.node && typeof this.node.content === "string"
-          ? this.node.content
-          : "Button";
-
-      this.syncSettingsStateFromNode({
+  onPointerDown(element) {
+    if (EditorComponent.activeSettingsOwner === element) return;
+    EditorComponent.openFor(element, {
+      defaultState: {
         buttonLink: "",
         buttonSize: "m",
         buttonTheme: "primary",
@@ -63,322 +70,221 @@ class SiteButton extends withVariantConfig(EditorComponent) {
         buttonPaddingRight: "",
         buttonPaddingBottom: "",
         buttonPaddingLeft: "",
-      });
-    }
-  }
-
-  updateNodeContent(nodes, targetNodeId, nextContent) {
-    return nodes.map((currentNode) => {
-      if (currentNode?.id === targetNodeId && currentNode?.type === "button") {
-        return {
-          ...currentNode,
-          content: nextContent,
-        };
-      }
-
-      if (Array.isArray(currentNode?.content)) {
-        return {
-          ...currentNode,
-          content: this.updateNodeContent(
-            currentNode.content,
-            targetNodeId,
-            nextContent,
-          ),
-        };
-      }
-
-      return currentNode;
-    });
-  }
-
-  updateButtonText(nextText) {
-    this.buttonText = nextText;
-
-    if (!this.pageConfig || !this.node?.id) {
-      return;
-    }
-
-    const nextPageConfig = {
-      ...this.pageConfig,
-      content: this.updateNodeContent(
-        Array.isArray(this.pageConfig.content) ? this.pageConfig.content : [],
-        this.node.id,
-        nextText,
-      ),
-    };
-
-    this.node = {
-      ...this.node,
-      content: nextText,
-    };
-    this.pageConfig = nextPageConfig;
-    this.dispatchPageConfigUpdated(nextPageConfig);
-  }
-
-  openButtonSettings() {
-    this.syncSettingsStateFromNode({
-      buttonLink: "",
-      buttonSize: "m",
-      buttonTheme: "primary",
-      buttonVariant: "filled",
-      buttonType: "link",
-      buttonShape: "rounded",
-      buttonRadiusCustom: "12px",
-      buttonPaddingTop: "",
-      buttonPaddingRight: "",
-      buttonPaddingBottom: "",
-      buttonPaddingLeft: "",
-    });
-
-    this.openSettingsEditor({
+      },
       tabs: [
         { id: "general", label: "General" },
         { id: "design", label: "Design" },
       ],
       content: (tab) => {
+        const editor = EditorComponent.instance;
         if (tab === "general") {
           return html`
             <settings-section title="Content">
               <settings-section
                 title="Content"
-                ?overridden=${this.hasAnyOverriddenKeys(
-                  "buttonText",
+                ?overridden=${editor.hasAnyOverriddenKeys(
                   "buttonLink",
                   "buttonType",
                 )}
               >
                 <editor-text-input
                   label="Label"
-                  .value=${this.buttonText}
-                  @input=${(event) => this.updateButtonText(event.detail.value)}
+                  .value=${element.content}
+                  @input=${(event) => {
+                    element.content = event.detail.value;
+                  }}
                   @change=${(event) =>
-                    this.updateButtonText(event.detail.value)}
+                    updateButtonContent(element, event.detail.value)}
                 ></editor-text-input>
                 <editor-text-input
                   label="Link"
                   placeholder="https://example.com"
-                  .value=${this.buttonLink}
-                  .disabled=${this.buttonType !== "link"}
+                  .value=${editor.buttonLink}
+                  .disabled=${editor.buttonType !== "link"}
                   @change=${(event) =>
-                    this.updateSettingsState({
+                    editor.updateSettingsState({
                       buttonLink: event.detail.value,
                     })}
                 ></editor-text-input>
                 <editor-select
                   label="Button action"
-                  .value=${this.buttonType}
+                  .value=${editor.buttonType}
                   .options=${[
                     { label: "Link", value: "link" },
                     { label: "Normal button", value: "button" },
                     { label: "Submit button", value: "submit" },
                   ]}
                   @change=${(event) =>
-                    this.updateSettingsState({
+                    editor.updateSettingsState({
                       buttonType: event.detail.value,
                     })}
                 ></editor-select>
               </settings-section>
-              <settings-section title="Size">
-                <settings-section
-                  title="Size"
-                  ?overridden=${this.hasAnyOverriddenKeys(
-                    "buttonSize",
-                    "buttonPaddingTop",
-                    "buttonPaddingRight",
-                    "buttonPaddingBottom",
-                    "buttonPaddingLeft",
-                  )}
-                >
-                  <editor-radio-button
-                    .options=${SIZE_OPTIONS}
-                    .value=${this.buttonSize}
-                    @change=${(event) =>
-                      this.updateSettingsState({
-                        buttonSize: event.detail.value,
-                      })}
-                  ></editor-radio-button>
-                  ${this.buttonSize === "custom"
-                    ? html`
-                        <editor-padding-input
-                          .value=${{
-                            top: this.buttonPaddingTop,
-                            right: this.buttonPaddingRight,
-                            bottom: this.buttonPaddingBottom,
-                            left: this.buttonPaddingLeft,
-                          }}
-                          @change=${(event) => {
-                            const value = event.detail.value || {};
-                            this.updateSettingsState({
-                              buttonPaddingTop: value.top || "",
-                              buttonPaddingRight: value.right || "",
-                              buttonPaddingBottom: value.bottom || "",
-                              buttonPaddingLeft: value.left || "",
-                            });
-                          }}
-                        ></editor-padding-input>
-                      `
-                    : null}
-                </settings-section>
-              </settings-section></settings-section
-            >
+              <settings-section
+                title="Size"
+                ?overridden=${editor.hasAnyOverriddenKeys(
+                  "buttonSize",
+                  "buttonPaddingTop",
+                  "buttonPaddingRight",
+                  "buttonPaddingBottom",
+                  "buttonPaddingLeft",
+                )}
+              >
+                <editor-radio-button
+                  .options=${SIZE_OPTIONS}
+                  .value=${editor.buttonSize}
+                  @change=${(event) =>
+                    editor.updateSettingsState({
+                      buttonSize: event.detail.value,
+                    })}
+                ></editor-radio-button>
+                ${editor.buttonSize === "custom"
+                  ? html`
+                      <editor-padding-input
+                        .value=${{
+                          top: editor.buttonPaddingTop,
+                          right: editor.buttonPaddingRight,
+                          bottom: editor.buttonPaddingBottom,
+                          left: editor.buttonPaddingLeft,
+                        }}
+                        @change=${(event) => {
+                          const value = event.detail.value || {};
+                          editor.updateSettingsState({
+                            buttonPaddingTop: value.top || "",
+                            buttonPaddingRight: value.right || "",
+                            buttonPaddingBottom: value.bottom || "",
+                            buttonPaddingLeft: value.left || "",
+                          });
+                        }}
+                      ></editor-padding-input>
+                    `
+                  : null}
+              </settings-section>
+            </settings-section>
           `;
         }
 
         if (tab === "design") {
           return html`
-            <settings-section title="Theme">
-              <settings-section
-                title="Theme"
-                ?overridden=${this.hasAnyOverriddenKeys("buttonTheme")}
-              >
-                <editor-select
-                  label="Theme color"
-                  .value=${this.buttonTheme}
-                  .options=${[
-                    { label: "Primary", value: "primary" },
-                    { label: "Secondary", value: "secondary" },
-                    { label: "Light", value: "light" },
-                    { label: "Dark", value: "dark" },
-                    { label: "Muted", value: "muted" },
-                  ]}
-                  @change=${(event) =>
-                    this.updateSettingsState({
-                      buttonTheme: event.detail.value,
-                    })}
-                ></editor-select>
-              </settings-section>
-              <settings-section title="Style">
-                <settings-section
-                  title="Style"
-                  ?overridden=${this.hasAnyOverriddenKeys("buttonVariant")}
-                >
-                  <editor-radio-button
-                    .options=${[
-                      { label: "Filled", value: "filled" },
-                      { label: "Border", value: "border" },
-                      { label: "Ghost", value: "ghost" },
-                    ]}
-                    .value=${this.buttonVariant}
-                    @change=${(event) =>
-                      this.updateSettingsState({
-                        buttonVariant: event.detail.value,
-                      })}
-                  ></editor-radio-button>
-                </settings-section>
-                <settings-section title="Shape">
-                  <settings-section
-                    title="Shape"
-                    ?overridden=${this.hasAnyOverriddenKeys(
-                      "buttonShape",
-                      "buttonRadiusCustom",
-                    )}
-                  >
-                    <editor-radio-button
-                      .options=${[
-                        { label: "Rounded", value: "rounded" },
-                        { label: "Square", value: "square" },
-                        { label: "Border radius", value: "custom" },
-                      ]}
-                      .value=${this.buttonShape}
-                      @change=${(event) =>
-                        this.updateSettingsState({
-                          buttonShape: event.detail.value,
-                        })}
-                    ></editor-radio-button>
-                    ${this.buttonShape === "custom"
-                      ? html`
-                          <editor-text-input
-                            label="Radius"
-                            placeholder="12px"
-                            .value=${this.buttonRadiusCustom}
-                            @change=${(event) =>
-                              this.updateSettingsState({
-                                buttonRadiusCustom: event.detail.value,
-                              })}
-                          ></editor-text-input>
-                        `
-                      : null}
-                  </settings-section>
-                </settings-section></settings-section
-              ></settings-section
+            <settings-section
+              title="Theme"
+              ?overridden=${editor.hasAnyOverriddenKeys("buttonTheme")}
             >
+              <editor-select
+                label="Theme color"
+                .value=${editor.buttonTheme}
+                .options=${[
+                  { label: "Primary", value: "primary" },
+                  { label: "Secondary", value: "secondary" },
+                  { label: "Light", value: "light" },
+                  { label: "Dark", value: "dark" },
+                  { label: "Muted", value: "muted" },
+                ]}
+                @change=${(event) =>
+                  editor.updateSettingsState({
+                    buttonTheme: event.detail.value,
+                  })}
+              ></editor-select>
+            </settings-section>
+            <settings-section
+              title="Style"
+              ?overridden=${editor.hasAnyOverriddenKeys("buttonVariant")}
+            >
+              <editor-radio-button
+                .options=${[
+                  { label: "Filled", value: "filled" },
+                  { label: "Border", value: "border" },
+                  { label: "Ghost", value: "ghost" },
+                ]}
+                .value=${editor.buttonVariant}
+                @change=${(event) =>
+                  editor.updateSettingsState({
+                    buttonVariant: event.detail.value,
+                  })}
+              ></editor-radio-button>
+            </settings-section>
+            <settings-section
+              title="Shape"
+              ?overridden=${editor.hasAnyOverriddenKeys(
+                "buttonShape",
+                "buttonRadiusCustom",
+              )}
+            >
+              <editor-radio-button
+                .options=${[
+                  { label: "Rounded", value: "rounded" },
+                  { label: "Square", value: "square" },
+                  { label: "Border radius", value: "custom" },
+                ]}
+                .value=${editor.buttonShape}
+                @change=${(event) =>
+                  editor.updateSettingsState({
+                    buttonShape: event.detail.value,
+                  })}
+              ></editor-radio-button>
+              ${editor.buttonShape === "custom"
+                ? html`
+                    <editor-text-input
+                      label="Radius"
+                      placeholder="12px"
+                      .value=${editor.buttonRadiusCustom}
+                      @change=${(event) =>
+                        editor.updateSettingsState({
+                          buttonRadiusCustom: event.detail.value,
+                        })}
+                    ></editor-text-input>
+                  `
+                : null}
+            </settings-section>
           `;
         }
 
         return html``;
       },
     });
-  }
+  },
 
-  openButtonSettingsIfNeeded() {
-    if (this.isSettingsEditorOpen) {
-      return;
-    }
-
-    this.openButtonSettings();
-  }
-
-  // Spacing and custom CSS are rendered inside owb-button, not in site-button.
-  applySpacingToRenderRoot() {}
-  applyCustomCssToRenderRoot() {}
-
-  render() {
-    // Delegate all visual rendering to OwbButton. SiteButton only provides the
-    // editor chrome (data-editor-block wrapper, settings overlay lifecycle).
-    // Pass spacing and customCss through so owb-button renders them, matching
-    // the published site where owb-button is the outermost component.
-    const settings = {
-      buttonLink: this.buttonLink,
-      buttonSize: this.buttonSize,
-      buttonTheme: this.buttonTheme,
-      buttonVariant: this.buttonVariant,
-      buttonType: this.buttonType,
-      buttonShape: this.buttonShape,
-      buttonRadiusCustom: this.buttonRadiusCustom,
-      buttonPaddingTop: this.buttonPaddingTop,
-      buttonPaddingRight: this.buttonPaddingRight,
-      buttonPaddingBottom: this.buttonPaddingBottom,
-      buttonPaddingLeft: this.buttonPaddingLeft,
-      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
-      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
-      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
-      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
-      settingSpacingMarginTop: this.settingSpacingMarginTop,
-      settingSpacingMarginRight: this.settingSpacingMarginRight,
-      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
-      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
-      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
-      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
-      settingSpacingTextColor: this.settingSpacingTextColor,
-      settingSpacingHidden: this.settingSpacingHidden,
-      customCss: this.settingCustomCss,
+  onConnected(element) {
+    element._onFocusNodeRequest = (event) => {
+      const requestedNodeId = String(event?.detail?.nodeId || "");
+      if (
+        !requestedNodeId ||
+        String(element.node?.id || "") !== requestedNodeId
+      ) {
+        return;
+      }
+      element.scrollIntoView({ block: "center", behavior: "smooth" });
+      const editorBlock = element.renderRoot?.querySelector(
+        "[data-editor-block]",
+      );
+      if (editorBlock instanceof HTMLElement) {
+        editorBlock.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+            pointerId: 1,
+            isPrimary: true,
+          }),
+        );
+        return;
+      }
+      OwbButton.editorPlugin?.onPointerDown?.(element);
     };
+    window.addEventListener("owb-focus-node", element._onFocusNodeRequest);
+  },
 
-    return html`
-      <div
-        data-editor-block
-        @pointerdown=${() => this.openButtonSettingsIfNeeded()}
-        class="button-block ${this.isSettingsEditorOpen
-          ? "is-settings-open"
-          : ""}"
-      >
-        <owb-button
-          .content=${this.buttonText}
-          .settings=${settings}
-        ></owb-button>
-      </div>
-    `;
-  }
-}
+  onDisconnected(element) {
+    if (element._onFocusNodeRequest) {
+      window.removeEventListener("owb-focus-node", element._onFocusNodeRequest);
+      element._onFocusNodeRequest = null;
+    }
+  },
+});
 
-if (!customElements.get("site-button")) {
-  customElements.define("site-button", SiteButton);
-}
-
-if (!customElements.get("owb-button")) {
-  customElements.define("owb-button", OwbButton);
-}
-
+// ---------------------------------------------------------------------------
+// Render function — returns owb-button directly (no site-button wrapper)
+// ---------------------------------------------------------------------------
 export const editorRenderButton = (
   node,
   pageConfig,
@@ -386,12 +292,16 @@ export const editorRenderButton = (
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<site-button
+  return html`<owb-button
     class=${renderOptions.hostClass || ""}
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
     .pageConfig=${pageConfig}
     @page-config-updated=${onPageConfigUpdated}
-  ></site-button>`;
+  ></owb-button>`;
 };
+
+if (!customElements.get("owb-button")) {
+  customElements.define("owb-button", OwbButton);
+}

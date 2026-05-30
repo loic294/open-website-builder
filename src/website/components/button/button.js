@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
@@ -103,6 +103,7 @@ export class OwbButton extends LitElement {
     // harmless in the published bundle where they are never assigned.
     node: { type: Object },
     pageConfig: { type: Object },
+    isSettingsOpen: { state: true },
   };
 
   constructor() {
@@ -111,6 +112,8 @@ export class OwbButton extends LitElement {
     this.settings = {};
     this.node = null;
     this.pageConfig = null;
+    this.isSettingsOpen = false;
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
   connectedCallback() {
@@ -123,6 +126,41 @@ export class OwbButton extends LitElement {
       } catch (e) {}
     }
     super.connectedCallback();
+    if (OwbButton.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbButton.editorPlugin.onConnected?.(this);
+    }
+  }
+
+  disconnectedCallback() {
+    if (OwbButton.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbButton.editorPlugin.onDisconnected?.(this);
+    }
+    super.disconnectedCallback();
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   updated(changedProperties) {
@@ -154,13 +192,13 @@ export class OwbButton extends LitElement {
         : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
-        class="button-block${isEditorMode && this.isSettingsEditorOpen
+        class="button-block${isEditorMode && this.isSettingsOpen
           ? " is-settings-open"
           : ""}"
-        data-editor-block=${isEditorMode || undefined}
+        data-editor-block=${isEditorMode ? "" : nothing}
         @pointerdown=${isEditorMode
           ? () => OwbButton.editorPlugin?.onPointerDown?.(this)
-          : undefined}
+          : nothing}
       >
         <div class="button-preview-wrap">
           ${renderButtonPreview({

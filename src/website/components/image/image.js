@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
@@ -33,6 +33,7 @@ export class OwbImage extends LitElement {
     node: { type: Object },
     pageConfig: { type: Object },
     lightboxOpen: { state: true },
+    isSettingsOpen: { state: true },
   };
 
   constructor() {
@@ -42,7 +43,9 @@ export class OwbImage extends LitElement {
     this.node = null;
     this.pageConfig = null;
     this.lightboxOpen = false;
+    this.isSettingsOpen = false;
     this.onWindowKeydown = this.onWindowKeydown.bind(this);
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
   connectedCallback() {
@@ -56,11 +59,53 @@ export class OwbImage extends LitElement {
     }
     super.connectedCallback();
     window.addEventListener("keydown", this.onWindowKeydown);
+    if (OwbImage.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbImage.editorPlugin.onConnected?.(this);
+    }
   }
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this.onWindowKeydown);
+    if (OwbImage.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbImage.editorPlugin.onDisconnected?.(this);
+    }
     super.disconnectedCallback();
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  applyCustomCssToRenderRoot(cssText) {
+    if (!(this.renderRoot instanceof ShadowRoot)) return;
+    let styleEl = this.renderRoot.querySelector("style[data-custom-css]");
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.setAttribute("data-custom-css", "true");
+      this.renderRoot.appendChild(styleEl);
+    }
+    styleEl.textContent = String(cssText || "");
   }
 
   onWindowKeydown(event) {
@@ -135,6 +180,7 @@ export class OwbImage extends LitElement {
     const clickAction = String(settings?.imageClickAction || "none");
     const linkUrl = String(settings?.imageLinkUrl || "").trim();
     const linkTarget = String(settings?.imageLinkTarget || "current");
+    const isEditorMode = OwbImage.editorPlugin !== null;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/image.css" />
@@ -142,7 +188,20 @@ export class OwbImage extends LitElement {
         ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
         : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
-      <div class="image-block size-${mode}">
+      ${isEditorMode
+        ? unsafeHTML(
+            `<link rel="stylesheet" href="/src/editor/components/layout/editor-component/styles-blocks.css" />`,
+          )
+        : null}
+      <div
+        class="image-block size-${mode}${this.isSettingsOpen
+          ? " is-settings-open"
+          : ""}"
+        data-editor-block=${isEditorMode ? "" : nothing}
+        @pointerdown=${isEditorMode
+          ? () => OwbImage.editorPlugin?.onPointerDown?.(this)
+          : nothing}
+      >
         ${this.renderImageWithAction(
           url,
           mode,

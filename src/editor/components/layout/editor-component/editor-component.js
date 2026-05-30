@@ -61,6 +61,48 @@ export class EditorComponent extends LitElement {
 
   static activeSettingsOwner = null;
 
+  /** Singleton instance mounted once at document.body level by editor-main.js. */
+  static instance = null;
+
+  /**
+   * Open the settings overlay for a plugin-based component that does NOT extend
+   * EditorComponent.  `ownerElement` must have `.node` and `.pageConfig` props.
+   */
+  static openFor(ownerElement, options) {
+    const instance = EditorComponent.instance;
+    if (!instance) return;
+
+    // Close any legacy EditorComponent-subclass owner that may be active
+    const prevOwner = EditorComponent.activeSettingsOwner;
+    if (
+      prevOwner &&
+      prevOwner !== ownerElement &&
+      typeof prevOwner.closeSettingsEditor === "function"
+    ) {
+      prevOwner.closeSettingsEditor();
+    }
+
+    instance._ownerElement = ownerElement;
+    instance.node = ownerElement.node;
+    instance.pageConfig = ownerElement.pageConfig;
+
+    // Sync custom CSS from the new node
+    const cssFromNode = instance.getNodeCustomCss();
+    if (instance.settingCustomCss !== cssFromNode) {
+      instance.settingCustomCss = cssFromNode;
+    }
+    instance.validateCustomCss(cssFromNode);
+    instance.syncCssEditorValue(cssFromNode);
+
+    if (options && typeof options === "object" && "defaultState" in options) {
+      const { defaultState, ...editorOptions } = options;
+      instance.syncSettingsStateFromNode(defaultState || {});
+      instance.openSettingsEditor(editorOptions);
+    } else {
+      instance.openSettingsEditor(options);
+    }
+  }
+
   static dispatchActiveSettingsOwnerChanged() {
     window.dispatchEvent(
       new CustomEvent("owb-active-settings-owner-changed", {
@@ -125,6 +167,8 @@ export class EditorComponent extends LitElement {
     this.onOverlayPointerMove = this.onOverlayPointerMove.bind(this);
     this.onOverlayPointerUp = this.onOverlayPointerUp.bind(this);
     this.onFocusNodeRequest = this.onFocusNodeRequest.bind(this);
+    /** Set by openFor() to track which component owns the current overlay session. */
+    this._ownerElement = null;
     const initViewport = window.__owbViewport || {
       size: "desktop",
       orientation: "vertical",
@@ -135,7 +179,11 @@ export class EditorComponent extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    window.addEventListener("owb-focus-node", this.onFocusNodeRequest);
+    // Only legacy EditorComponent subclasses need per-instance focus routing.
+    // Plugin-based components register their own owb-focus-node listeners.
+    if (this.constructor !== EditorComponent) {
+      window.addEventListener("owb-focus-node", this.onFocusNodeRequest);
+    }
     this._onViewportChange = (event) => {
       this.activeViewportSize = event.detail.size;
       this.activeViewportOrientation = event.detail.orientation;
@@ -198,18 +246,27 @@ export class EditorComponent extends LitElement {
   }
 
   openSettingsEditor(options = html`<p>No settings available.</p>`) {
+    // When the singleton is used via openFor(), the logical owner is _ownerElement.
+    // For legacy subclasses, the owner is `this`.
+    const ownerElement = this._ownerElement || this;
     const activeOwner = EditorComponent.activeSettingsOwner;
 
     // Don't let a child steal settings from its parent collection when it is the active owner
-    if (activeOwner && activeOwner !== this) {
+    if (activeOwner && activeOwner !== ownerElement) {
       const parentCollection = this.findParentCollection();
       if (parentCollection && parentCollection === activeOwner) {
         return;
       }
-      activeOwner.closeSettingsEditor();
+      if (typeof activeOwner.closeSettingsEditor === "function") {
+        activeOwner.closeSettingsEditor();
+      } else {
+        // Plugin-based owner: tear down the singleton overlay directly
+        this.destroyCssEditor();
+        window.removeEventListener("keydown", this.onOverlayKeydown);
+      }
     }
 
-    EditorComponent.activeSettingsOwner = this;
+    EditorComponent.activeSettingsOwner = ownerElement;
     EditorComponent.dispatchActiveSettingsOwnerChanged();
     this.ensureOverlayContainer();
     this.isSettingsEditorOpen = true;
@@ -369,6 +426,11 @@ export class EditorComponent extends LitElement {
   }
 
   applyCustomCssToRenderRoot(cssText) {
+    if (this._ownerElement) {
+      this._ownerElement.applyCustomCssToRenderRoot?.(cssText);
+      return;
+    }
+
     if (!(this.renderRoot instanceof ShadowRoot)) {
       return;
     }
@@ -384,6 +446,11 @@ export class EditorComponent extends LitElement {
   }
 
   applySpacingToRenderRoot() {
+    if (this._ownerElement) {
+      // Plugin-based owner handles spacing declaratively via its settings property.
+      return;
+    }
+
     if (!(this.renderRoot instanceof ShadowRoot)) {
       return;
     }
@@ -926,10 +993,13 @@ export class EditorComponent extends LitElement {
     this.settingsOverlayContent = null;
     this.dragState = null;
 
-    if (EditorComponent.activeSettingsOwner === this) {
+    const ownerElement = this._ownerElement || this;
+    if (EditorComponent.activeSettingsOwner === ownerElement) {
       EditorComponent.activeSettingsOwner = null;
       EditorComponent.dispatchActiveSettingsOwnerChanged();
     }
+
+    this._ownerElement = null;
 
     this.renderSettingsOverlay();
     window.removeEventListener("keydown", this.onOverlayKeydown);
@@ -1114,6 +1184,23 @@ export class EditorComponent extends LitElement {
   }
 
   dispatchPageConfigUpdated(nextPageConfig) {
+    if (this._ownerElement) {
+      // Sync the updated settings to the owner element for immediate re-render.
+      const settings = this.node?.settings ?? {};
+      this._ownerElement.settings =
+        Object.keys(settings).length > 0 ? { ...settings } : {};
+      // Sync updated pageConfig reference back to the owner element.
+      this._ownerElement.pageConfig = nextPageConfig;
+      this._ownerElement.dispatchEvent(
+        new CustomEvent("page-config-updated", {
+          detail: nextPageConfig,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      return;
+    }
+
     this.dispatchEvent(
       new CustomEvent("page-config-updated", {
         detail: nextPageConfig,
@@ -1358,6 +1445,15 @@ export class EditorComponent extends LitElement {
     if (this.node && typeof this.node === "object") {
       const nextPersistedSettings = this.getPersistedSettings(nextState);
 
+      // Immediately sync settings to the plugin-based owner element so it
+      // re-renders without waiting for the page-config-updated round-trip.
+      if (this._ownerElement && "settings" in this._ownerElement) {
+        this._ownerElement.settings =
+          Object.keys(nextPersistedSettings).length > 0
+            ? { ...nextPersistedSettings }
+            : {};
+      }
+
       console.log("[OWB debug] updateSettingsState", {
         nodeId: this.node.id,
         nodeType: this.node.type,
@@ -1412,7 +1508,9 @@ export class EditorComponent extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener("owb-focus-node", this.onFocusNodeRequest);
+    if (this.constructor !== EditorComponent) {
+      window.removeEventListener("owb-focus-node", this.onFocusNodeRequest);
+    }
     window.removeEventListener("owb-viewport-change", this._onViewportChange);
     this.closeSettingsEditor();
     this.destroyCssEditor();
@@ -1427,11 +1525,12 @@ export class EditorComponent extends LitElement {
   }
 
   findParentCollection() {
-    if (this.tagName === "SITE-COLLECTION") {
+    const startElement = this._ownerElement || this;
+    if (startElement.tagName === "SITE-COLLECTION") {
       return null;
     }
 
-    let current = this;
+    let current = startElement;
     while (current) {
       const root = current.getRootNode?.();
       const host = root instanceof ShadowRoot ? root.host : null;
@@ -1565,4 +1664,8 @@ export class EditorComponent extends LitElement {
 
     this.destroyCssEditor();
   }
+}
+
+if (!customElements.get("editor-root")) {
+  customElements.define("editor-root", EditorComponent);
 }

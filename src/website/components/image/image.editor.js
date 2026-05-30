@@ -1,172 +1,124 @@
-import { LitElement, html, unsafeCSS } from "lit";
-import { Image as ImageIcon, createElement } from "lucide";
+import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
-import { withVariantConfig } from "../variant-component-base.js";
+import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbImage, getImageMode } from "./image.js";
+import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
-OwbImage.editorPlugin = {};
+// Apply editor block styles (hover ring, is-settings-open indicator, etc.)
+// to OwbImage's own shadow root so they scope correctly.
+OwbImage.styles = [unsafeCSS(blocksStyles)];
 
-class SiteImage extends withVariantConfig(EditorComponent) {
-  static properties = {
-    node: { type: Object },
-    pageConfig: { type: Object },
-    imageUrl: { type: String },
-    imageSizeMode: { type: String },
-    imageClickAction: { type: String },
-    imageLinkUrl: { type: String },
-    imageLinkTarget: { type: String },
-  };
+// ---------------------------------------------------------------------------
+// Helper: recursively update url on a node in the content tree
+// ---------------------------------------------------------------------------
+function updateUrlInTree(nodes, targetNodeId, nextUrl) {
+  return nodes.map((currentNode) => {
+    if (currentNode?.id === targetNodeId && currentNode?.type === "image") {
+      return { ...currentNode, url: nextUrl };
+    }
+    if (Array.isArray(currentNode?.content)) {
+      return {
+        ...currentNode,
+        content: updateUrlInTree(currentNode.content, targetNodeId, nextUrl),
+      };
+    }
+    return currentNode;
+  });
+}
 
-  static styles = [super.styles];
+// ---------------------------------------------------------------------------
+// Editor plugin — all editor logic lives here, no SiteImage wrapper class
+// ---------------------------------------------------------------------------
+const imageEditorPlugin = {
+  onUpdated(element, changedProperties) {
+    if (!changedProperties.has("node")) return;
+    element.url =
+      element.node && typeof element.node.url === "string"
+        ? element.node.url
+        : "";
+    element.settings = element.node?.settings ?? {};
+  },
 
-  constructor() {
-    super();
-    this.node = null;
-    this.pageConfig = null;
-    this.imageUrl = "";
-    this.imageSizeMode = "contained";
-    this.imageClickAction = "none";
-    this.imageLinkUrl = "";
-    this.imageLinkTarget = "current";
-  }
+  onPointerDown(element) {
+    // If this element already owns the overlay, do nothing.
+    if (EditorComponent.activeSettingsOwner === element) return;
 
-  updated(changedProperties) {
-    if (changedProperties.has("node")) {
-      this.imageUrl =
-        this.node && typeof this.node.url === "string" ? this.node.url : "";
-
-      this.syncSettingsStateFromNode({
+    EditorComponent.openFor(element, {
+      defaultState: {
         imageSizeMode: "contained",
         imageClickAction: "none",
         imageLinkUrl: "",
         imageLinkTarget: "current",
-      });
-    }
-  }
-
-  updateImageSizeMode(nextMode) {
-    const normalizedMode = getImageMode(nextMode);
-
-    const nextState = {
-      imageSizeMode: normalizedMode,
-    };
-
-    if (normalizedMode === "full-width") {
-      nextState.gridRowSpan = 1;
-    }
-
-    this.updateSettingsState(nextState);
-  }
-
-  updateNodeUrl(nodes, targetNodeId, nextUrl) {
-    return nodes.map((currentNode) => {
-      if (currentNode?.id === targetNodeId && currentNode?.type === "image") {
-        return {
-          ...currentNode,
-          url: nextUrl,
-        };
-      }
-
-      if (Array.isArray(currentNode?.content)) {
-        return {
-          ...currentNode,
-          content: this.updateNodeUrl(
-            currentNode.content,
-            targetNodeId,
-            nextUrl,
-          ),
-        };
-      }
-
-      return currentNode;
-    });
-  }
-
-  updateImageUrl(nextUrl) {
-    this.imageUrl = nextUrl;
-
-    if (!this.pageConfig || !this.node?.id) {
-      return;
-    }
-
-    const nextPageConfig = {
-      ...this.pageConfig,
-      content: this.updateNodeUrl(
-        Array.isArray(this.pageConfig.content) ? this.pageConfig.content : [],
-        this.node.id,
-        nextUrl,
-      ),
-    };
-
-    this.node = {
-      ...this.node,
-      url: nextUrl,
-    };
-    this.pageConfig = nextPageConfig;
-    this.dispatchPageConfigUpdated(nextPageConfig);
-  }
-
-  previewImageUrl(nextUrl) {
-    this.imageUrl = nextUrl;
-  }
-
-  openImageSettings() {
-    this.syncSettingsStateFromNode({
-      imageSizeMode: "contained",
-      imageClickAction: "none",
-      imageLinkUrl: "",
-      imageLinkTarget: "current",
-    });
-
-    this.openSettingsEditor({
+      },
       tabs: [{ id: "general", label: "General" }],
-      content: () => html`
-        <div>
-          <settings-section title="Image">
-                      <settings-section title="Image" ?overridden=${this.hasAnyOverriddenKeys("imageSizeMode", "url")}>
-            <editor-text-input
-              label="URL"
-              placeholder="https://example.com/image.jpg"
-              .value=${this.imageUrl}
-              @input=${(e) => this.previewImageUrl(e.detail.value)}
-              @change=${(e) => this.updateImageUrl(e.detail.value)}
-            ></editor-text-input>
+      content: (activeTab) => {
+        const editor = EditorComponent.instance;
+        return html`
+          <div>
+            <settings-section
+              title="Image"
+              ?overridden=${editor.hasAnyOverriddenKeys("imageSizeMode")}
+            >
+              <editor-text-input
+                label="URL"
+                placeholder="https://example.com/image.jpg"
+                .value=${element.url}
+                @input=${(e) => {
+                  element.url = e.detail.value;
+                }}
+                @change=${(e) => {
+                  imageEditorPlugin._updateImageUrl(element, e.detail.value);
+                }}
+              ></editor-text-input>
 
-            <editor-radio-button
-              .options=${[
-                { label: "Full width", value: "full-width" },
-                { label: "Contained", value: "contained" },
-                { label: "Cover", value: "cover" },
-              ]}
-              .value=${this.imageSizeMode}
-              @change=${(e) => this.updateImageSizeMode(e.detail.value)}
-            ></editor-radio-button>
-          </settings-section>
-          <settings-section title="Interaction">
-                      <settings-section title="Interaction" ?overridden=${this.hasAnyOverriddenKeys("imageClickAction", "imageLinkUrl", "imageLinkTarget")}>
-            <editor-radio-button
-              .options=${[
-                { label: "Do nothing", value: "none" },
-                { label: "Open a link", value: "link" },
-                { label: "Open image in lightbox", value: "lightbox" },
-              ]}
-              .value=${this.imageClickAction}
-              @change=${(event) => {
-                this.updateSettingsState({
-                  imageClickAction: event.detail.value,
-                });
-              }}
-            ></editor-radio-button>
+              <editor-radio-button
+                .options=${[
+                  { label: "Full width", value: "full-width" },
+                  { label: "Contained", value: "contained" },
+                  { label: "Cover", value: "cover" },
+                ]}
+                .value=${editor.imageSizeMode}
+                @change=${(e) => {
+                  const normalizedMode = getImageMode(e.detail.value);
+                  const nextState = { imageSizeMode: normalizedMode };
+                  if (normalizedMode === "full-width") {
+                    nextState.gridRowSpan = 1;
+                  }
+                  editor.updateSettingsState(nextState);
+                }}
+              ></editor-radio-button>
+            </settings-section>
 
-            ${
-              this.imageClickAction === "link"
+            <settings-section
+              title="Interaction"
+              ?overridden=${editor.hasAnyOverriddenKeys(
+                "imageClickAction",
+                "imageLinkUrl",
+                "imageLinkTarget",
+              )}
+            >
+              <editor-radio-button
+                .options=${[
+                  { label: "Do nothing", value: "none" },
+                  { label: "Open a link", value: "link" },
+                  { label: "Open image in lightbox", value: "lightbox" },
+                ]}
+                .value=${editor.imageClickAction}
+                @change=${(event) => {
+                  editor.updateSettingsState({
+                    imageClickAction: event.detail.value,
+                  });
+                }}
+              ></editor-radio-button>
+
+              ${editor.imageClickAction === "link"
                 ? html`
                     <editor-text-input
                       label="Link URL"
                       placeholder="https://example.com"
-                      .value=${this.imageLinkUrl}
+                      .value=${editor.imageLinkUrl}
                       @change=${(event) => {
-                        this.updateSettingsState({
+                        editor.updateSettingsState({
                           imageLinkUrl: event.detail.value,
                         });
                       }}
@@ -176,65 +128,87 @@ class SiteImage extends withVariantConfig(EditorComponent) {
                         { label: "Open in current page", value: "current" },
                         { label: "Open in new tab", value: "new" },
                       ]}
-                      .value=${this.imageLinkTarget}
+                      .value=${editor.imageLinkTarget}
                       @change=${(event) => {
-                        this.updateSettingsState({
+                        editor.updateSettingsState({
                           imageLinkTarget: event.detail.value,
                         });
                       }}
                     ></editor-radio-button>
                   `
-                : null
-            }
-          </settings-section>
-        </div>
-      `,
+                : null}
+            </settings-section>
+          </div>
+        `;
+      },
     });
-  }
+  },
 
-  openImageSettingsIfNeeded() {
-    if (this.isSettingsEditorOpen) {
-      return;
-    }
-
-    this.openImageSettings();
-  }
-
-  // Spacing and custom CSS are rendered inside owb-image, not in site-image.
-  applySpacingToRenderRoot() {}
-  applyCustomCssToRenderRoot() {}
-
-  render() {
-    const settings = {
-      imageSizeMode: this.imageSizeMode,
-      imageClickAction: this.imageClickAction,
-      imageLinkUrl: this.imageLinkUrl,
-      imageLinkTarget: this.imageLinkTarget,
-      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
-      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
-      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
-      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
-      settingSpacingMarginTop: this.settingSpacingMarginTop,
-      settingSpacingMarginRight: this.settingSpacingMarginRight,
-      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
-      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
-      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
-      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
-      settingSpacingTextColor: this.settingSpacingTextColor,
-      settingSpacingHidden: this.settingSpacingHidden,
-      customCss: this.settingCustomCss,
+  onConnected(element) {
+    element._onFocusNodeRequest = (event) => {
+      const requestedNodeId = String(event?.detail?.nodeId || "");
+      if (
+        !requestedNodeId ||
+        String(element.node?.id || "") !== requestedNodeId
+      ) {
+        return;
+      }
+      element.scrollIntoView({ block: "center", behavior: "smooth" });
+      const editorBlock = element.renderRoot?.querySelector(
+        "[data-editor-block]",
+      );
+      if (editorBlock instanceof HTMLElement) {
+        editorBlock.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+            pointerId: 1,
+            isPrimary: true,
+          }),
+        );
+        return;
+      }
+      imageEditorPlugin.onPointerDown(element);
     };
-    return html`
-      <owb-image
-        data-editor-block
-        @pointerdown=${() => this.openImageSettingsIfNeeded()}
-        class="${this.isSettingsEditorOpen ? "is-settings-open" : ""}"
-        .settings=${settings}
-      ></owb-image>
-    `;
-  }
-}
+    window.addEventListener("owb-focus-node", element._onFocusNodeRequest);
+  },
 
+  onDisconnected(element) {
+    if (element._onFocusNodeRequest) {
+      window.removeEventListener("owb-focus-node", element._onFocusNodeRequest);
+      element._onFocusNodeRequest = null;
+    }
+  },
+
+  // Update the url field — a top-level node property, not in node.settings.
+  _updateImageUrl(element, nextUrl) {
+    element.url = nextUrl;
+    if (!element.pageConfig || !element.node?.id) return;
+
+    const nextContent = updateUrlInTree(
+      Array.isArray(element.pageConfig.content)
+        ? element.pageConfig.content
+        : [],
+      element.node.id,
+      nextUrl,
+    );
+
+    element.node = { ...element.node, url: nextUrl };
+    const nextPageConfig = { ...element.pageConfig, content: nextContent };
+    element.pageConfig = nextPageConfig;
+    element.dispatchPageConfigUpdated(nextPageConfig);
+
+    // Re-render the overlay so the URL input reflects the committed value.
+    EditorComponent.instance?.renderSettingsOverlay();
+  },
+};
+
+installEditorPlugin(OwbImage, imageEditorPlugin);
+
+// ---------------------------------------------------------------------------
+// Render function — returns owb-image directly (no site-image wrapper)
+// ---------------------------------------------------------------------------
 export const editorRenderImage = (
   node,
   pageConfig,
@@ -242,17 +216,15 @@ export const editorRenderImage = (
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<site-image
+  return html`<owb-image
+    class=${renderOptions.hostClass || ""}
+    style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
     .pageConfig=${pageConfig}
     @page-config-updated=${onPageConfigUpdated}
-  ></site-image>`;
+  ></owb-image>`;
 };
-
-if (!customElements.get("site-image")) {
-  customElements.define("site-image", SiteImage);
-}
 
 if (!customElements.get("owb-image")) {
   customElements.define("owb-image", OwbImage);

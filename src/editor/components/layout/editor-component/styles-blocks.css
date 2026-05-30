@@ -1,9 +1,9 @@
 :host {
-  display: block;
+  /* display: block; */
 }
 
 [data-editor-block] {
-  position: relative;
+  /* position: relative; */
 }
 
 [data-editor-block]:hover::before,

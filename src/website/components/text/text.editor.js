@@ -164,7 +164,7 @@ class Text extends withVariantConfig(EditorComponent) {
   dispatchPageConfigUpdated(nextPageConfig) {
     this.dispatchEvent(
       new CustomEvent("page-config-updated", {
-        detail: { pageConfig: nextPageConfig },
+        detail: nextPageConfig,
         bubbles: true,
         composed: true,
       }),

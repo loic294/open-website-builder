@@ -1,12 +1,12 @@
 import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
-import { withVariantConfig } from "../variant-component-base.js";
-import styles from "./styles.css?inline";
+import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbSlider, defaultSliderConfig } from "./slider.js";
+import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 export { defaultSliderConfig };
 
-OwbSlider.editorPlugin = {};
+OwbSlider.styles = [].concat(OwbSlider.styles || [], unsafeCSS(blocksStyles));
 
 const FORMAT_OPTIONS = [
   { label: "Original", value: "auto" },
@@ -19,214 +19,176 @@ const FORMAT_OPTIONS = [
   { label: "9x16", value: "9 / 16" },
 ];
 
-class SiteSlider extends withVariantConfig(EditorComponent) {
-  static properties = {
-    node: { type: Object },
-    pageConfig: { type: Object },
-    sliderImages: { type: Array },
-    sliderFormat: { type: String },
-    sliderItemWidth: { type: String },
-    sliderHeight: { type: String },
-    sliderGap: { type: String },
-  };
+// ---------------------------------------------------------------------------
+// Helper: recursively update images on a node in the content tree
+// ---------------------------------------------------------------------------
+function updateImagesInTree(nodes, targetNodeId, nextImages) {
+  return nodes.map((currentNode) => {
+    if (currentNode?.id === targetNodeId && currentNode?.type === "slider") {
+      return { ...currentNode, images: nextImages };
+    }
+    if (Array.isArray(currentNode?.content)) {
+      return {
+        ...currentNode,
+        content: updateImagesInTree(
+          currentNode.content,
+          targetNodeId,
+          nextImages,
+        ),
+      };
+    }
+    return currentNode;
+  });
+}
 
-  static styles = [super.styles, unsafeCSS(styles)];
+function updateSliderImages(element, nextImages) {
+  element.images = nextImages;
+  if (!element.pageConfig || !element.node?.id) return;
+  const nextContent = updateImagesInTree(
+    Array.isArray(element.pageConfig.content) ? element.pageConfig.content : [],
+    element.node.id,
+    nextImages,
+  );
+  element.node = { ...element.node, images: nextImages };
+  const nextPageConfig = { ...element.pageConfig, content: nextContent };
+  element.pageConfig = nextPageConfig;
+  element.dispatchPageConfigUpdated(nextPageConfig);
+}
 
-  constructor() {
-    super();
-    this.node = null;
-    this.pageConfig = null;
-    this.sliderImages = [];
-    this.sliderFormat = "3 / 2";
-    this.sliderItemWidth = "80%";
-    this.sliderHeight = "400px";
-    this.sliderGap = "12px";
-  }
+// ---------------------------------------------------------------------------
+// Editor plugin
+// ---------------------------------------------------------------------------
+installEditorPlugin(OwbSlider, {
+  onUpdated(element, changedProperties) {
+    if (!changedProperties.has("node")) return;
+    element.images = Array.isArray(element.node?.images)
+      ? element.node.images
+      : [];
+    element.settings = element.node?.settings ?? {};
+  },
 
-  updated(changedProperties) {
-    if (changedProperties.has("node")) {
-      this.sliderImages = Array.isArray(this.node?.images)
-        ? this.node.images
-        : [];
-
-      this.syncSettingsStateFromNode({
+  onPointerDown(element) {
+    if (EditorComponent.activeSettingsOwner === element) return;
+    EditorComponent.openFor(element, {
+      defaultState: {
         sliderFormat: "3 / 2",
         sliderItemWidth: "80%",
         sliderHeight: "400px",
         sliderGap: "12px",
-      });
-    }
-  }
-
-  updateNodeImages(nodes, targetNodeId, nextImages) {
-    return nodes.map((currentNode) => {
-      if (currentNode?.id === targetNodeId && currentNode?.type === "slider") {
-        return { ...currentNode, images: nextImages };
-      }
-
-      if (Array.isArray(currentNode?.content)) {
-        return {
-          ...currentNode,
-          content: this.updateNodeImages(
-            currentNode.content,
-            targetNodeId,
-            nextImages,
-          ),
-        };
-      }
-
-      return currentNode;
-    });
-  }
-
-  updateImagesFromText(nextValue) {
-    const nextImages = String(nextValue || "")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    this.sliderImages = nextImages;
-    this.currentIndex = 0;
-
-    if (!this.pageConfig || !this.node?.id) {
-      return;
-    }
-
-    const nextPageConfig = {
-      ...this.pageConfig,
-      content: this.updateNodeImages(
-        Array.isArray(this.pageConfig.content) ? this.pageConfig.content : [],
-        this.node.id,
-        nextImages,
-      ),
-    };
-
-    this.node = { ...this.node, images: nextImages };
-    this.pageConfig = nextPageConfig;
-    this.dispatchPageConfigUpdated(nextPageConfig);
-  }
-
-  openSliderSettings() {
-    this.syncSettingsStateFromNode({
-      sliderFormat: "3 / 2",
-      sliderItemWidth: "80%",
-      sliderHeight: "400px",
-      sliderGap: "12px",
-    });
-
-    this.openSettingsEditor({
+      },
       tabs: [{ id: "general", label: "General" }],
-      content: () => html`
-        <settings-section title="Photos">
-          <textarea
-            class="slider-textarea"
-            .value=${this.sliderImages.join("\n")}
-            placeholder="One image URL per line"
-            @input=${(event) => this.updateImagesFromText(event.target.value)}
-          ></textarea>
-        </settings-section>
-        <settings-section
-          title="Layout"
-          ?overridden=${this.hasAnyOverriddenKeys(
-            "sliderFormat",
-            "sliderItemWidth",
-            "sliderHeight",
-            "sliderGap",
-          )}
-        >
-          <editor-select
-            label="Picture format"
-            .value=${this.sliderFormat}
-            .options=${FORMAT_OPTIONS.map((option) => ({
-              label: option.label,
-              value: option.value,
-            }))}
-            @change=${(event) =>
-              this.updateSettingsState({ sliderFormat: event.detail.value })}
-          ></editor-select>
-          ${this.sliderFormat === "auto"
-            ? html`
-                <editor-text-input
-                  label="Height"
-                  placeholder="400px"
-                  .value=${this.sliderHeight}
-                  @change=${(event) =>
-                    this.updateSettingsState({
-                      sliderHeight: event.detail.value,
-                    })}
-                ></editor-text-input>
-              `
-            : html`
-                <editor-text-input
-                  label="Item width"
-                  placeholder="80%"
-                  .value=${this.sliderItemWidth}
-                  @change=${(event) =>
-                    this.updateSettingsState({
-                      sliderItemWidth: event.detail.value,
-                    })}
-                ></editor-text-input>
-              `}
-          <editor-text-input
-            label="Gap"
-            placeholder="12px"
-            .value=${this.sliderGap}
-            @change=${(event) =>
-              this.updateSettingsState({ sliderGap: event.detail.value })}
-          ></editor-text-input>
-        </settings-section>
-      `,
+      content: () => {
+        const editor = EditorComponent.instance;
+        return html`
+          <settings-section title="Photos">
+            <textarea
+              class="slider-textarea"
+              .value=${element.images.join("\n")}
+              placeholder="One image URL per line"
+              @input=${(event) => {
+                const nextImages = String(event.target.value || "")
+                  .split("\n")
+                  .map((l) => l.trim())
+                  .filter(Boolean);
+                updateSliderImages(element, nextImages);
+              }}
+            ></textarea>
+          </settings-section>
+          <settings-section
+            title="Layout"
+            ?overridden=${editor.hasAnyOverriddenKeys(
+              "sliderFormat",
+              "sliderItemWidth",
+              "sliderHeight",
+              "sliderGap",
+            )}
+          >
+            <editor-select
+              label="Picture format"
+              .value=${editor.sliderFormat}
+              .options=${FORMAT_OPTIONS}
+              @change=${(event) =>
+                editor.updateSettingsState({
+                  sliderFormat: event.detail.value,
+                })}
+            ></editor-select>
+            ${editor.sliderFormat === "auto"
+              ? html`
+                  <editor-text-input
+                    label="Height"
+                    placeholder="400px"
+                    .value=${editor.sliderHeight}
+                    @change=${(event) =>
+                      editor.updateSettingsState({
+                        sliderHeight: event.detail.value,
+                      })}
+                  ></editor-text-input>
+                `
+              : html`
+                  <editor-text-input
+                    label="Item width"
+                    placeholder="80%"
+                    .value=${editor.sliderItemWidth}
+                    @change=${(event) =>
+                      editor.updateSettingsState({
+                        sliderItemWidth: event.detail.value,
+                      })}
+                  ></editor-text-input>
+                `}
+            <editor-text-input
+              label="Gap"
+              placeholder="12px"
+              .value=${editor.sliderGap}
+              @change=${(event) =>
+                editor.updateSettingsState({ sliderGap: event.detail.value })}
+            ></editor-text-input>
+          </settings-section>
+        `;
+      },
     });
-  }
+  },
 
-  openSliderSettingsIfNeeded() {
-    if (this.isSettingsEditorOpen) {
-      return;
-    }
-    this.openSliderSettings();
-  }
-
-  // Spacing and custom CSS are rendered inside owb-slider, not in site-slider.
-  applySpacingToRenderRoot() {}
-  applyCustomCssToRenderRoot() {}
-
-  render() {
-    const settings = {
-      sliderFormat: this.sliderFormat,
-      sliderItemWidth: this.sliderItemWidth,
-      sliderHeight: this.sliderHeight,
-      sliderGap: this.sliderGap,
-      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
-      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
-      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
-      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
-      settingSpacingMarginTop: this.settingSpacingMarginTop,
-      settingSpacingMarginRight: this.settingSpacingMarginRight,
-      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
-      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
-      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
-      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
-      settingSpacingTextColor: this.settingSpacingTextColor,
-      settingSpacingHidden: this.settingSpacingHidden,
-      customCss: this.settingCustomCss,
+  onConnected(element) {
+    element._onFocusNodeRequest = (event) => {
+      const requestedNodeId = String(event?.detail?.nodeId || "");
+      if (
+        !requestedNodeId ||
+        String(element.node?.id || "") !== requestedNodeId
+      ) {
+        return;
+      }
+      element.scrollIntoView({ block: "center", behavior: "smooth" });
+      const editorBlock = element.renderRoot?.querySelector(
+        "[data-editor-block]",
+      );
+      if (editorBlock instanceof HTMLElement) {
+        editorBlock.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+            pointerId: 1,
+            isPrimary: true,
+          }),
+        );
+        return;
+      }
+      OwbSlider.editorPlugin?.onPointerDown?.(element);
     };
-    return html`
-      <div
-        data-editor-block
-        @pointerdown=${() => this.openSliderSettingsIfNeeded()}
-        class="slider-block ${this.isSettingsEditorOpen
-          ? "is-settings-open"
-          : ""}"
-      >
-        <owb-slider
-          .images=${this.sliderImages}
-          .settings=${settings}
-        ></owb-slider>
-      </div>
-    `;
-  }
-}
+    window.addEventListener("owb-focus-node", element._onFocusNodeRequest);
+  },
 
+  onDisconnected(element) {
+    if (element._onFocusNodeRequest) {
+      window.removeEventListener("owb-focus-node", element._onFocusNodeRequest);
+      element._onFocusNodeRequest = null;
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Render function — returns owb-slider directly (no site-slider wrapper)
+// ---------------------------------------------------------------------------
 export const editorRenderSlider = (
   node,
   pageConfig,
@@ -234,19 +196,15 @@ export const editorRenderSlider = (
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<site-slider
+  return html`<owb-slider
     class=${renderOptions.hostClass || ""}
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
     .node=${node}
     .pageConfig=${pageConfig}
     @page-config-updated=${onPageConfigUpdated}
-  ></site-slider>`;
+  ></owb-slider>`;
 };
-
-if (!customElements.get("site-slider")) {
-  customElements.define("site-slider", SiteSlider);
-}
 
 if (!customElements.get("owb-slider")) {
   customElements.define("owb-slider", OwbSlider);

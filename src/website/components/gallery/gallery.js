@@ -1,6 +1,7 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, isServer, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import { createElement, X, ChevronLeft, ChevronRight } from "lucide";
 
 export const defaultGalleryConfig = {
   type: "gallery",
@@ -18,7 +19,7 @@ export class OwbGallery extends LitElement {
     .lightbox {
       border: none;
       padding: 0;
-      background: rgba(17, 24, 39, 0.95);
+      background: rgba(255, 255, 255, 0.95);
       max-width: 100vw;
       max-height: 100dvh;
       width: 100vw;
@@ -26,7 +27,7 @@ export class OwbGallery extends LitElement {
     }
 
     .lightbox::backdrop {
-      background: rgba(0, 0, 0, 0.72);
+      background: rgba(255, 255, 255, 0.5);
     }
 
     .lightbox-inner {
@@ -58,7 +59,7 @@ export class OwbGallery extends LitElement {
       align-items: center;
       justify-content: center;
       background: rgba(255, 255, 255, 0.18);
-      color: #fff;
+      color: #000;
       cursor: pointer;
       font-size: 18px;
       line-height: 1;
@@ -84,6 +85,7 @@ export class OwbGallery extends LitElement {
     node: { type: Object },
     pageConfig: { type: Object },
     lightboxIndex: { state: true },
+    isSettingsOpen: { state: true },
   };
 
   constructor() {
@@ -93,7 +95,9 @@ export class OwbGallery extends LitElement {
     this.node = null;
     this.pageConfig = null;
     this.lightboxIndex = -1;
+    this.isSettingsOpen = false;
     this._onKeydown = this._onKeydown.bind(this);
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
   connectedCallback() {
@@ -107,16 +111,47 @@ export class OwbGallery extends LitElement {
     }
     super.connectedCallback();
     window.addEventListener("keydown", this._onKeydown);
+    if (OwbGallery.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbGallery.editorPlugin.onConnected?.(this);
+    }
   }
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this._onKeydown);
+    if (OwbGallery.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbGallery.editorPlugin.onDisconnected?.(this);
+    }
     super.disconnectedCallback();
   }
 
   updated(changedProperties) {
     super.updated(changedProperties);
     OwbGallery.editorPlugin?.onUpdated?.(this, changedProperties);
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   _onKeydown(event) {
@@ -156,67 +191,79 @@ export class OwbGallery extends LitElement {
     const activeImage =
       this.lightboxIndex >= 0 ? images[this.lightboxIndex] : "";
     const spacingCss = getSpacingStyleBlock(settings);
+    const isEditorMode = OwbGallery.editorPlugin !== null;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/gallery.css" />
       ${spacingCss
         ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
         : null}
-      ${images.length === 0
-        ? html`<div class="gallery-empty">No gallery images configured</div>`
-        : html`
-            <div
-              class="gallery-grid"
-              style="--gallery-columns: ${cols}; --gallery-gap: ${gap}; --gallery-ratio: ${format};"
-            >
-              ${images.map(
-                (url, index) => html`
-                  <button
-                    type="button"
-                    class="gallery-thumb"
-                    @click=${() => this.openLightbox(index)}
-                  >
-                    <img src="${url}" alt="" loading="lazy" />
-                  </button>
-                `,
-              )}
-            </div>
-            <dialog
-              class="lightbox"
-              @click=${(event) => {
-                if (event.target === event.currentTarget) this.closeLightbox();
-              }}
-            >
-              <div class="lightbox-inner">
-                <img src="${activeImage}" alt="" />
-                <button
-                  class="lightbox-close"
-                  type="button"
-                  @click=${() => this.closeLightbox()}
-                >
-                  X
-                </button>
-                ${images.length > 1
-                  ? html`
-                      <button
-                        class="lightbox-nav is-prev"
-                        type="button"
-                        @click=${() => this.navigate(-1)}
-                      >
-                        &#8249;
-                      </button>
-                      <button
-                        class="lightbox-nav is-next"
-                        type="button"
-                        @click=${() => this.navigate(1)}
-                      >
-                        &#8250;
-                      </button>
-                    `
-                  : null}
+      <div
+        class="gallery-block${this.isSettingsOpen ? " is-settings-open" : ""}"
+        data-editor-block=${isEditorMode ? "" : nothing}
+        @pointerdown=${isEditorMode
+          ? () => OwbGallery.editorPlugin?.onPointerDown?.(this)
+          : nothing}
+      >
+        ${images.length === 0
+          ? html`<div class="gallery-empty">No gallery images configured</div>`
+          : html`
+              <div
+                class="gallery-grid"
+                style="--gallery-columns: ${cols}; --gallery-gap: ${gap}; --gallery-ratio: ${format};"
+              >
+                ${images.map(
+                  (url, index) => html`
+                    <button
+                      type="button"
+                      class="gallery-thumb"
+                      @click=${() => this.openLightbox(index)}
+                    >
+                      <img src="${url}" alt="" loading="lazy" />
+                    </button>
+                  `,
+                )}
               </div>
-            </dialog>
-          `}
+              ${isServer
+                ? null
+                : html`<dialog
+                    class="lightbox"
+                    @click=${(event) => {
+                      if (event.target === event.currentTarget)
+                        this.closeLightbox();
+                    }}
+                  >
+                    <div class="lightbox-inner">
+                      <img src="${activeImage}" alt="" />
+                      <button
+                        class="lightbox-close"
+                        type="button"
+                        @click=${() => this.closeLightbox()}
+                      >
+                        ${createElement(X)}
+                      </button>
+                      ${images.length > 1
+                        ? html`
+                            <button
+                              class="lightbox-nav is-prev"
+                              type="button"
+                              @click=${() => this.navigate(-1)}
+                            >
+                              ${createElement(ChevronLeft)}
+                            </button>
+                            <button
+                              class="lightbox-nav is-next"
+                              type="button"
+                              @click=${() => this.navigate(1)}
+                            >
+                              ${createElement(ChevronRight)}
+                            </button>
+                          `
+                        : null}
+                    </div>
+                  </dialog>`}
+            `}
+      </div>
     `;
   }
 }

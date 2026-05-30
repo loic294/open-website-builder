@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
@@ -21,6 +21,7 @@ export class OwbSlider extends LitElement {
     settings: { type: Object },
     node: { type: Object },
     pageConfig: { type: Object },
+    isSettingsOpen: { state: true },
   };
 
   constructor() {
@@ -29,9 +30,11 @@ export class OwbSlider extends LitElement {
     this.settings = {};
     this.node = null;
     this.pageConfig = null;
+    this.isSettingsOpen = false;
     this._currentSlot = 0;
     this._silentJumpCleanup = null;
     this._onKeydown = this._onKeydown.bind(this);
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
   connectedCallback() {
@@ -45,11 +48,25 @@ export class OwbSlider extends LitElement {
     }
     super.connectedCallback();
     window.addEventListener("keydown", this._onKeydown);
+    if (OwbSlider.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbSlider.editorPlugin.onConnected?.(this);
+    }
   }
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this._onKeydown);
     if (this._silentJumpCleanup) this._silentJumpCleanup();
+    if (OwbSlider.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbSlider.editorPlugin.onDisconnected?.(this);
+    }
     super.disconnectedCallback();
   }
 
@@ -64,6 +81,23 @@ export class OwbSlider extends LitElement {
   updated(changedProperties) {
     super.updated(changedProperties);
     OwbSlider.editorPlugin?.onUpdated?.(this, changedProperties);
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   _onKeydown(event) {
@@ -160,13 +194,23 @@ export class OwbSlider extends LitElement {
     const count = images.length;
     const spacingCss = getSpacingStyleBlock(settings);
 
+    const isEditorMode = OwbSlider.editorPlugin !== null;
+
     if (count === 0) {
       return html`
         <link rel="stylesheet" href="/owb-styles/slider.css" />
         ${spacingCss
           ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
           : null}
-        <div class="slider-empty">No slider images configured</div>
+        <div
+          class="slider-block${this.isSettingsOpen ? " is-settings-open" : ""}"
+          data-editor-block=${isEditorMode ? "" : nothing}
+          @pointerdown=${isEditorMode
+            ? () => OwbSlider.editorPlugin?.onPointerDown?.(this)
+            : nothing}
+        >
+          <div class="slider-empty">No slider images configured</div>
+        </div>
       `;
     }
 
@@ -186,7 +230,13 @@ export class OwbSlider extends LitElement {
       ${spacingCss
         ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
         : null}
-      <div class="slider-block">
+      <div
+        class="slider-block${this.isSettingsOpen ? " is-settings-open" : ""}"
+        data-editor-block=${isEditorMode ? "" : nothing}
+        @pointerdown=${isEditorMode
+          ? () => OwbSlider.editorPlugin?.onPointerDown?.(this)
+          : nothing}
+      >
         <div class="slider-track-wrapper">
           <div class="slider-track" style="${trackStyle}">
             ${count > 1
