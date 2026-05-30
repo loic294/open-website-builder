@@ -1,5 +1,11 @@
 import { LitElement, html, css, unsafeCSS } from "lit";
-import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
+import {
+  SettingsController,
+  SETTINGS_HOST_PROPERTIES,
+  initSettingsHostState,
+  getActiveSettingsOwner,
+} from "../../../editor/components/layout/editor-component/settings-controller.js";
 import { dataLayer } from "../../../editor/data/data-layer.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import { ArrowDown, ArrowUp, Trash, Move, Plus, createElement } from "lucide";
@@ -257,9 +263,7 @@ function updateNodeContentById(nodes, targetNodeId, nextContent) {
   };
 }
 
-export class SiteLayoutContainerBase extends withVariantConfig(
-  EditorComponent,
-) {
+export class OwbLayoutContainerEditor extends withVariantConfig(LitElement) {
   static designColorVariables = [
     "--website-primary-color",
     "--website-secondary-color",
@@ -284,6 +288,8 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     pageConfig: { type: Object },
     renderNodeFn: { attribute: false },
     onPageConfigUpdated: { attribute: false },
+
+    ...SETTINGS_HOST_PROPERTIES,
 
     settingWidth: { type: String },
     settingWidthCustomValue: { type: String },
@@ -323,7 +329,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     replaceWithSharedComponentId: { type: String },
   };
 
-  static styles = [super.styles, unsafeCSS(styles)];
+  static styles = [unsafeCSS(blocksStyles), unsafeCSS(styles)];
 
   constructor() {
     super();
@@ -331,6 +337,8 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     this.pageConfig = null;
     this.renderNodeFn = null;
     this.onPageConfigUpdated = null;
+    initSettingsHostState(this);
+    this.settings = new SettingsController(this, { focusRouter: true });
     this.settingWidth = "normal";
     this.settingWidthCustomValue = "";
     this.settingBackgroundColor = "";
@@ -411,14 +419,23 @@ export class SiteLayoutContainerBase extends withVariantConfig(
 
   connectedCallback() {
     super.connectedCallback();
+    this.settings.onConnected();
     window.addEventListener(
       "owb-active-settings-owner-changed",
       this.onActiveSettingsOwnerChanged,
     );
   }
 
+  willUpdate(changedProperties) {
+    this.settings.onWillUpdate(changedProperties);
+  }
+
+  openSettingsEditor(options) {
+    this.settings.openSettingsEditor(options);
+  }
+
   closeSettingsEditor() {
-    super.closeSettingsEditor();
+    this.settings.closeSettingsEditor();
     this.showGridPreviewOverlay = false;
     this.forceGridOverlayVisible = false;
     this.hoveredGridChildId = "";
@@ -433,7 +450,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       this.draftGridPlacements = {};
       this.cleanupGridPointerInteraction();
 
-      this.syncSettingsStateFromNode(this.getDefaultSettingsState());
+      this.settings.syncSettingsStateFromNode(this.getDefaultSettingsState());
     }
 
     if (
@@ -455,6 +472,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     );
     this.cleanupGridPointerInteraction();
     this.cleanupSectionResizeInteraction();
+    this.settings.onDisconnected();
     super.disconnectedCallback();
   }
 
@@ -473,7 +491,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       return activeSettingsChildId;
     }
 
-    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    const activeSettingsOwner = getActiveSettingsOwner();
     if (activeSettingsOwner && activeSettingsOwner !== this) {
       return "";
     }
@@ -482,7 +500,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
   }
 
   getActiveSettingsChildIdForSection() {
-    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    const activeSettingsOwner = getActiveSettingsOwner();
     if (!activeSettingsOwner || activeSettingsOwner === this) {
       return "";
     }
@@ -524,7 +542,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
   }
 
   isSettingsOwnedBySection() {
-    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    const activeSettingsOwner = getActiveSettingsOwner();
     if (!activeSettingsOwner) {
       return false;
     }
@@ -554,7 +572,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     }
 
     // Disable hover detection if a settings panel is open on a different component
-    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    const activeSettingsOwner = getActiveSettingsOwner();
     if (activeSettingsOwner && activeSettingsOwner !== this) {
       return;
     }
@@ -1102,7 +1120,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       }
     }
 
-    this.dispatchPageConfigUpdated(this.pageConfig);
+    this.settings.dispatchPageConfigUpdated(this.pageConfig);
   }
 
   renderChildNode(node, renderOptions = {}) {
@@ -1130,17 +1148,17 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       this.node,
       position,
     );
-    this.dispatchPageConfigUpdated(nextPageConfig);
+    this.settings.dispatchPageConfigUpdated(nextPageConfig);
   }
 
   moveSection(direction) {
     const nextPageConfig = moveSection(this.pageConfig, this.node, direction);
-    this.dispatchPageConfigUpdated(nextPageConfig);
+    this.settings.dispatchPageConfigUpdated(nextPageConfig);
   }
 
   deleteSection() {
     const nextPageConfig = removeSection(this.pageConfig, this.node);
-    this.dispatchPageConfigUpdated(nextPageConfig);
+    this.settings.dispatchPageConfigUpdated(nextPageConfig);
   }
 
   getDefaultChildNode(type) {
@@ -1352,7 +1370,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       content: nextContent,
     };
     this.pageConfig = nextPageConfig;
-    this.dispatchPageConfigUpdated(nextPageConfig);
+    this.settings.dispatchPageConfigUpdated(nextPageConfig);
   }
 
   addChildBlock(type) {
@@ -1461,7 +1479,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
         this.activeSectionResizeState.startRows + deltaRows,
       );
       if (nextRows !== Number.parseInt(this.settingGridRows, 10)) {
-        this.updateSettingsState({
+        this.settings.updateSettingsState({
           settingGridRows: nextRows,
         });
       }
@@ -1474,7 +1492,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
     );
     const nextValue = `${nextHeight}px`;
     if (nextValue !== this.settingFixedHeight) {
-      this.updateSettingsState({
+      this.settings.updateSettingsState({
         settingFixedHeight: nextValue,
       });
     }
@@ -1557,7 +1575,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       content: nextContent,
     };
 
-    this.dispatchPageConfigUpdated(nextPageConfig);
+    this.settings.dispatchPageConfigUpdated(nextPageConfig);
     this.closeSettingsEditor();
   }
 
@@ -1576,7 +1594,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       await this.loadSharedComponentOptions();
     }
 
-    this.syncSettingsStateFromNode(this.getDefaultSettingsState());
+    this.settings.syncSettingsStateFromNode(this.getDefaultSettingsState());
 
     this.openSettingsEditor({
       tabs: [
@@ -1600,7 +1618,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
           return html`<div>
             <settings-section
               title="Width"
-              ?overridden=${this.hasAnyOverriddenKeys(
+              ?overridden=${this.settings.hasAnyOverriddenKeys(
                 "settingWidth",
                 "settingWidthCustomValue",
               )}
@@ -1609,7 +1627,9 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                 .options=${options}
                 .value=${this.settingWidth}
                 @change=${(e) => {
-                  this.updateSettingsState({ settingWidth: e.detail.value });
+                  this.settings.updateSettingsState({
+                    settingWidth: e.detail.value,
+                  });
                 }}
               ></editor-radio-button>
 
@@ -1619,7 +1639,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                     placeholder="1024px"
                     .value=${this.settingWidthCustomValue}
                     @change=${(e) => {
-                      this.updateSettingsState({
+                      this.settings.updateSettingsState({
                         settingWidthCustomValue: e.detail.value,
                       });
                     }}
@@ -1628,7 +1648,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
             </settings-section>
             <settings-section
               title="Sizing"
-              ?overridden=${this.hasAnyOverriddenKeys(
+              ?overridden=${this.settings.hasAnyOverriddenKeys(
                 "settingSizing",
                 "settingPaddingTop",
                 "settingPaddingRight",
@@ -1646,7 +1666,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                 ]}
                 .value=${this.settingSizing}
                 @change=${(e) => {
-                  this.updateSettingsState({
+                  this.settings.updateSettingsState({
                     settingSizing: e.detail.value,
                   });
                 }}
@@ -1663,7 +1683,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                       }}
                       @change=${(e) => {
                         const paddingValues = e.detail.value || {};
-                        this.updateSettingsState({
+                        this.settings.updateSettingsState({
                           settingPaddingTop: paddingValues.top || "",
                           settingPaddingRight: paddingValues.right || "",
                           settingPaddingBottom: paddingValues.bottom || "",
@@ -1676,7 +1696,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
             </settings-section>
             <settings-section
               title="Alignment"
-              ?overridden=${this.hasAnyOverriddenKeys(
+              ?overridden=${this.settings.hasAnyOverriddenKeys(
                 "settingAlignmentMode",
                 "settingGap",
                 "settingRowHeight",
@@ -1721,7 +1741,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                 }}
                 @alignment-change=${(e) => {
                   const next = e.detail.value;
-                  this.updateSettingsState({
+                  this.settings.updateSettingsState({
                     settingAlignmentMode: next.mode,
                     settingGap: next.gap,
                     settingRowHeight: next.rowHeight,
@@ -1753,7 +1773,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
                       placeholder="320px"
                       .value=${this.settingFixedHeight}
                       @change=${(event) => {
-                        this.updateSettingsState({
+                        this.settings.updateSettingsState({
                           settingFixedHeight: event.detail.value,
                         });
                       }}
@@ -1808,14 +1828,16 @@ export class SiteLayoutContainerBase extends withVariantConfig(
           return html`<div>
             <settings-section
               title="Background color"
-              ?overridden=${this.hasAnyOverriddenKeys("settingBackgroundColor")}
+              ?overridden=${this.settings.hasAnyOverriddenKeys(
+                "settingBackgroundColor",
+              )}
             >
               <editor-color-dots
                 .options=${this.constructor.designColorVariables}
                 .value=${this.settingBackgroundColor}
                 label="Background color"
                 @change=${(e) => {
-                  this.updateSettingsState({
+                  this.settings.updateSettingsState({
                     settingBackgroundColor: e.detail.value,
                   });
                 }}
@@ -1823,14 +1845,16 @@ export class SiteLayoutContainerBase extends withVariantConfig(
             </settings-section>
             <settings-section
               title="Text color"
-              ?overridden=${this.hasAnyOverriddenKeys("settingTextColor")}
+              ?overridden=${this.settings.hasAnyOverriddenKeys(
+                "settingTextColor",
+              )}
             >
               <editor-color-dots
                 .options=${this.constructor.designColorVariables}
                 .value=${this.settingTextColor}
                 label="Text color"
                 @change=${(e) => {
-                  this.updateSettingsState({
+                  this.settings.updateSettingsState({
                     settingTextColor: e.detail.value,
                   });
                 }}
@@ -1849,7 +1873,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
       return;
     }
 
-    const activeSettingsOwner = EditorComponent.activeSettingsOwner;
+    const activeSettingsOwner = getActiveSettingsOwner();
     const activeOwnerNodeId = String(activeSettingsOwner?.node?.id || "");
     const isActiveOwnerDescendant = this.hasDescendantNodeId(activeOwnerNodeId);
     if (
@@ -2253,7 +2277,7 @@ export class SiteLayoutContainerBase extends withVariantConfig(
   }
 }
 
-export class SiteSection extends SiteLayoutContainerBase {
+export class OwbSectionEditor extends OwbLayoutContainerEditor {
   shouldShowAddSectionButtons() {
     return true;
   }
@@ -2389,14 +2413,14 @@ export function removeSection(pageConfig, node) {
 
 OwbSection.editorPlugin = {};
 
-export const editorRenderSiteSection = (
+export const editorRenderSection = (
   node,
   pageConfig,
   onPageConfigUpdated,
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<site-section
+  return html`<owb-section-editor
     class=${renderOptions.hostClass || ""}
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
@@ -2405,10 +2429,10 @@ export const editorRenderSiteSection = (
     .renderNodeFn=${renderNode}
     .onPageConfigUpdated=${onPageConfigUpdated}
     @page-config-updated=${onPageConfigUpdated}
-  ></site-section>`;
+  ></owb-section-editor>`;
 };
 
-customElements.define("site-section", SiteSection);
+customElements.define("owb-section-editor", OwbSectionEditor);
 
 if (!customElements.get("owb-section")) {
   customElements.define("owb-section", OwbSection);

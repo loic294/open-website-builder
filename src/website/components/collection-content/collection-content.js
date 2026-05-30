@@ -1,88 +1,92 @@
 import { html, LitElement, css } from "lit";
-import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 
-class SiteCollectionContent extends EditorComponent {
-  static styles = [
-    super.styles,
-    css`
-      :host {
-        display: block;
-      }
+export class OwbCollectionContent extends LitElement {
+  static editorPlugin = null;
 
-      .collection-content-placeholder {
-        padding: 16px;
-        border: 1px dashed var(--editor-muted-text-color);
-        border-radius: var(--editor-sharp-radius);
-        background: color-mix(
-          in srgb,
-          var(--editor-background) 60%,
-          var(--editor-white-color)
-        );
-        color: var(--editor-muted-text-color);
-        font-size: 12px;
-      }
-    `,
-  ];
+  static properties = {
+    node: { type: Object },
+    pageConfig: { type: Object },
+    isSettingsOpen: { state: true },
+  };
 
-  openCollectionContentSettings() {
-    this.openSettingsEditor(html`
-      <div>
-        <p>
-          This marker shows where a collection item's content should be injected
-          when rendering a collection template.
-        </p>
-      </div>
-    `);
+  static styles = css`
+    :host {
+      display: block;
+    }
+
+    .collection-content-placeholder {
+      padding: 16px;
+      border: 1px dashed var(--editor-muted-text-color);
+      border-radius: var(--editor-sharp-radius);
+      background: color-mix(
+        in srgb,
+        var(--editor-background) 60%,
+        var(--editor-white-color)
+      );
+      color: var(--editor-muted-text-color);
+      font-size: 12px;
+    }
+  `;
+
+  constructor() {
+    super();
+    this.node = null;
+    this.pageConfig = null;
+    this.isSettingsOpen = false;
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (OwbCollectionContent.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbCollectionContent.editorPlugin.onConnected?.(this);
+    }
+  }
+
+  disconnectedCallback() {
+    if (OwbCollectionContent.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbCollectionContent.editorPlugin.onDisconnected?.(this);
+    }
+    super.disconnectedCallback();
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    OwbCollectionContent.editorPlugin?.onUpdated?.(this, changedProperties);
   }
 
   render() {
+    const isEditorMode = OwbCollectionContent.editorPlugin !== null;
     return html`
       <div
-        class="collection-content-placeholder"
-        data-editor-block
-        @click=${() => this.openCollectionContentSettings()}
+        class="collection-content-placeholder${isEditorMode &&
+        this.isSettingsOpen
+          ? " is-settings-open"
+          : ""}"
+        data-editor-block=${isEditorMode ? "" : null}
+        @pointerdown=${isEditorMode
+          ? () => OwbCollectionContent.editorPlugin?.onPointerDown?.(this)
+          : null}
       >
         Collection content
       </div>
     `;
   }
-}
-
-class OwbCollectionContent extends LitElement {
-  static styles = [
-    css`
-      :host {
-        display: block;
-      }
-    `,
-  ];
-
-  render() {
-    return html`<slot></slot>`;
-  }
-}
-
-export const editorRenderCollectionContent = (
-  node,
-  pageConfig,
-  onPageConfigUpdated,
-  renderNode,
-  renderOptions = {},
-) => {
-  return html`<site-collection-content
-    class=${renderOptions.hostClass || ""}
-    style=${renderOptions.hostStyle || ""}
-    data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
-    .node=${node}
-    .pageConfig=${pageConfig}
-    .renderNodeFn=${renderNode}
-    .onPageConfigUpdated=${onPageConfigUpdated}
-    @page-config-updated=${onPageConfigUpdated}
-  ></site-collection-content>`;
-};
-
-if (!customElements.get("site-collection-content")) {
-  customElements.define("site-collection-content", SiteCollectionContent);
 }
 
 if (!customElements.get("owb-collection-content")) {

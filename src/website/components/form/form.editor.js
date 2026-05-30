@@ -1,14 +1,14 @@
 import { html } from "lit";
-import { SiteLayoutContainerBase } from "../site-section/site-section.js";
+import { OwbLayoutContainerEditor } from "../site-section/site-section.js";
 import { OwbForm } from "./form.js";
 
 export { defaultFormConfig } from "./form.js";
 
 OwbForm.editorPlugin = {};
 
-class SiteForm extends SiteLayoutContainerBase {
+class OwbFormEditor extends OwbLayoutContainerEditor {
   static properties = {
-    ...SiteLayoutContainerBase.properties,
+    ...OwbLayoutContainerEditor.properties,
     formActionUrl: { type: String },
     formMethod: { type: String },
     formSubmitMode: { type: String },
@@ -44,7 +44,7 @@ class SiteForm extends SiteLayoutContainerBase {
           placeholder="https://example.com/contact"
           .value=${this.formActionUrl}
           @change=${(event) => {
-            this.updateSettingsState({
+            this.settings.updateSettingsState({
               formActionUrl: event.detail.value,
             });
           }}
@@ -57,7 +57,7 @@ class SiteForm extends SiteLayoutContainerBase {
             { label: "GET", value: "get" },
           ]}
           @change=${(event) => {
-            this.updateSettingsState({
+            this.settings.updateSettingsState({
               formMethod: event.detail.value,
             });
           }}
@@ -71,7 +71,7 @@ class SiteForm extends SiteLayoutContainerBase {
           ]}
           @change=${(event) => {
             const nextMode = event.detail.value;
-            this.updateSettingsState({
+            this.settings.updateSettingsState({
               formSubmitMode: nextMode,
               formSuccessMessage:
                 nextMode === "success-message" ? this.formSuccessMessage : "",
@@ -87,7 +87,7 @@ class SiteForm extends SiteLayoutContainerBase {
               placeholder="/thank-you"
               .value=${this.formRedirectUrl}
               @change=${(event) => {
-                this.updateSettingsState({
+                this.settings.updateSettingsState({
                   formRedirectUrl: event.detail.value,
                 });
               }}
@@ -97,7 +97,7 @@ class SiteForm extends SiteLayoutContainerBase {
               placeholder="Thanks! Your form has been submitted."
               .value=${this.formSuccessMessage}
               @change=${(event) => {
-                this.updateSettingsState({
+                this.settings.updateSettingsState({
                   formSuccessMessage: event.detail.value,
                 });
               }}
@@ -114,7 +114,7 @@ export const editorRenderForm = (
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<site-form
+  return html`<owb-form-editor
     class=${renderOptions.hostClass || ""}
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
@@ -123,11 +123,11 @@ export const editorRenderForm = (
     .renderNodeFn=${renderNode}
     .onPageConfigUpdated=${onPageConfigUpdated}
     @page-config-updated=${onPageConfigUpdated}
-  ></site-form>`;
+  ></owb-form-editor>`;
 };
 
-if (!customElements.get("site-form")) {
-  customElements.define("site-form", SiteForm);
+if (!customElements.get("owb-form-editor")) {
+  customElements.define("owb-form-editor", OwbFormEditor);
 }
 
 if (!customElements.get("owb-form")) {

@@ -1,6 +1,5 @@
-import { LitElement, html, unsafeCSS } from "lit";
+import { LitElement, html, nothing, unsafeCSS } from "lit";
 import { dataLayer } from "../../../editor/data/data-layer.js";
-import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import styles from "./styles.css?inline";
 
 export const defaultSharedConfig = {
@@ -8,7 +7,9 @@ export const defaultSharedConfig = {
   content: [],
 };
 
-class SharedComponent extends EditorComponent {
+export class OwbShared extends LitElement {
+  static editorPlugin = null;
+
   static properties = {
     node: { type: Object },
     pageConfig: { type: Object },
@@ -17,9 +18,10 @@ class SharedComponent extends EditorComponent {
     loading: { state: true },
     error: { state: true },
     sharedComponentOptions: { state: true },
+    isSettingsOpen: { state: true },
   };
 
-  static styles = unsafeCSS(styles);
+  static styles = [unsafeCSS(styles)];
 
   constructor() {
     super();
@@ -31,24 +33,46 @@ class SharedComponent extends EditorComponent {
     this.error = "";
     this.loadedComponentId = "";
     this.sharedComponentOptions = [];
+    this.isSettingsOpen = false;
+    this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadComponentIfNeeded();
-    void this.loadSharedComponentOptions();
-  }
-
-  updated(changedProperties) {
-    if (changedProperties.has("node")) {
-      this.loadComponentIfNeeded();
+    if (OwbShared.editorPlugin) {
+      window.addEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbShared.editorPlugin.onConnected?.(this);
     }
   }
 
+  disconnectedCallback() {
+    if (OwbShared.editorPlugin) {
+      window.removeEventListener(
+        "owb-active-settings-owner-changed",
+        this._onActiveOwnerChanged,
+      );
+      OwbShared.editorPlugin.onDisconnected?.(this);
+    }
+    super.disconnectedCallback();
+  }
+
+  _onActiveOwnerChanged(event) {
+    const ownerNodeId = String(event?.detail?.ownerNodeId || "");
+    this.isSettingsOpen = Boolean(
+      ownerNodeId && ownerNodeId === String(this.node?.id || ""),
+    );
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    OwbShared.editorPlugin?.onUpdated?.(this, changedProperties);
+  }
+
   loadComponentIfNeeded() {
-    const componentId = String(
-      this.node?.settings?.shared_component_id || "",
-    ).trim();
+    const componentId = this.currentSharedComponentId;
 
     if (!componentId) {
       this.loadedComponentId = "";
@@ -98,63 +122,6 @@ class SharedComponent extends EditorComponent {
     const nextUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.pushState({}, "", nextUrl);
     window.dispatchEvent(new CustomEvent("editor-route-change"));
-    this.closeSettingsEditor();
-  }
-
-  openSharedSettings() {
-    const currentId = this.currentSharedComponentId;
-    const options = this.sharedComponentOptions;
-    const hasCurrent = options.some((option) => option.value === currentId);
-    const baseOptions = hasCurrent
-      ? options
-      : [
-          ...options,
-          ...(currentId
-            ? [{ label: `Current (${currentId})`, value: currentId }]
-            : []),
-        ];
-    const selectOptions = [
-      { label: "Select one...", value: "" },
-      ...baseOptions,
-    ];
-
-    this.openSettingsEditor({
-      tabs: [{ id: "general", label: "General" }],
-      content: () => html`
-        <settings-section
-          title="Shared component"
-          ?overridden=${this.hasAnyOverriddenKeys("shared_component_id")}
-        >
-          <editor-select
-            label="Component"
-            .value=${currentId}
-            .options=${selectOptions}
-            @change=${(event) => {
-              this.updateSettingsState({
-                shared_component_id: event.detail.value,
-              });
-              this.loadComponentIfNeeded();
-            }}
-          ></editor-select>
-          <editor-btn
-            class="edit-shared-component-button"
-            style="light"
-            @click=${() => this.navigateToSharedEditor(currentId)}
-            ?disabled=${!currentId}
-          >
-            Edit Shared Component
-          </editor-btn>
-        </settings-section>
-      `,
-    });
-  }
-
-  openSharedSettingsIfNeeded() {
-    if (this.isSettingsEditorOpen) {
-      return;
-    }
-
-    this.openSharedSettings();
   }
 
   async loadComponent(componentId) {
@@ -217,6 +184,7 @@ class SharedComponent extends EditorComponent {
   };
 
   render() {
+    const isEditorMode = OwbShared.editorPlugin !== null;
     const sharedContent = (() => {
       if (this.loading) {
         return html`
@@ -261,11 +229,13 @@ class SharedComponent extends EditorComponent {
 
     return html`
       <div
-        data-editor-block
-        class="shared-block ${this.isSettingsEditorOpen
+        data-editor-block=${isEditorMode ? "" : nothing}
+        class="shared-block ${isEditorMode && this.isSettingsOpen
           ? "is-settings-open"
           : ""}"
-        @pointerdown=${() => this.openSharedSettingsIfNeeded()}
+        @pointerdown=${isEditorMode
+          ? () => OwbShared.editorPlugin?.onPointerDown?.(this)
+          : nothing}
       >
         ${sharedContent}
       </div>
@@ -273,22 +243,6 @@ class SharedComponent extends EditorComponent {
   }
 }
 
-export const editorRenderShared = (
-  node,
-  pageConfig,
-  onPageConfigUpdated,
-  renderNode,
-  renderOptions = {},
-) => {
-  return html`<site-shared
-    class=${renderOptions.hostClass || ""}
-    style=${renderOptions.hostStyle || ""}
-    data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
-    .node=${node}
-    .pageConfig=${pageConfig}
-    .renderNode=${renderNode}
-    @page-config-updated=${onPageConfigUpdated}
-  ></site-shared>`;
-};
-
-customElements.define("site-shared", SharedComponent);
+if (!customElements.get("owb-shared")) {
+  customElements.define("owb-shared", OwbShared);
+}

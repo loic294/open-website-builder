@@ -1,5 +1,5 @@
 import { html, unsafeCSS } from "lit";
-import { SiteLayoutContainerBase } from "../site-section/site-section.js";
+import { OwbLayoutContainerEditor } from "../site-section/site-section.js";
 import sectionStyles from "../site-section/styles.css?inline";
 import { OwbContainer } from "./container.js";
 
@@ -7,7 +7,7 @@ export { defaultContainerConfig } from "./container.js";
 
 OwbContainer.editorPlugin = {};
 
-class SiteContainer extends SiteLayoutContainerBase {
+class OwbContainerEditor extends OwbLayoutContainerEditor {
   static styles = [super.styles, unsafeCSS(sectionStyles)];
 }
 
@@ -18,7 +18,7 @@ export const editorRenderContainer = (
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<site-container
+  return html`<owb-container-editor
     class=${renderOptions.hostClass || ""}
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
@@ -27,11 +27,11 @@ export const editorRenderContainer = (
     .renderNodeFn=${renderNode}
     .onPageConfigUpdated=${onPageConfigUpdated}
     @page-config-updated=${onPageConfigUpdated}
-  ></site-container>`;
+  ></owb-container-editor>`;
 };
 
-if (!customElements.get("site-container")) {
-  customElements.define("site-container", SiteContainer);
+if (!customElements.get("owb-container-editor")) {
+  customElements.define("owb-container-editor", OwbContainerEditor);
 }
 
 if (!customElements.get("owb-container")) {

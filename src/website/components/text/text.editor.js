@@ -1,5 +1,4 @@
-import { LitElement, html, css, unsafeCSS } from "lit";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { html, unsafeCSS } from "lit";
 import { Editor, Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import BubbleMenu from "@tiptap/extension-bubble-menu";
@@ -11,33 +10,29 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
-  Code2,
   Heading2,
   Italic,
   Link2,
   List,
   ListOrdered,
-  ListPlus,
   Pilcrow,
-  Quote,
   Redo2,
-  RotateCcw,
-  Strikethrough,
-  TypeOutline,
-  Underline as UnderlineIcon,
   Undo2,
   createElement,
 } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
-import { withVariantConfig } from "../variant-component-base.js";
-import { getSpacingStyleBlock } from "../../utils/spacing.js";
-
+import { installEditorPlugin } from "../../../editor/editor-plugin.js";
+import { OwbText, defaultTextConfig } from "./text.js";
+import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 import styles from "./styles.css?inline";
-import { OwbText } from "./text.js";
 
-OwbText.editorPlugin = {};
+export { defaultTextConfig };
 
-const GRID_DEFAULT_ROW_SIZE = 30;
+OwbText.styles = [].concat(
+  OwbText.styles || [],
+  unsafeCSS(blocksStyles),
+  unsafeCSS(styles),
+);
 
 const FontSize = Extension.create({
   name: "fontSize",
@@ -85,751 +80,408 @@ const FontSize = Extension.create({
   },
 });
 
-class Text extends withVariantConfig(EditorComponent) {
-  static properties = {
-    content: { type: String },
-    node: { type: Object },
-    pageConfig: { type: Object },
-  };
+function updateNodeContent(nodes, targetNodeId, nextContent) {
+  return nodes.map((node) => {
+    if (node.id === targetNodeId) {
+      return { ...node, content: nextContent };
+    }
 
-  static styles = [super.styles, unsafeCSS(styles)];
+    if (Array.isArray(node.content)) {
+      return {
+        ...node,
+        content: updateNodeContent(node.content, targetNodeId, nextContent),
+      };
+    }
 
-  constructor() {
-    super();
-    this.content = "";
-    this.node = null;
-    this.pageConfig = null;
-    this.editor = null;
-    this.autoGrowFrame = null;
-    this.lastSelectionRange = null;
+    return node;
+  });
+}
+
+function runEditorCommand(element, buildChain) {
+  const editor = element._tipTapEditor;
+  if (!editor) {
+    return;
   }
 
-  captureSelectionRange() {
-    if (!this.editor) {
-      return;
-    }
+  const selection = element._lastSelectionRange || editor.state.selection;
+  buildChain(editor.chain().focus().setTextSelection(selection)).run();
+}
 
-    this.lastSelectionRange = this.editor.state.selection;
+function setHeadingStyle(element, nextHeading) {
+  const editor = element._tipTapEditor;
+  if (!editor) return;
+
+  if (nextHeading === "paragraph") {
+    runEditorCommand(element, (chain) => chain.setParagraph());
+    return;
   }
 
-  runEditorCommand(buildChain) {
-    if (!this.editor) {
-      return;
-    }
-
-    const { from, to } = this.lastSelectionRange || this.editor.state.selection;
-    buildChain(
-      this.editor.chain().focus().setTextSelection({ from, to }),
-    ).run();
+  const level = Number.parseInt(nextHeading, 10);
+  if (!Number.isNaN(level) && level >= 1 && level <= 6) {
+    runEditorCommand(element, (chain) => chain.setHeading({ level }));
   }
+}
 
-  requestAutoGrowGridRowSpan() {
-    if (this.autoGrowFrame) {
-      cancelAnimationFrame(this.autoGrowFrame);
-    }
-
-    this.autoGrowFrame = requestAnimationFrame(() => {
-      this.autoGrowGridRowSpanForText();
-    });
-  }
-
-  autoGrowGridRowSpanForText() {
-    const el = this.renderRoot?.querySelector?.("[data-editor]");
-
-    if (!el) {
-      return;
-    }
-
-    const scrollHeight = el.scrollHeight;
-    const rowSpan = Math.ceil(scrollHeight / GRID_DEFAULT_ROW_SIZE);
-    const currentRowSpan = Number.parseInt(
-      this.style.getPropertyValue("--row-span") || "0",
-      10,
-    );
-
-    if (rowSpan === currentRowSpan) {
-      return;
-    }
-
-    this.style.setProperty("--row-span", rowSpan);
-    this.dispatchEvent(
-      new CustomEvent("grid-child-row-span-updated", {
-        detail: { rowSpan },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
-  dispatchPageConfigUpdated(nextPageConfig) {
-    this.dispatchEvent(
-      new CustomEvent("page-config-updated", {
-        detail: nextPageConfig,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
-  updateNodeContent(nodes, targetNodeId, nextContent) {
-    return nodes.map((node) => {
-      if (node.id === targetNodeId) {
-        return { ...node, content: nextContent };
-      }
-
-      if (Array.isArray(node.content)) {
-        return {
-          ...node,
-          content: this.updateNodeContent(
-            node.content,
-            targetNodeId,
-            nextContent,
-          ),
-        };
-      }
-
-      return node;
-    });
-  }
-
-  commitEditorContent(nextContent) {
-    this.content = nextContent;
-
-    if (!this.pageConfig || !this.node?.id) {
-      return;
-    }
-
-    if (this.node?.content === nextContent) {
-      return;
-    }
-
-    const nextPageConfig = {
-      ...this.pageConfig,
-      content: this.updateNodeContent(
-        Array.isArray(this.pageConfig.content) ? this.pageConfig.content : [],
-        this.node.id,
-        nextContent,
-      ),
-    };
-
-    this.dispatchPageConfigUpdated(nextPageConfig);
-  }
-
-  firstUpdated() {
-    const menuEl = this.renderRoot.querySelector(".menu");
-    this.editor = new Editor({
-      element: this.renderRoot.querySelector("[data-editor]"),
-      injectCSS: true,
-      extensions: [
-        StarterKit,
-        TextAlign.configure({
-          types: ["heading", "paragraph"],
-        }),
-        TextStyle,
-        FontSize,
-        BubbleMenu.configure({
-          element: menuEl,
-          options: {
-            strategy: "fixed",
-            placement: "top",
-          },
-          onShow: () => {
-            console.log("Bubble menu shown");
-          },
-          onHide: () => {
-            console.log("Bubble menu hidden");
-          },
-        }),
-      ],
-      content: this.content,
-      onSelectionUpdate: () => {
-        this.captureSelectionRange();
-        this.openTextSettingsIfNeeded();
-        this.requestUpdate();
-      },
-      onFocus: () => {
-        this.captureSelectionRange();
-        this.openTextSettingsIfNeeded();
-      },
-      onUpdate: ({ editor }) => {
-        const nextContent = editor.getHTML();
-        this.commitEditorContent(nextContent);
-        this.requestAutoGrowGridRowSpan();
-      },
-      onBlur: ({ editor }) => {
-        const nextContent = editor.getHTML();
-        this.commitEditorContent(nextContent);
-        this.captureSelectionRange();
-      },
-    });
-  }
-
-  toggleLink() {
-    if (!this.editor) {
-      return;
-    }
-
-    if (this.editor.isActive("link")) {
-      this.runEditorCommand((chain) => chain.unsetLink());
-      return;
-    }
-
-    const previousUrl = this.editor.getAttributes("link").href || "https://";
-    const url = window.prompt("Enter URL", previousUrl);
-
-    if (!url) {
-      return;
-    }
-
-    this.runEditorCommand((chain) =>
-      chain.extendMarkRange("link").setLink({ href: url }),
-    );
-  }
-
-  toggleTextStyle() {
-    if (!this.editor) {
-      return;
-    }
-
-    if (this.editor.isActive("textStyle")) {
-      this.runEditorCommand((chain) => chain.unsetMark("textStyle"));
-      return;
-    }
-
-    this.runEditorCommand((chain) =>
-      chain.setMark("textStyle", { color: "inherit" }),
-    );
-  }
-
-  onFocusNodeRequest(event) {
-    const requestedNodeId = String(event?.detail?.nodeId || "");
-    if (!requestedNodeId || String(this.node?.id || "") !== requestedNodeId) {
-      return;
-    }
-
-    this.scrollIntoView({ block: "center", behavior: "smooth" });
-    this.openTextSettingsIfNeeded();
-  }
-
-  openTextSettingsIfNeeded() {
-    if (this.isSettingsEditorOpen) {
-      return;
-    }
-
-    this.openTextSettings();
-  }
-
-  renderGlobalTextToolButtons() {
-    return html`
-      <editor-btn
-        style="light icon"
-        title="Bold"
-        @click=${() => this.runEditorCommand((chain) => chain.toggleBold())}
-      >
-        ${createElement(Bold)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Italic"
-        @click=${() => this.runEditorCommand((chain) => chain.toggleItalic())}
-      >
-        ${createElement(Italic)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Underline"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.toggleUnderline())}
-      >
-        ${createElement(UnderlineIcon)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Link"
-        @click=${() => this.toggleLink()}
-      >
-        ${createElement(Link2)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Text style"
-        @click=${() => this.toggleTextStyle()}
-      >
-        ${createElement(TypeOutline)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Strike"
-        @click=${() => this.runEditorCommand((chain) => chain.toggleStrike())}
-      >
-        ${createElement(Strikethrough)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Bullet list"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.toggleBulletList())}
-      >
-        ${createElement(List)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Blockquote"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.toggleBlockquote())}
-      >
-        ${createElement(Quote)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Code block"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.toggleCodeBlock())}
-      >
-        ${createElement(Code2)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Heading"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.toggleHeading({ level: 2 }))}
-      >
-        ${createElement(Heading2)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="List item"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.splitListItem("listItem"))}
-      >
-        ${createElement(ListPlus)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Ordered list"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.toggleOrderedList())}
-      >
-        ${createElement(ListOrdered)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Paragraph"
-        @click=${() => this.runEditorCommand((chain) => chain.setParagraph())}
-      >
-        ${createElement(Pilcrow)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Align left"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.setTextAlign("left"))}
-      >
-        ${createElement(AlignLeft)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Align center"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.setTextAlign("center"))}
-      >
-        ${createElement(AlignCenter)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Align right"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.setTextAlign("right"))}
-      >
-        ${createElement(AlignRight)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Justify"
-        @click=${() =>
-          this.runEditorCommand((chain) => chain.setTextAlign("justify"))}
-      >
-        ${createElement(AlignJustify)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Undo"
-        @click=${() => this.runEditorCommand((chain) => chain.undo())}
-      >
-        ${createElement(Undo2)}
-      </editor-btn>
-      <editor-btn
-        style="light icon"
-        title="Redo"
-        @click=${() => this.runEditorCommand((chain) => chain.redo())}
-      >
-        ${createElement(Redo2)}
-      </editor-btn>
-    `;
-  }
-
-  openTextSettings() {
-    this.openSettingsEditor({
-      tabs: [{ id: "format", label: "Format" }],
-      content: (tab) => {
-        if (tab !== "format") {
-          return html``;
-        }
-
-        return html`
-          <div style="display: grid; gap: 8px; padding: 10px;">
-            <settings-section title="Text tools">
-              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                ${this.renderGlobalTextToolButtons()}
-              </div>
-            </settings-section>
-            <settings-section
-              title="Typography"
-              ?overridden=${this.hasAnyOverriddenKeys(
-                "fontSize",
-                "headingStyle",
-              )}
-            >
-              <editor-select
-                label="Font size"
-                .value=${this.getCurrentFontSize()}
-                .options=${[
-                  { label: "Default", value: "" },
-                  { label: "12", value: "12px" },
-                  { label: "14", value: "14px" },
-                  { label: "16", value: "16px" },
-                  { label: "18", value: "18px" },
-                  { label: "20", value: "20px" },
-                  { label: "24", value: "24px" },
-                  { label: "32", value: "32px" },
-                ]}
-                @change=${(event) => this.setFontSizeValue(event.detail.value)}
-              ></editor-select>
-              <editor-select
-                label="Heading style"
-                .value=${this.getCurrentHeadingStyle()}
-                .options=${[
-                  { label: "Paragraph", value: "paragraph" },
-                  { label: "H1", value: "1" },
-                  { label: "H2", value: "2" },
-                  { label: "H3", value: "3" },
-                  { label: "H4", value: "4" },
-                  { label: "H5", value: "5" },
-                  { label: "H6", value: "6" },
-                ]}
-                @change=${(event) =>
-                  this.setHeadingStyleValue(event.detail.value)}
-              ></editor-select>
-            </settings-section>
-            <settings-section title="Style reset">
-              <editor-btn style="light" @click=${() => this.resetTextStyle()}
-                >${createElement(RotateCcw)} Reset style</editor-btn
-              >
-            </settings-section>
-          </div>
-        `;
-      },
-    });
-  }
-
-  setFontSizeValue(nextSize) {
-    if (!this.editor) {
-      return;
-    }
-
-    if (!nextSize) {
-      this.runEditorCommand((chain) => chain.unsetFontSize());
-      return;
-    }
-
-    this.runEditorCommand((chain) => chain.setFontSize(nextSize));
-  }
-
-  setFontSize(event) {
-    this.setFontSizeValue(event.target.value);
-  }
-
-  getCurrentFontSize() {
-    if (!this.editor) {
-      return "";
-    }
-
-    return this.editor.getAttributes("textStyle")?.fontSize || "";
-  }
-
-  setHeadingStyleValue(nextHeading) {
-    if (!this.editor) {
-      return;
-    }
-
-    if (nextHeading === "paragraph") {
-      this.runEditorCommand((chain) => chain.setParagraph());
-      return;
-    }
-
-    const level = Number.parseInt(nextHeading, 10);
-    if (!Number.isNaN(level) && level >= 1 && level <= 6) {
-      this.runEditorCommand((chain) => chain.setHeading({ level }));
-    }
-  }
-
-  setHeadingStyle(event) {
-    this.setHeadingStyleValue(event.target.value);
-  }
-
-  resetTextStyle() {
-    if (!this.editor) {
-      return;
-    }
-
-    this.runEditorCommand((chain) =>
-      chain.unsetAllMarks().clearNodes().unsetFontSize().setTextAlign("left"),
-    );
-  }
-
-  getCurrentHeadingStyle() {
-    if (!this.editor) {
-      return "paragraph";
-    }
-
-    for (let level = 1; level <= 6; level += 1) {
-      if (this.editor.isActive("heading", { level })) {
-        return String(level);
-      }
-    }
-
+function getCurrentHeadingStyle(element) {
+  const editor = element._tipTapEditor;
+  if (!editor) {
     return "paragraph";
   }
 
-  updated(changedProperties) {
-    if (!this.editor) {
-      return;
-    }
-
-    if (
-      changedProperties.has("content") &&
-      this.editor.getHTML() !== this.content
-    ) {
-      this.editor.commands.setContent(this.content || "", false);
+  for (let level = 1; level <= 6; level += 1) {
+    if (editor.isActive("heading", { level })) {
+      return String(level);
     }
   }
 
-  disconnectedCallback() {
-    if (this.autoGrowFrame) {
-      cancelAnimationFrame(this.autoGrowFrame);
-      this.autoGrowFrame = null;
-    }
-    this.editor?.destroy();
-    this.editor = null;
-    super.disconnectedCallback();
-  }
-
-  // Spacing and custom CSS are rendered in this component's own template
-  // (matching owb-text's approach) rather than via imperative injection.
-  applySpacingToRenderRoot() {}
-  applyCustomCssToRenderRoot() {}
-
-  render() {
-    const spacingCss = getSpacingStyleBlock({
-      settingSpacingPaddingTop: this.settingSpacingPaddingTop,
-      settingSpacingPaddingRight: this.settingSpacingPaddingRight,
-      settingSpacingPaddingBottom: this.settingSpacingPaddingBottom,
-      settingSpacingPaddingLeft: this.settingSpacingPaddingLeft,
-      settingSpacingMarginTop: this.settingSpacingMarginTop,
-      settingSpacingMarginRight: this.settingSpacingMarginRight,
-      settingSpacingMarginBottom: this.settingSpacingMarginBottom,
-      settingSpacingMarginLeft: this.settingSpacingMarginLeft,
-      settingSpacingBorderRadius: this.settingSpacingBorderRadius,
-      settingSpacingBackgroundColor: this.settingSpacingBackgroundColor,
-      settingSpacingTextColor: this.settingSpacingTextColor,
-      settingSpacingHidden: this.settingSpacingHidden,
-    });
-    const customCss = String(this.settingCustomCss || "").trim();
-    return html`
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
-      ${customCss
-        ? unsafeHTML(`<style data-custom-css>${customCss}</style>`)
-        : null}
-      <div class="text-block">
-        <div data-editor data-editor-block></div>
-        <div class="menu menu-${this.node.id}">
-          <editor-btn
-            style="light icon"
-            title="Bold"
-            @click="${() => this.editor.commands.toggleBold()}"
-          >
-            ${createElement(Bold)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Italic"
-            @click="${() => this.editor.commands.toggleItalic()}"
-          >
-            ${createElement(Italic)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Underline"
-            @click="${() => this.editor.commands.toggleUnderline()}"
-          >
-            ${createElement(UnderlineIcon)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Link"
-            @click="${() => this.toggleLink()}"
-          >
-            ${createElement(Link2)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Text style"
-            @click="${() => this.toggleTextStyle()}"
-          >
-            ${createElement(TypeOutline)}
-          </editor-btn>
-          <select
-            class="toolbar-select"
-            @change="${(event) => this.setFontSize(event)}"
-            .value="${this.getCurrentFontSize()}"
-          >
-            <option value="">Font size</option>
-            <option value="12px">12</option>
-            <option value="14px">14</option>
-            <option value="16px">16</option>
-            <option value="18px">18</option>
-            <option value="20px">20</option>
-            <option value="24px">24</option>
-            <option value="32px">32</option>
-          </select>
-          <select
-            class="toolbar-select heading-style-select"
-            @change="${(event) => this.setHeadingStyle(event)}"
-            .value="${this.getCurrentHeadingStyle()}"
-          >
-            <option value="paragraph">Paragraph</option>
-            <option value="1">H1</option>
-            <option value="2">H2</option>
-            <option value="3">H3</option>
-            <option value="4">H4</option>
-            <option value="5">H5</option>
-            <option value="6">H6</option>
-          </select>
-          <editor-btn
-            style="light icon"
-            title="Strike"
-            @click="${() => this.editor.chain().focus().toggleStrike().run()}"
-          >
-            ${createElement(Strikethrough)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Bullet list"
-            @click="${() =>
-              this.editor.chain().focus().toggleBulletList().run()}"
-          >
-            ${createElement(List)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Blockquote"
-            @click="${() =>
-              this.editor.chain().focus().toggleBlockquote().run()}"
-          >
-            ${createElement(Quote)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Code block"
-            @click="${() =>
-              this.editor.chain().focus().toggleCodeBlock().run()}"
-          >
-            ${createElement(Code2)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Heading"
-            @click="${() =>
-              this.editor.chain().focus().toggleHeading({ level: 2 }).run()}"
-          >
-            ${createElement(Heading2)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="List item"
-            @click="${() =>
-              this.editor.chain().focus().splitListItem("listItem").run()}"
-          >
-            ${createElement(ListPlus)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Ordered list"
-            @click="${() =>
-              this.editor.chain().focus().toggleOrderedList().run()}"
-          >
-            ${createElement(ListOrdered)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Paragraph"
-            @click="${() => this.editor.chain().focus().setParagraph().run()}"
-          >
-            ${createElement(Pilcrow)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Align left"
-            @click="${() =>
-              this.editor.chain().focus().setTextAlign("left").run()}"
-          >
-            ${createElement(AlignLeft)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Align center"
-            @click="${() =>
-              this.editor.chain().focus().setTextAlign("center").run()}"
-          >
-            ${createElement(AlignCenter)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Align right"
-            @click="${() =>
-              this.editor.chain().focus().setTextAlign("right").run()}"
-          >
-            ${createElement(AlignRight)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Justify"
-            @click="${() =>
-              this.editor.chain().focus().setTextAlign("justify").run()}"
-          >
-            ${createElement(AlignJustify)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Undo"
-            @click="${() => this.editor.chain().focus().undo().run()}"
-          >
-            ${createElement(Undo2)}
-          </editor-btn>
-          <editor-btn
-            style="light icon"
-            title="Redo"
-            @click="${() => this.editor.chain().focus().redo().run()}"
-          >
-            ${createElement(Redo2)}
-          </editor-btn>
-        </div>
-      </div>
-    `;
-  }
+  return "paragraph";
 }
+
+function setFontSize(element, nextSize) {
+  if (!element._tipTapEditor) return;
+
+  if (!nextSize) {
+    runEditorCommand(element, (chain) => chain.unsetFontSize());
+    return;
+  }
+
+  runEditorCommand(element, (chain) => chain.setFontSize(nextSize));
+}
+
+function getCurrentFontSize(element) {
+  const editor = element._tipTapEditor;
+  if (!editor) {
+    return "";
+  }
+
+  return editor.getAttributes("textStyle")?.fontSize || "";
+}
+
+function toggleLink(element) {
+  const editor = element._tipTapEditor;
+  if (!editor) {
+    return;
+  }
+
+  if (editor.isActive("link")) {
+    runEditorCommand(element, (chain) => chain.unsetLink());
+    return;
+  }
+
+  const previousUrl = editor.getAttributes("link").href || "https://";
+  const url = window.prompt("Enter URL", previousUrl);
+
+  if (!url) {
+    return;
+  }
+
+  runEditorCommand(element, (chain) =>
+    chain.extendMarkRange("link").setLink({ href: url }),
+  );
+}
+
+function openTextSettings(element) {
+  if (EditorComponent.activeSettingsOwner === element) {
+    return;
+  }
+
+  EditorComponent.openFor(element, {
+    defaultState: {
+      fontSize: "",
+      headingStyle: "paragraph",
+    },
+    tabs: [{ id: "format", label: "Format" }],
+    content: () => {
+      const editor = EditorComponent.instance;
+      return html`
+        <settings-section title="Text tools">
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            <editor-btn
+              style="light icon"
+              title="Bold"
+              @click=${() =>
+                runEditorCommand(element, (chain) => chain.toggleBold())}
+            >
+              ${createElement(Bold)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Italic"
+              @click=${() =>
+                runEditorCommand(element, (chain) => chain.toggleItalic())}
+            >
+              ${createElement(Italic)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Link"
+              @click=${() => toggleLink(element)}
+            >
+              ${createElement(Link2)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Bullet list"
+              @click=${() =>
+                runEditorCommand(element, (chain) => chain.toggleBulletList())}
+            >
+              ${createElement(List)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Ordered list"
+              @click=${() =>
+                runEditorCommand(element, (chain) => chain.toggleOrderedList())}
+            >
+              ${createElement(ListOrdered)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Paragraph"
+              @click=${() =>
+                runEditorCommand(element, (chain) => chain.setParagraph())}
+            >
+              ${createElement(Pilcrow)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Heading"
+              @click=${() =>
+                runEditorCommand(element, (chain) =>
+                  chain.toggleHeading({ level: 2 }),
+                )}
+            >
+              ${createElement(Heading2)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Align left"
+              @click=${() =>
+                runEditorCommand(element, (chain) =>
+                  chain.setTextAlign("left"),
+                )}
+            >
+              ${createElement(AlignLeft)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Align center"
+              @click=${() =>
+                runEditorCommand(element, (chain) =>
+                  chain.setTextAlign("center"),
+                )}
+            >
+              ${createElement(AlignCenter)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Align right"
+              @click=${() =>
+                runEditorCommand(element, (chain) =>
+                  chain.setTextAlign("right"),
+                )}
+            >
+              ${createElement(AlignRight)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Justify"
+              @click=${() =>
+                runEditorCommand(element, (chain) =>
+                  chain.setTextAlign("justify"),
+                )}
+            >
+              ${createElement(AlignJustify)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Undo"
+              @click=${() => runEditorCommand(element, (chain) => chain.undo())}
+            >
+              ${createElement(Undo2)}
+            </editor-btn>
+            <editor-btn
+              style="light icon"
+              title="Redo"
+              @click=${() => runEditorCommand(element, (chain) => chain.redo())}
+            >
+              ${createElement(Redo2)}
+            </editor-btn>
+          </div>
+        </settings-section>
+
+        <settings-section
+          title="Typography"
+          ?overridden=${editor.hasAnyOverriddenKeys("fontSize", "headingStyle")}
+        >
+          <editor-select
+            label="Font size"
+            .value=${getCurrentFontSize(element)}
+            .options=${[
+              { label: "Default", value: "" },
+              { label: "12", value: "12px" },
+              { label: "14", value: "14px" },
+              { label: "16", value: "16px" },
+              { label: "18", value: "18px" },
+              { label: "20", value: "20px" },
+              { label: "24", value: "24px" },
+              { label: "32", value: "32px" },
+            ]}
+            @change=${(event) => {
+              setFontSize(element, event.detail.value);
+              editor.updateSettingsState({ fontSize: event.detail.value });
+            }}
+          ></editor-select>
+
+          <editor-select
+            label="Heading style"
+            .value=${getCurrentHeadingStyle(element)}
+            .options=${[
+              { label: "Paragraph", value: "paragraph" },
+              { label: "H1", value: "1" },
+              { label: "H2", value: "2" },
+              { label: "H3", value: "3" },
+              { label: "H4", value: "4" },
+              { label: "H5", value: "5" },
+              { label: "H6", value: "6" },
+            ]}
+            @change=${(event) => {
+              setHeadingStyle(element, event.detail.value);
+              editor.updateSettingsState({ headingStyle: event.detail.value });
+            }}
+          ></editor-select>
+        </settings-section>
+      `;
+    },
+  });
+}
+
+function ensureEditor(element) {
+  const editorEl = element.renderRoot?.querySelector(".text-block");
+  if (!editorEl || element._tipTapEditor) {
+    return;
+  }
+
+  const menuEl = document.createElement("div");
+  menuEl.className = "menu";
+  element.renderRoot.appendChild(menuEl);
+
+  const editor = new Editor({
+    element: editorEl,
+    injectCSS: true,
+    extensions: [
+      StarterKit,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      TextStyle,
+      FontSize,
+      BubbleMenu.configure({
+        element: menuEl,
+        options: {
+          strategy: "fixed",
+          placement: "top",
+        },
+      }),
+    ],
+    content: String(element.content ?? ""),
+    onSelectionUpdate: () => {
+      element._lastSelectionRange = editor.state.selection;
+    },
+    onFocus: () => {
+      element._lastSelectionRange = editor.state.selection;
+      openTextSettings(element);
+    },
+    onUpdate: ({ editor: textEditor }) => {
+      const nextContent = textEditor.getHTML();
+      if (!element.pageConfig || !element.node?.id) {
+        return;
+      }
+
+      if (element.node?.content === nextContent) {
+        return;
+      }
+
+      const nextPageConfig = {
+        ...element.pageConfig,
+        content: updateNodeContent(
+          Array.isArray(element.pageConfig.content)
+            ? element.pageConfig.content
+            : [],
+          element.node.id,
+          nextContent,
+        ),
+      };
+
+      element.dispatchEvent(
+        new CustomEvent("page-config-updated", {
+          detail: nextPageConfig,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    },
+  });
+
+  element._tipTapEditor = editor;
+  element._bubbleMenuElement = menuEl;
+}
+
+installEditorPlugin(OwbText, {
+  onUpdated(element, changedProperties) {
+    if (changedProperties.has("node")) {
+      element.content = String(element.node?.content ?? "");
+      element.settings = element.node?.settings ?? {};
+
+      const editor = element._tipTapEditor;
+      if (editor && editor.getHTML() !== element.content) {
+        editor.commands.setContent(element.content || "", false);
+      }
+    }
+  },
+
+  onConnected(element) {
+    element._onFocusNodeRequest = (event) => {
+      const requestedNodeId = String(event?.detail?.nodeId || "");
+      if (
+        !requestedNodeId ||
+        String(element.node?.id || "") !== requestedNodeId
+      ) {
+        return;
+      }
+
+      element.scrollIntoView({ block: "center", behavior: "smooth" });
+      openTextSettings(element);
+      element._tipTapEditor?.commands?.focus?.();
+    };
+
+    window.addEventListener("owb-focus-node", element._onFocusNodeRequest);
+    ensureEditor(element);
+  },
+
+  onDisconnected(element) {
+    if (element._onFocusNodeRequest) {
+      window.removeEventListener("owb-focus-node", element._onFocusNodeRequest);
+      element._onFocusNodeRequest = null;
+    }
+
+    if (element._tipTapEditor) {
+      element._tipTapEditor.destroy();
+      element._tipTapEditor = null;
+    }
+
+    if (element._bubbleMenuElement?.parentNode) {
+      element._bubbleMenuElement.parentNode.removeChild(
+        element._bubbleMenuElement,
+      );
+      element._bubbleMenuElement = null;
+    }
+  },
+
+  onPointerDown(element) {
+    openTextSettings(element);
+  },
+});
 
 export const editorRenderText = (
   node,
@@ -838,7 +490,7 @@ export const editorRenderText = (
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<site-text
+  return html`<owb-text
     class=${renderOptions.hostClass || ""}
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
@@ -846,12 +498,8 @@ export const editorRenderText = (
     .pageConfig=${pageConfig}
     .content=${String(node.content ?? "")}
     @page-config-updated=${onPageConfigUpdated}
-  ></site-text>`;
+  ></owb-text>`;
 };
-
-if (!customElements.get("site-text")) {
-  customElements.define("site-text", Text);
-}
 
 if (!customElements.get("owb-text")) {
   customElements.define("owb-text", OwbText);
