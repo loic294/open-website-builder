@@ -3,10 +3,20 @@ import { render as ssrRender } from "@lit-labs/ssr";
 import { collectResult } from "@lit-labs/ssr/lib/render-result.js";
 import { html as litHtml } from "lit";
 import { OwbButton } from "../../src/website/components/button/button.js";
+import { OwbText } from "../../src/website/components/text/text.js";
+import { OwbImage } from "../../src/website/components/image/image.js";
 import * as simpleIcons from "simple-icons";
 
 if (!customElements.get("owb-button")) {
   customElements.define("owb-button", OwbButton);
+}
+
+if (!customElements.get("owb-text")) {
+  customElements.define("owb-text", OwbText);
+}
+
+if (!customElements.get("owb-image")) {
+  customElements.define("owb-image", OwbImage);
 }
 
 function escapeAttr(value) {
@@ -246,22 +256,34 @@ function getSortedCollectionItems(items = [], sortMode = "disk") {
   return next;
 }
 
-function renderText(node, context) {
+async function renderText(node, context) {
   const tokenValues = context?.tokenValues || {};
   const payload = applyTokensToJson(
     { content: node?.content ?? "", settings: node?.settings ?? {} },
     tokenValues,
   );
-  return `<owb-text>${configScript(payload)}</owb-text>`;
+  const ssrResult = ssrRender(
+    litHtml`<owb-text
+      .content=${payload.content}
+      .settings=${payload.settings}
+    ></owb-text>`,
+  );
+  return await collectResult(ssrResult);
 }
 
-function renderImage(node, context) {
+async function renderImage(node, context) {
   const tokenValues = context?.tokenValues || {};
   const payload = applyTokensToJson(
     { url: node?.url ?? "", settings: node?.settings ?? {} },
     tokenValues,
   );
-  return `<owb-image>${configScript(payload)}</owb-image>`;
+  const ssrResult = ssrRender(
+    litHtml`<owb-image
+      .url=${payload.url}
+      .settings=${payload.settings}
+    ></owb-image>`,
+  );
+  return await collectResult(ssrResult);
 }
 
 async function renderButton(node, context) {
@@ -596,11 +618,11 @@ async function renderNode(node, context) {
 
   switch (node.type) {
     case "text":
-      return renderText(node, context);
+      return await renderText(node, context);
     case "image":
-      return renderImage(node, context);
+      return await renderImage(node, context);
     case "button":
-      return renderButton(node, context);
+      return await renderButton(node, context);
     case "embed":
       return renderEmbed(node, context);
     case "social-media":
@@ -670,7 +692,7 @@ function buildPageHtml({ title, bodyHtml }) {
     </div>
     <script type="module" src="./published.js"></script>
     <script type="module" src="./publish-runtime.js"></script>
-    <script defer src="https://analytics.loicbellemarealford.ca/script.js" data-website-id="7653ba01-64a9-4d8c-8b9d-8d623c194126"></script>
+    <script defer src="https://analytics.loicbellemarealford.ca/script.js" data-website-id="7653ba01-64a9-4d8c-8b9d-8d623c194126" data-domains="loicbellemarealford.ca" data-performance="true" data-do-not-track="true"></script>
   </body>
 </html>`;
 }
