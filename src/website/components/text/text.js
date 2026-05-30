@@ -69,7 +69,9 @@ export class OwbText extends LitElement {
     const normalizedContent = normalizeTextLinksToSameTab(content);
     return html`
       <link rel="stylesheet" href="/owb-styles/text.css" />
-      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div class="text-block ProseMirror">${unsafeHTML(normalizedContent)}</div>
     `;

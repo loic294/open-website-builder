@@ -83,7 +83,9 @@ export class OwbEmbed extends LitElement {
     const spacingCss = getSpacingStyleBlock(settings);
     return html`
       <link rel="stylesheet" href="/owb-styles/embed.css" />
-      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
       ${safeHtml.trim()
         ? html`<div class="embed-preview">${unsafeHTML(safeHtml)}</div>`
         : html`<div class="embed-placeholder">No embed content</div>`}

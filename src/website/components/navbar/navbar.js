@@ -133,7 +133,9 @@ export class OwbNavbar extends LitElement {
 
     return html`
       <link rel="stylesheet" href="/owb-styles/navbar.css" />
-      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
       ${mobileOn
         ? unsafeHTML(
             `<style>@media (max-width: ${breakpoint}) { .navbar { display: none !important; } .navbar-mobile-toggle { display: flex !important; } }</style>`,

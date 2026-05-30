@@ -135,7 +135,9 @@ export class OwbImage extends LitElement {
 
     return html`
       <link rel="stylesheet" href="/owb-styles/image.css" />
-      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div class="image-block size-${mode}">
         ${this.renderImageWithAction(

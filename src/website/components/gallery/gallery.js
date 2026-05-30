@@ -159,7 +159,9 @@ export class OwbGallery extends LitElement {
 
     return html`
       <link rel="stylesheet" href="/owb-styles/gallery.css" />
-      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
       ${images.length === 0
         ? html`<div class="gallery-empty">No gallery images configured</div>`
         : html`

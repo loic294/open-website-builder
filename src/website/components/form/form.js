@@ -114,7 +114,9 @@ export class OwbForm extends LitElement {
           : "is-normal-width";
 
     return html`
-      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
         class="owb-form-container ${widthClass}"

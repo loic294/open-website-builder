@@ -240,7 +240,9 @@ export class OwbSection extends LitElement {
 
     return html`
       ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
-      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <section style="${getSectionInlineStyle(settings)}">
         <div

@@ -181,7 +181,9 @@ export class OwbSocialMedia extends LitElement {
 
     return html`
       <link rel="stylesheet" href="/owb-styles/social-media.css" />
-      ${spacingCss ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`) : null}
+      ${spacingCss
+        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+        : null}
       ${items.length === 0
         ? html`<div class="social-empty">No social links configured</div>`
         : html`
