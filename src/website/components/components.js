@@ -7,7 +7,7 @@ import { editorRenderCheckbox } from "./checkbox/checkbox";
 import { editorRenderShared } from "./shared/shared";
 import { editorRenderText } from "./text/text";
 import { editorRenderImage } from "./image/image";
-import { editorRenderButton } from "./button/button";
+import { editorRenderButton } from "./button/button.editor";
 import { editorRenderEmbed } from "./embed/embed";
 import { editorRenderSocialMedia } from "./social-media/social-media";
 import { editorRenderGallery } from "./gallery/gallery";

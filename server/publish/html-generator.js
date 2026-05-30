@@ -1,4 +1,13 @@
+import "@lit-labs/ssr/lib/install-global-dom-shim.js";
+import { render as ssrRender } from "@lit-labs/ssr";
+import { collectResult } from "@lit-labs/ssr/lib/render-result.js";
+import { html as litHtml } from "lit";
+import { OwbButton } from "../../src/website/components/button/button.js";
 import * as simpleIcons from "simple-icons";
+
+if (!customElements.get("owb-button")) {
+  customElements.define("owb-button", OwbButton);
+}
 
 function escapeAttr(value) {
   return String(value ?? "")
@@ -255,13 +264,19 @@ function renderImage(node, context) {
   return `<owb-image>${configScript(payload)}</owb-image>`;
 }
 
-function renderButton(node, context) {
+async function renderButton(node, context) {
   const tokenValues = context?.tokenValues || {};
   const payload = applyTokensToJson(
     { content: node?.content ?? "Button", settings: node?.settings ?? {} },
     tokenValues,
   );
-  return `<owb-button>${configScript(payload)}</owb-button>`;
+  const ssrResult = ssrRender(
+    litHtml`<owb-button
+      .content=${payload.content}
+      .settings=${payload.settings}
+    ></owb-button>`,
+  );
+  return await collectResult(ssrResult);
 }
 
 function renderEmbed(node, context) {
@@ -653,6 +668,7 @@ function buildPageHtml({ title, bodyHtml }) {
     <div class="website">
       ${bodyHtml}
     </div>
+    <script type="module" src="./published.js"></script>
     <script type="module" src="./publish-runtime.js"></script>
     <script defer src="https://analytics.loicbellemarealford.ca/script.js" data-website-id="7653ba01-64a9-4d8c-8b9d-8d623c194126"></script>
   </body>

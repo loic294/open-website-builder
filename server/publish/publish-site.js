@@ -57,7 +57,8 @@ function useAbsolutePublishAssetPaths(html) {
   return String(html || "")
     .replace(/href="\.\/theme\.css"/g, 'href="/theme.css"')
     .replace(/href="\.\/base\.css"/g, 'href="/base.css"')
-    .replace(/src="\.\/publish-runtime\.js"/g, 'src="/publish-runtime.js"');
+    .replace(/src="\.\/publish-runtime\.js"/g, 'src="/publish-runtime.js"')
+    .replace(/src="\.\/published\.js"/g, 'src="/published.js"');
 }
 
 function normalizePublishedUrlPath(rawValue, fallbackValue = "") {
@@ -163,37 +164,36 @@ async function copyDirectoryRecursive(sourceDir, targetDir) {
   }
 }
 
-async function buildPublishedComponentStyles(appRoot) {
-  const stylePaths = [
-    resolve(appRoot, "src/website/components/text/styles.css"),
-    resolve(appRoot, "src/website/components/image/styles.css"),
-    resolve(appRoot, "src/website/components/button/styles.css"),
-    resolve(appRoot, "src/website/components/input/styles.css"),
-    resolve(appRoot, "src/website/components/checkbox/styles.css"),
-    resolve(appRoot, "src/website/components/captcha/styles.css"),
-    resolve(appRoot, "src/website/components/embed/styles.css"),
-    resolve(appRoot, "src/website/components/social-media/styles.css"),
-    resolve(appRoot, "src/website/components/gallery/styles.css"),
-    resolve(appRoot, "src/website/components/slider/styles.css"),
-    resolve(appRoot, "src/website/components/navbar/styles.css"),
-  ];
+const COMPONENT_STYLE_NAMES = [
+  "text",
+  "image",
+  "button",
+  "input",
+  "checkbox",
+  "captcha",
+  "embed",
+  "social-media",
+  "gallery",
+  "slider",
+  "navbar",
+  "shared",
+];
 
-  const chunks = [];
-  for (const filePath of stylePaths) {
+async function copyComponentStyles(appRoot, outputDir) {
+  const stylesDir = resolve(outputDir, "owb-styles");
+  await mkdir(stylesDir, { recursive: true });
+  for (const name of COMPONENT_STYLE_NAMES) {
+    const srcPath = resolve(
+      appRoot,
+      `src/website/components/${name}/styles.css`,
+    );
+    const destPath = resolve(stylesDir, `${name}.css`);
     try {
-      chunks.push(await readFile(filePath, "utf8"));
+      await copyFile(srcPath, destPath);
     } catch {
       // Missing style files are optional in published output.
     }
   }
-
-  chunks.push(`
-:host {
-  display: block;
-}
-`);
-
-  return withGeneratedHeader(chunks.join("\n\n"));
 }
 
 export async function publishSite({ contentRoot, outputDir, appRoot }) {
@@ -337,8 +337,16 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
     }
 
     try {
-      const css = await buildPublishedComponentStyles(appRoot);
-      await writeFile(resolve(outputDir, "owb-components.css"), css, "utf8");
+      await copyFile(
+        resolve(appRoot, "dist-pub/published.js"),
+        resolve(outputDir, "published.js"),
+      );
+    } catch {
+      /* optional — published.js is created by npm run build:pub */
+    }
+
+    try {
+      await copyComponentStyles(appRoot, outputDir);
     } catch {
       /* optional */
     }

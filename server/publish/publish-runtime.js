@@ -99,9 +99,7 @@ function buildResponsiveSpacingCss(settings) {
   return rules;
 }
 
-const SHADOW_STYLESHEET_HREF = "/owb-components.css";
-
-function renderShadow(host, markup) {
+function renderShadow(host, markup, cssHref) {
   const root = host.shadowRoot || host.attachShadow({ mode: "open" });
   const raw = readConfig(host);
   const settings = raw.settings ?? raw;
@@ -110,7 +108,8 @@ function renderShadow(host, markup) {
   const combinedSpacing = [spacingCss, responsiveSpacingCss]
     .filter(Boolean)
     .join("\n");
-  root.innerHTML = `<link rel="stylesheet" href="${SHADOW_STYLESHEET_HREF}" />${combinedSpacing ? `<style data-spacing>${combinedSpacing}</style>` : ""}${markup}`;
+  const linkTag = cssHref ? `<link rel="stylesheet" href="${cssHref}" />` : "";
+  root.innerHTML = `${linkTag}${combinedSpacing ? `<style data-spacing>${combinedSpacing}</style>` : ""}${markup}`;
   return root;
 }
 
@@ -346,6 +345,7 @@ class OwbText extends HTMLElement {
     renderShadow(
       this,
       `${customCss ? `<style>${customCss}</style>` : ""}<div class="text-block ProseMirror">${normalizedContent}</div>`,
+      "/owb-styles/text.css",
     );
   }
 }
@@ -380,6 +380,7 @@ class OwbImage extends HTMLElement {
     const root = renderShadow(
       this,
       `<style>:host{display:block;width:100%;height:100%;}</style>${customCss ? `<style>${customCss}</style>` : ""}<div class="image-block size-${mode}">${imageContent}</div>${lightboxMarkup}`,
+      "/owb-styles/image.css",
     );
 
     const lightbox = root.querySelector("[data-image-lightbox]");
@@ -434,65 +435,6 @@ class OwbImage extends HTMLElement {
   }
 }
 
-class OwbButton extends HTMLElement {
-  connectedCallback() {
-    const { content = "Button", settings = {} } = readConfig(this);
-    const link = String(settings.buttonLink || "").trim();
-    const size = String(settings.buttonSize || "m");
-    const theme = String(settings.buttonTheme || "primary");
-    const variant = String(settings.buttonVariant || "filled");
-    const buttonType = String(settings.buttonType || "link");
-    const shape = String(settings.buttonShape || "rounded");
-    const customRadius = String(settings.buttonRadiusCustom || "12px");
-    const customCss = String(settings.customCss || "").trim();
-
-    let sizeStyle =
-      "--button-padding-y: 0.58rem; --button-padding-x: 1rem; --button-font-size: 0.95rem;";
-    if (size === "xs") {
-      sizeStyle =
-        "--button-padding-y: 0.28rem; --button-padding-x: 0.65rem; --button-font-size: 0.78rem;";
-    }
-    if (size === "sm") {
-      sizeStyle =
-        "--button-padding-y: 0.4rem; --button-padding-x: 0.8rem; --button-font-size: 0.85rem;";
-    }
-    if (size === "l") {
-      sizeStyle =
-        "--button-padding-y: 0.72rem; --button-padding-x: 1.25rem; --button-font-size: 1.05rem;";
-    }
-    if (size === "xl") {
-      sizeStyle =
-        "--button-padding-y: 0.9rem; --button-padding-x: 1.5rem; --button-font-size: 1.15rem;";
-    }
-
-    if (size === "custom") {
-      const top = settings.buttonPaddingTop || "0.58rem";
-      const right = settings.buttonPaddingRight || "1rem";
-      const bottom = settings.buttonPaddingBottom || "0.58rem";
-      const left = settings.buttonPaddingLeft || "1rem";
-      sizeStyle = `--button-padding-y: ${top}; --button-padding-x: ${right}; --button-font-size: 0.95rem; padding: ${top} ${right} ${bottom} ${left};`;
-    }
-
-    let radius = "9999px";
-    if (shape === "square") {
-      radius = "0px";
-    }
-    if (shape === "custom") {
-      radius = customRadius || "12px";
-    }
-
-    const buttonMarkup =
-      buttonType === "submit" || buttonType === "button"
-        ? `<button class="site-button theme-${theme} variant-${variant}" type="${buttonType}" style="${sizeStyle} --button-radius: ${radius};">${content}</button>`
-        : `<a class="site-button theme-${theme} variant-${variant}" href="${link || "#"}" style="${sizeStyle} --button-radius: ${radius};">${content}</a>`;
-
-    renderShadow(
-      this,
-      `${customCss ? `<style>${customCss}</style>` : ""}<div class="button-block"><div class="button-preview-wrap">${buttonMarkup}</div></div>`,
-    );
-  }
-}
-
 class OwbEmbed extends HTMLElement {
   connectedCallback() {
     const { html = "" } = readConfig(this);
@@ -502,6 +444,7 @@ class OwbEmbed extends HTMLElement {
       safeHtml.trim()
         ? `<div class="embed-preview">${safeHtml}</div>`
         : `<div class="embed-placeholder">No embed content</div>`,
+      "/owb-styles/embed.css",
     );
   }
 }
@@ -513,6 +456,7 @@ class OwbSocialMedia extends HTMLElement {
       renderShadow(
         this,
         `<div class="social-empty">No social links configured</div>`,
+        "/owb-styles/social-media.css",
       );
       return;
     }
@@ -555,6 +499,7 @@ class OwbSocialMedia extends HTMLElement {
     renderShadow(
       this,
       `<div class="social-block"><div class="social-buttons-grid align-${alignment}">${contentHtml}</div></div>`,
+      "/owb-styles/social-media.css",
     );
   }
 }
@@ -625,6 +570,7 @@ class OwbGallery extends HTMLElement {
       renderShadow(
         this,
         `<div class="gallery-empty">No gallery images configured</div>`,
+        "/owb-styles/gallery.css",
       );
       return;
     }
@@ -639,6 +585,7 @@ class OwbGallery extends HTMLElement {
     renderShadow(
       this,
       `<div class="gallery-grid" style="display:grid;grid-template-columns:repeat(${cols}, minmax(0, 1fr));gap:${gap};--gallery-columns: ${cols}; --gallery-gap: ${gap}; --gallery-ratio: ${format};">${thumbs}</div><div class="gallery-lightbox" data-gallery-lightbox hidden style="display:none;"><button type="button" class="gallery-lightbox-close" data-gallery-close>X</button><button type="button" class="gallery-lightbox-nav is-prev" data-gallery-prev><</button><img class="gallery-lightbox-image" data-gallery-image src="" alt="" /><button type="button" class="gallery-lightbox-nav is-next" data-gallery-next>></button></div>`,
+      "/owb-styles/gallery.css",
     );
   }
 
@@ -827,6 +774,7 @@ class OwbSlider extends HTMLElement {
       renderShadow(
         this,
         `<div class="slider-empty">No slider images configured</div>`,
+        "/owb-styles/slider.css",
       );
       return;
     }
@@ -851,6 +799,7 @@ class OwbSlider extends HTMLElement {
     renderShadow(
       this,
       `<div class="slider-block"><div class="slider-track-wrapper"><div class="slider-track" style="${trackStyle}">${allSlides}</div></div>${navHtml}</div>`,
+      "/owb-styles/slider.css",
     );
   }
 }
@@ -1157,9 +1106,6 @@ if (!customElements.get("owb-text")) {
 if (!customElements.get("owb-image")) {
   customElements.define("owb-image", OwbImage);
 }
-if (!customElements.get("owb-button")) {
-  customElements.define("owb-button", OwbButton);
-}
 if (!customElements.get("owb-embed")) {
   customElements.define("owb-embed", OwbEmbed);
 }
@@ -1350,6 +1296,7 @@ class OwbNavbar extends HTMLElement {
     renderShadow(
       this,
       `${mediaQuery}<div class="navbar-block"${blockStyle}><nav class="navbar${hasUnderline ? " has-underline-hover" : ""}${hasUnderlineActive ? " has-underline-active" : ""}" style="${navVars}">${desktopLinks}</nav>${mobileHtml}</div>`,
+      "/owb-styles/navbar.css",
     );
   }
 }

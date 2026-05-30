@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:pub": "vite build --config vite.pub.config.js",
     "preview": "vite preview",
-    "publish": "node ./server/publish/publish-cli.js",
+    "publish": "npm run build:pub && node ./server/publish/publish-cli.js",
     "upload": "npx wrangler pages deploy ./dist-publish --project-name=loicbellemarealford --branch main"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "@codemirror/lint": "^6.9.6",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.43.0",
+    "@lit-labs/ssr": "^4.1.0",
     "@tiptap/core": "^3.23.5",
     "@tiptap/extension-bubble-menu": "^3.23.5",
     "@tiptap/extension-link": "^3.23.5",

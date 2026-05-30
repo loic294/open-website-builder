@@ -104,6 +104,34 @@ function createPublishedPreviewMiddleware({ publishedDir }) {
 export default defineConfig({
   plugins: [
     {
+      name: "component-styles",
+      configureServer(server) {
+        server.middlewares.use(async (request, response, next) => {
+          const match = (request.url || "").match(
+            /^\/owb-styles\/([a-z][a-z0-9-]*)\.css(?:\?.*)?$/,
+          );
+          if (!match) {
+            next();
+            return;
+          }
+          const componentName = match[1];
+          const filePath = resolve(
+            __dirname,
+            `src/website/components/${componentName}/styles.css`,
+          );
+          try {
+            const css = await readFile(filePath, "utf8");
+            response.statusCode = 200;
+            response.setHeader("Content-Type", "text/css; charset=utf-8");
+            response.end(css);
+          } catch {
+            response.statusCode = 404;
+            response.end("");
+          }
+        });
+      },
+    },
+    {
       name: "data-api",
       configureServer(server) {
         server.middlewares.use(createImagesMiddleware({ contentRoot }));

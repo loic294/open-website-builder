@@ -1,3 +1,4 @@
+import "./website/components/button/button.editor.js";
 import "./editor/components/layout/website-editor/website-editor.js";
 import "./editor/components/layout/editor-menu/editor-menu.js";
 import "./editor/components/ui/radio-button/radio-button.js";
