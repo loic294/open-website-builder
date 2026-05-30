@@ -4,6 +4,7 @@ import { dataLayer } from "../../../editor/data/data-layer.js";
 import { withVariantConfig } from "../variant-component-base.js";
 import { ArrowDown, ArrowUp, Trash, Move, Plus, createElement } from "lucide";
 import styles from "./styles.css?inline";
+import { OwbSection } from "./section.js";
 
 export const defaultSectionConfig = {
   type: "section",
@@ -2386,59 +2387,7 @@ export function removeSection(pageConfig, node) {
   };
 }
 
-class OwbSection extends withVariantConfig(LitElement) {
-  static styles = [
-    css`
-      :host {
-        display: block;
-      }
-
-      section .container {
-        position: relative;
-        padding: var(--section-padding-top, 7rem)
-          var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem)
-          var(--section-padding-left, 2rem);
-        margin: 0 auto;
-      }
-
-      section .container.is-normal-width {
-        max-width: 960px;
-      }
-
-      section .container.is-full-width {
-        max-width: 100%;
-      }
-    `,
-  ];
-
-  render() {
-    const settings = this.config;
-    const customCss = String(settings.customCss || "").trim();
-    const width = String(settings.settingWidth || "normal");
-    const widthClass =
-      width === "full"
-        ? "is-full-width"
-        : width === "custom"
-          ? ""
-          : "is-normal-width";
-
-    return html`
-      ${customCss
-        ? html`<style>
-            ${customCss}
-          </style>`
-        : null}
-      <section style="${getPublishedSectionStyle(settings)}">
-        <div
-          class="container ${widthClass}"
-          style="${getPublishedContainerStyle(settings)}"
-        >
-          <slot></slot>
-        </div>
-      </section>
-    `;
-  }
-}
+OwbSection.editorPlugin = {};
 
 export const editorRenderSiteSection = (
   node,
@@ -2464,3 +2413,4 @@ customElements.define("site-section", SiteSection);
 if (!customElements.get("owb-section")) {
   customElements.define("owb-section", OwbSection);
 }
+

@@ -1,6 +1,6 @@
 import { editorRenderSiteSection } from "./site-section/site-section";
-import { editorRenderContainer } from "./container/container";
-import { editorRenderForm } from "./form/form";
+import { editorRenderContainer } from "./container/container.editor";
+import { editorRenderForm } from "./form/form.editor";
 import { editorRenderInput } from "./input/input";
 import { editorRenderCaptcha } from "./captcha/captcha";
 import { editorRenderCheckbox } from "./checkbox/checkbox";
@@ -8,11 +8,11 @@ import { editorRenderShared } from "./shared/shared";
 import { editorRenderText } from "./text/text.editor";
 import { editorRenderImage } from "./image/image.editor";
 import { editorRenderButton } from "./button/button.editor";
-import { editorRenderEmbed } from "./embed/embed";
-import { editorRenderSocialMedia } from "./social-media/social-media";
-import { editorRenderGallery } from "./gallery/gallery";
-import { editorRenderSlider } from "./slider/slider";
-import { editorRenderNavbar } from "./navbar/navbar";
+import { editorRenderEmbed } from "./embed/embed.editor";
+import { editorRenderSocialMedia } from "./social-media/social-media.editor";
+import { editorRenderGallery } from "./gallery/gallery.editor";
+import { editorRenderSlider } from "./slider/slider.editor";
+import { editorRenderNavbar } from "./navbar/navbar.editor";
 import { editorRenderCollection } from "./collection/collection";
 import { editorRenderCollectionContent } from "./collection-content/collection-content";
 

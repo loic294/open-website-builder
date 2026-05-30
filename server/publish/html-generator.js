@@ -2,9 +2,18 @@ import "@lit-labs/ssr/lib/install-global-dom-shim.js";
 import { render as ssrRender } from "@lit-labs/ssr";
 import { collectResult } from "@lit-labs/ssr/lib/render-result.js";
 import { html as litHtml } from "lit";
+
 import { OwbButton } from "../../src/website/components/button/button.js";
 import { OwbText } from "../../src/website/components/text/text.js";
 import { OwbImage } from "../../src/website/components/image/image.js";
+import { OwbEmbed } from "../../src/website/components/embed/embed.js";
+import { OwbGallery } from "../../src/website/components/gallery/gallery.js";
+import { OwbSlider } from "../../src/website/components/slider/slider.js";
+import { OwbSocialMedia } from "../../src/website/components/social-media/social-media.js";
+import { OwbNavbar } from "../../src/website/components/navbar/navbar.js";
+import { OwbSection } from "../../src/website/components/site-section/section.js";
+import { OwbContainer } from "../../src/website/components/container/container.js";
+import { OwbForm } from "../../src/website/components/form/form.js";
 import * as simpleIcons from "simple-icons";
 
 if (!customElements.get("owb-button")) {
@@ -17,6 +26,38 @@ if (!customElements.get("owb-text")) {
 
 if (!customElements.get("owb-image")) {
   customElements.define("owb-image", OwbImage);
+}
+
+if (!customElements.get("owb-embed")) {
+  customElements.define("owb-embed", OwbEmbed);
+}
+
+if (!customElements.get("owb-gallery")) {
+  customElements.define("owb-gallery", OwbGallery);
+}
+
+if (!customElements.get("owb-slider")) {
+  customElements.define("owb-slider", OwbSlider);
+}
+
+if (!customElements.get("owb-social-media")) {
+  customElements.define("owb-social-media", OwbSocialMedia);
+}
+
+if (!customElements.get("owb-navbar")) {
+  customElements.define("owb-navbar", OwbNavbar);
+}
+
+if (!customElements.get("owb-section")) {
+  customElements.define("owb-section", OwbSection);
+}
+
+if (!customElements.get("owb-container")) {
+  customElements.define("owb-container", OwbContainer);
+}
+
+if (!customElements.get("owb-form")) {
+  customElements.define("owb-form", OwbForm);
 }
 
 function escapeAttr(value) {
@@ -301,59 +342,55 @@ async function renderButton(node, context) {
   return await collectResult(ssrResult);
 }
 
-function renderEmbed(node, context) {
+async function renderEmbed(node, context) {
   const tokenValues = context?.tokenValues || {};
-  const payload = applyTokensToJson({ html: node?.html ?? "" }, tokenValues);
-  return `<owb-embed>${configScript(payload)}</owb-embed>`;
+  const payload = applyTokensToJson(
+    { html: node?.html ?? "", settings: node?.settings ?? {} },
+    tokenValues,
+  );
+  const ssrResult = ssrRender(litHtml`<owb-embed .html=${payload.html} .settings=${payload.settings}></owb-embed>`);
+  return await collectResult(ssrResult);
 }
 
-function renderSocialMedia(node) {
-  const items = Array.isArray(node?.items)
-    ? node.items.map((item) => {
-        const normalizedIconSlug = normalizeIconSlug(item?.icon);
-        const icon = normalizedIconSlug
-          ? SIMPLE_ICON_MAP.get(normalizedIconSlug)
-          : null;
-
-        return {
-          ...(item && typeof item === "object" ? item : {}),
-          icon: normalizedIconSlug,
-          iconSvg: icon?.svg || "",
-          iconHex: icon?.hex || "",
-          iconTitle: icon?.title || "",
-        };
-      })
-    : [];
-
-  return `<owb-social-media>${configScript({ items, settings: node?.settings ?? {} })}</owb-social-media>`;
+async function renderSocialMedia(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const payload = applyTokensToJson(
+    { items: node?.items ?? [], settings: node?.settings ?? {} },
+    tokenValues,
+  );
+  const ssrResult = ssrRender(litHtml`<owb-social-media .items=${payload.items} .settings=${payload.settings}></owb-social-media>`);
+  return await collectResult(ssrResult);
 }
 
-function renderGallery(node) {
-  const settings = node?.settings ?? {};
-  return `<owb-gallery>${configScript({
-    images: node?.images ?? [],
-    columns: Number.parseInt(settings.galleryColumns, 10) || 3,
-    format: String(settings.galleryFormat || "1 / 1"),
-    gap: String(settings.galleryGap || "8px"),
-  })}</owb-gallery>`;
+async function renderGallery(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const payload = applyTokensToJson(
+    { images: node?.images ?? [], settings: node?.settings ?? {} },
+    tokenValues,
+  );
+  const ssrResult = ssrRender(litHtml`<owb-gallery .images=${payload.images} .settings=${payload.settings}></owb-gallery>`);
+  return await collectResult(ssrResult);
 }
 
-function renderSlider(node) {
-  const settings = node?.settings ?? {};
-  return `<owb-slider>${configScript({
-    images: node?.images ?? [],
-    format: String(settings.sliderFormat || "3 / 2"),
-    itemWidth: String(settings.sliderItemWidth || "80%"),
-    height: String(settings.sliderHeight || "400px"),
-    gap: String(settings.sliderGap || "12px"),
-  })}</owb-slider>`;
+async function renderSlider(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const payload = applyTokensToJson(
+    { images: node?.images ?? [], settings: node?.settings ?? {} },
+    tokenValues,
+  );
+  const ssrResult = ssrRender(litHtml`<owb-slider .images=${payload.images} .settings=${payload.settings}></owb-slider>`);
+  return await collectResult(ssrResult);
 }
 
-function renderNavbar(node) {
-  return `<owb-navbar>${configScript({
-    links: node?.links ?? [],
-    settings: node?.settings ?? {},
-  })}</owb-navbar>`;
+async function renderNavbar(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const currentPath = context?.pageUrl || "";
+  const payload = applyTokensToJson(
+    { links: node?.links ?? [], settings: node?.settings ?? {} },
+    tokenValues,
+  );
+  const ssrResult = ssrRender(litHtml`<owb-navbar .links=${payload.links} .settings=${payload.settings} .currentPath=${currentPath}></owb-navbar>`);
+  return await collectResult(ssrResult);
 }
 
 async function renderShared(node, context) {
@@ -445,7 +482,13 @@ async function renderSection(node, context) {
     }
   }
 
-  return `<owb-section>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-section>`;
+  const childrenHtml = renderedChildren.join("\n");
+  const ssrResult = ssrRender(litHtml`<owb-section .settings=${settings}></owb-section>`);
+  const sectionHtml = await collectResult(ssrResult);
+  const sectionInsert = sectionHtml.lastIndexOf("</owb-section>");
+  return sectionInsert >= 0
+    ? sectionHtml.slice(0, sectionInsert) + childrenHtml + "</owb-section>"
+    : sectionHtml + childrenHtml;
 }
 
 async function renderContainer(node, context) {
@@ -469,7 +512,13 @@ async function renderContainer(node, context) {
     }
   }
 
-  return `<owb-container>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-container>`;
+  const childrenHtml = renderedChildren.join("\n");
+  const ssrResult = ssrRender(litHtml`<owb-container .settings=${settings}></owb-container>`);
+  const containerHtml = await collectResult(ssrResult);
+  const containerInsert = containerHtml.lastIndexOf("</owb-container>");
+  return containerInsert >= 0
+    ? containerHtml.slice(0, containerInsert) + childrenHtml + "</owb-container>"
+    : containerHtml + childrenHtml;
 }
 
 async function renderCollectionContent(node, context) {
@@ -547,7 +596,13 @@ async function renderCollection(node, context) {
     }
   }
 
-  return `<owb-container>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-container>`;
+  const childrenHtml = renderedChildren.join("\n");
+  const ssrResult = ssrRender(litHtml`<owb-container .settings=${settings}></owb-container>`);
+  const containerHtml = await collectResult(ssrResult);
+  const containerInsert = containerHtml.lastIndexOf("</owb-container>");
+  return containerInsert >= 0
+    ? containerHtml.slice(0, containerInsert) + childrenHtml + "</owb-container>"
+    : containerHtml + childrenHtml;
 }
 
 async function renderForm(node, context) {
@@ -571,7 +626,13 @@ async function renderForm(node, context) {
     }
   }
 
-  return `<owb-form>\n${configScript(settings)}\n${renderedChildren.join("\n")}\n</owb-form>`;
+  const childrenHtml = renderedChildren.join("\n");
+  const ssrResult = ssrRender(litHtml`<owb-form .settings=${settings}></owb-form>`);
+  const formHtml = await collectResult(ssrResult);
+  const formInsert = formHtml.lastIndexOf("</owb-form>");
+  return formInsert >= 0
+    ? formHtml.slice(0, formInsert) + childrenHtml + "</owb-form>"
+    : formHtml + childrenHtml;
 }
 
 function renderInput(node) {
@@ -624,15 +685,15 @@ async function renderNode(node, context) {
     case "button":
       return await renderButton(node, context);
     case "embed":
-      return renderEmbed(node, context);
+      return await renderEmbed(node, context);
     case "social-media":
-      return renderSocialMedia(node);
+      return await renderSocialMedia(node, context);
     case "gallery":
-      return renderGallery(node);
+      return await renderGallery(node, context);
     case "slider":
-      return renderSlider(node);
+      return await renderSlider(node, context);
     case "navbar":
-      return renderNavbar(node);
+      return await renderNavbar(node, context);
     case "shared":
       return await renderShared(node, context);
     case "section":
@@ -714,6 +775,7 @@ export async function generatePageHtml({
     sharedStack: new Set(),
     tokenValues,
     collectionItemContent,
+    pageUrl: pageConfig?.url || "",
   };
 
   const bodyHtml = await renderNodes(pageConfig?.content, context);

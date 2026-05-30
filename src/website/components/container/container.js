@@ -1,69 +1,126 @@
-import { LitElement, html, css, unsafeCSS } from "lit";
+import { LitElement, html, css } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import {
-  SiteLayoutContainerBase,
-  defaultSectionConfig,
-} from "../site-section/site-section.js";
-import sectionStyles from "../site-section/styles.css?inline";
+  getSectionInlineStyle,
+  getContainerInlineStyle,
+} from "../site-section/section.js";
 
 export const defaultContainerConfig = {
-  ...defaultSectionConfig,
   type: "container",
+  content: [],
 };
 
-class SiteContainer extends SiteLayoutContainerBase {
-  static styles = [super.styles, unsafeCSS(sectionStyles)];
+// Responsive breakpoints for container media queries
+const RESPONSIVE_BREAKPOINTS = [
+  { bucket: "tabletHorizontal", maxWidth: 1180 },
+  { bucket: "mobileHorizontal", maxWidth: 844 },
+  { bucket: "tabletVertical", maxWidth: 820 },
+  { bucket: "mobileVertical", maxWidth: 390 },
+];
+
+function buildResponsiveContainerCss(settings) {
+  const overrides = settings.responsiveOverrides;
+  if (!overrides || typeof overrides !== "object") return "";
+
+  const rules = RESPONSIVE_BREAKPOINTS.map(({ bucket, maxWidth }) => {
+    const bucketOverrides = overrides[bucket];
+    if (
+      !bucketOverrides ||
+      typeof bucketOverrides !== "object" ||
+      Object.keys(bucketOverrides).length === 0
+    ) {
+      return "";
+    }
+    const merged = { ...settings, ...bucketOverrides };
+    const sectionCss = getSectionInlineStyle(merged)
+      .split(";")
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `${p} !important`)
+      .join("; ");
+    const containerCss = getContainerInlineStyle(merged)
+      .split(";")
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `${p} !important`)
+      .join("; ");
+    const parts = [];
+    if (sectionCss)
+      parts.push(
+        `@media (max-width: ${maxWidth}px) { .container { ${sectionCss} } }`,
+      );
+    if (containerCss)
+      parts.push(
+        `@media (max-width: ${maxWidth}px) { .container { ${containerCss} } }`,
+      );
+    return parts.join(" ");
+  })
+    .filter(Boolean)
+    .join("\n");
+
+  return rules;
 }
 
-class OwbContainer extends LitElement {
-  static styles = [
-    css`
-      :host {
-        display: block;
-      }
+export class OwbContainer extends LitElement {
+  static editorPlugin = null;
 
-      .container {
-        margin: 0 auto;
-      }
-    `,
-  ];
+  static styles = css`
+    :host {
+      display: block;
+    }
+    .container {
+      position: relative;
+      padding: var(--section-padding-top, 7rem) var(--section-padding-right, 2rem)
+        var(--section-padding-bottom, 6rem) var(--section-padding-left, 2rem);
+      margin: 0 auto;
+    }
+    .container.is-normal-width {
+      max-width: 960px;
+    }
+    .container.is-full-width {
+      max-width: 100%;
+    }
+  `;
 
-  connectedCallback() {
-    super.connectedCallback();
-    this.renderRoot
-      .querySelectorAll("script[data-owb-config]")
-      .forEach((el) => {
-        el.remove();
-      });
+  static properties = {
+    settings: { type: Object },
+    node: { type: Object },
+    pageConfig: { type: Object },
+  };
+
+  constructor() {
+    super();
+    this.settings = {};
+    this.node = null;
+    this.pageConfig = null;
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    OwbContainer.editorPlugin?.onUpdated?.(this, changedProperties);
   }
 
   render() {
-    return html`<div class="container"><slot></slot></div>`;
+    const settings = this.settings || {};
+    const customCss = String(settings.customCss || "").trim();
+    const width = String(settings.settingWidth || "normal");
+    const widthClass =
+      width === "full"
+        ? "is-full-width"
+        : width === "custom"
+          ? ""
+          : "is-normal-width";
+    const responsiveCss = buildResponsiveContainerCss(settings);
+
+    return html`
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
+      <div
+        class="container ${widthClass}"
+        style="${getSectionInlineStyle(settings)}; ${getContainerInlineStyle(settings)}"
+      >
+        <slot></slot>
+      </div>
+    `;
   }
-}
-
-export const editorRenderContainer = (
-  node,
-  pageConfig,
-  onPageConfigUpdated,
-  renderNode,
-  renderOptions = {},
-) => {
-  return html`<site-container
-    class=${renderOptions.hostClass || ""}
-    style=${renderOptions.hostStyle || ""}
-    data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
-    .node=${node}
-    .pageConfig=${pageConfig}
-    .renderNodeFn=${renderNode}
-    .onPageConfigUpdated=${onPageConfigUpdated}
-    @page-config-updated=${onPageConfigUpdated}
-  ></site-container>`;
-};
-
-if (!customElements.get("site-container")) {
-  customElements.define("site-container", SiteContainer);
-}
-
-if (!customElements.get("owb-container")) {
-  customElements.define("owb-container", OwbContainer);
 }

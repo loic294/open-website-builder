@@ -1,6 +1,13 @@
 import "./website/components/button/button.editor.js";
 import "./website/components/text/text.editor.js";
 import "./website/components/image/image.editor.js";
+import "./website/components/embed/embed.editor.js";
+import "./website/components/gallery/gallery.editor.js";
+import "./website/components/slider/slider.editor.js";
+import "./website/components/social-media/social-media.editor.js";
+import "./website/components/navbar/navbar.editor.js";
+import "./website/components/container/container.editor.js";
+import "./website/components/form/form.editor.js";
 import "./editor/components/layout/website-editor/website-editor.js";
 import "./editor/components/layout/editor-menu/editor-menu.js";
 import "./editor/components/ui/radio-button/radio-button.js";
