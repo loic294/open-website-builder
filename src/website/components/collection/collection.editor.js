@@ -354,7 +354,9 @@ registerLayoutEditorProperties(OwbCollection, {
 
 const existingStyles = Array.isArray(OwbCollection.styles)
   ? OwbCollection.styles
-  : [OwbCollection.styles];
+  : OwbCollection.styles
+    ? [OwbCollection.styles]
+    : [];
 OwbCollection.styles = [...existingStyles, unsafeCSS(blocksStyles)];
 
 const COLLECTION_VARIANT_CONFIG = {
@@ -430,6 +432,15 @@ const COLLECTION_VARIANT_CONFIG = {
       );
       return applyTokensRecursively(clonedTemplate, tokenMap);
     });
+  },
+  getGridDimensionsOverride(controller, { columns }) {
+    const host = controller.host;
+    if (host.isSettingsEditorOpen) return null;
+    const childNodes =
+      COLLECTION_VARIANT_CONFIG.getRenderedChildNodes(controller);
+    const itemCount = Array.isArray(childNodes) ? childNodes.length : 0;
+    if (itemCount <= 0) return null;
+    return { columns, rows: Math.max(1, Math.ceil(itemCount / columns)) };
   },
   renderGeneralSettingsExtras(controller) {
     const host = controller.host;

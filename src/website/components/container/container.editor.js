@@ -12,7 +12,9 @@ registerLayoutEditorProperties(OwbContainer);
 
 const existingStyles = Array.isArray(OwbContainer.styles)
   ? OwbContainer.styles
-  : [OwbContainer.styles];
+  : OwbContainer.styles
+    ? [OwbContainer.styles]
+    : [];
 OwbContainer.styles = [...existingStyles, unsafeCSS(blocksStyles)];
 
 const CONTAINER_VARIANT_CONFIG = {

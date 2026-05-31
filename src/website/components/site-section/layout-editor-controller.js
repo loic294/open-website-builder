@@ -227,6 +227,7 @@ export class LayoutEditorController {
       getDefaultSettingsStateExtras: () => ({}),
       renderGeneralSettingsExtras: () => html``,
       getRenderedChildNodes: null,
+      getGridDimensionsOverride: null,
       onVariantConnected: () => {},
       onVariantUpdated: () => {},
       onVariantDisconnected: () => {},
@@ -555,13 +556,30 @@ export class LayoutEditorController {
   }
 
   getGridDimensions() {
-    return {
-      columns: Math.max(
-        1,
-        Number.parseInt(this.host.settingGridColumns, 10) || 1,
-      ),
-      rows: Math.max(1, Number.parseInt(this.host.settingGridRows, 10) || 1),
-    };
+    const baseColumns = Math.max(
+      1,
+      Number.parseInt(this.host.settingGridColumns, 10) || 1,
+    );
+    const baseRows = Math.max(
+      1,
+      Number.parseInt(this.host.settingGridRows, 10) || 1,
+    );
+    if (typeof this.config.getGridDimensionsOverride === "function") {
+      const override = this.config.getGridDimensionsOverride(this, {
+        columns: baseColumns,
+        rows: baseRows,
+      });
+      if (override && typeof override === "object") {
+        return {
+          columns: Math.max(
+            1,
+            Number.parseInt(override.columns, 10) || baseColumns,
+          ),
+          rows: Math.max(1, Number.parseInt(override.rows, 10) || baseRows),
+        };
+      }
+    }
+    return { columns: baseColumns, rows: baseRows };
   }
 
   normalizeGridPlacement(placement, fallbackIndex, columns, rows) {
