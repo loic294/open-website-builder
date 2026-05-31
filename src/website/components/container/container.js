@@ -151,7 +151,15 @@ export class OwbContainer extends LitElement {
     OwbContainer.editorPlugin?.onUpdated?.(this, changedProperties);
   }
 
+  willUpdate(changedProperties) {
+    OwbContainer.editorPlugin?.onWillUpdate?.(this, changedProperties);
+  }
+
   render() {
+    const pluginRender = OwbContainer.editorPlugin?.render;
+    if (typeof pluginRender === "function") {
+      return pluginRender(this);
+    }
     const settings = this.settings || {};
     const customCss = String(settings.customCss || "").trim();
     const spacingCss = getSpacingStyleBlock(settings);

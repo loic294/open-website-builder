@@ -1,4 +1,4 @@
-import { editorRenderSection } from "./site-section/site-section";
+import { editorRenderSection } from "./site-section/section.editor";
 import { editorRenderContainer } from "./container/container.editor";
 import { editorRenderForm } from "./form/form.editor";
 import { editorRenderInput } from "./input/input.editor";

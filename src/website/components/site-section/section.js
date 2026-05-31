@@ -214,6 +214,16 @@ export class OwbSection extends LitElement {
       } catch (e) {}
     }
     super.connectedCallback();
+    OwbSection.editorPlugin?.onConnected?.(this);
+  }
+
+  disconnectedCallback() {
+    OwbSection.editorPlugin?.onDisconnected?.(this);
+    super.disconnectedCallback();
+  }
+
+  willUpdate(changedProperties) {
+    OwbSection.editorPlugin?.onWillUpdate?.(this, changedProperties);
   }
 
   updated(changedProperties) {
@@ -222,6 +232,10 @@ export class OwbSection extends LitElement {
   }
 
   render() {
+    const pluginRender = OwbSection.editorPlugin?.render;
+    if (typeof pluginRender === "function") {
+      return pluginRender(this);
+    }
     const settings = this.settings || {};
     const customCss = String(settings.customCss || "").trim();
     const spacingCss = getSpacingStyleBlock(settings);

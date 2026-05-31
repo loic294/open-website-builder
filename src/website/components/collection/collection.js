@@ -27,6 +27,19 @@ export class OwbCollection extends LitElement {
     `,
   ];
 
+  static properties = {
+    settings: { type: Object },
+    node: { type: Object },
+    pageConfig: { type: Object },
+  };
+
+  constructor() {
+    super();
+    this.settings = {};
+    this.node = null;
+    this.pageConfig = null;
+  }
+
   connectedCallback() {
     super.connectedCallback();
     this.renderRoot
@@ -34,9 +47,38 @@ export class OwbCollection extends LitElement {
       .forEach((el) => {
         el.remove();
       });
+    OwbCollection.editorPlugin?.onConnected?.(this);
+  }
+
+  disconnectedCallback() {
+    OwbCollection.editorPlugin?.onDisconnected?.(this);
+    super.disconnectedCallback();
+  }
+
+  willUpdate(changedProperties) {
+    OwbCollection.editorPlugin?.onWillUpdate?.(this, changedProperties);
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    OwbCollection.editorPlugin?.onUpdated?.(this, changedProperties);
+  }
+
+  dispatchPageConfigUpdated(nextPageConfig) {
+    this.dispatchEvent(
+      new CustomEvent("page-config-updated", {
+        detail: nextPageConfig,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   render() {
+    const pluginRender = OwbCollection.editorPlugin?.render;
+    if (typeof pluginRender === "function") {
+      return pluginRender(this);
+    }
     return html`<div class="collection"><slot></slot></div>`;
   }
 }

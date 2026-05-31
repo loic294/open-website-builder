@@ -118,6 +118,10 @@ export class OwbForm extends LitElement {
     OwbForm.editorPlugin?.onUpdated?.(this, changedProperties);
   }
 
+  willUpdate(changedProperties) {
+    OwbForm.editorPlugin?.onWillUpdate?.(this, changedProperties);
+  }
+
   _handleSubmit(event) {
     event.preventDefault();
     const settings = this.settings || {};
@@ -135,6 +139,10 @@ export class OwbForm extends LitElement {
   }
 
   render() {
+    const pluginRender = OwbForm.editorPlugin?.render;
+    if (typeof pluginRender === "function") {
+      return pluginRender(this);
+    }
     const settings = this.settings || {};
     const action = String(settings.formActionUrl || "").trim();
     const method = String(settings.formMethod || "post").toLowerCase();

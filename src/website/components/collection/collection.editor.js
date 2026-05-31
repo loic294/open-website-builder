@@ -1,12 +1,14 @@
 import { html, unsafeCSS } from "lit";
 import { dataLayer } from "../../../editor/data/data-layer.js";
-import { OwbLayoutContainerEditor } from "../site-section/site-section.js";
+import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 import sectionStyles from "../site-section/styles.css?inline";
 import { OwbCollection } from "./collection.js";
+import {
+  LayoutEditorController,
+  registerLayoutEditorProperties,
+} from "../site-section/layout-editor-controller.js";
 
 export { defaultCollectionConfig } from "./collection.js";
-
-OwbCollection.editorPlugin = {};
 
 const COLLECTION_SORT_OPTIONS = [
   { label: "Disk order", value: "disk" },
@@ -28,6 +30,12 @@ const BASE_DYNAMIC_FIELDS = [
   "publishedAt",
   "categories",
 ];
+
+const COLLECTION_DEFAULTS = {
+  settingCollectionId: "",
+  settingCollectionItemsCount: "all",
+  settingCollectionSort: "disk",
+};
 
 function normalizePathTokenValue(value) {
   return String(value || "")
@@ -139,302 +147,280 @@ function cloneNodeWithIdSuffix(node, suffix) {
   return cloned;
 }
 
-class OwbCollectionEditor extends OwbLayoutContainerEditor {
-  static properties = {
-    ...super.properties,
-    collectionOptions: { type: Array, state: true },
-    collectionItemsMetadata: { type: Array, state: true },
-    collectionMetadataAllowlist: { type: Array, state: true },
-    settingCollectionId: { type: String },
-    settingCollectionItemsCount: { type: String },
-    settingCollectionSort: { type: String },
-  };
+function getRawTemplateChildren(host) {
+  return Array.isArray(host.node?.content) ? host.node.content : [];
+}
 
-  static styles = [super.styles, unsafeCSS(sectionStyles)];
+function getSortedItems(host) {
+  const items = Array.isArray(host.collectionItemsMetadata)
+    ? host.collectionItemsMetadata
+    : [];
+  const sortMode = String(host.settingCollectionSort || "disk");
+  const nextItems = [...items];
 
-  constructor() {
-    super();
-    this.collectionOptions = [];
-    this.collectionItemsMetadata = [];
-    this.collectionMetadataAllowlist = [];
-    this.settingCollectionId = "";
-    this.settingCollectionItemsCount = "all";
-    this.settingCollectionSort = "disk";
-    this.onCollectionPointerDownCapture =
-      this.onCollectionPointerDownCapture.bind(this);
-  }
-
-  getDefaultSettingsState() {
-    return {
-      ...super.getDefaultSettingsState(),
-      settingCollectionId: "",
-      settingCollectionItemsCount: "all",
-      settingCollectionSort: "disk",
-    };
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
-    this.addEventListener("pointerdown", this.onCollectionPointerDownCapture, {
-      capture: true,
-    });
-    void this.loadCollectionOptions();
-  }
-
-  disconnectedCallback() {
-    this.removeEventListener(
-      "pointerdown",
-      this.onCollectionPointerDownCapture,
-      {
-        capture: true,
-      },
+  if (sortMode === "title-asc") {
+    nextItems.sort((a, b) =>
+      String(a?.title || "").localeCompare(String(b?.title || "")),
     );
-    super.disconnectedCallback();
-  }
-
-  shouldForceCollectionEditingFromEvent(event) {
-    if (this.isSettingsEditorOpen) {
-      return false;
-    }
-
-    const path = event.composedPath();
-    for (const node of path) {
-      if (!(node instanceof Element)) {
-        continue;
-      }
-
-      if (node === this) {
-        break;
-      }
-
-      if (
-        node.hasAttribute("data-editor-block") ||
-        node.hasAttribute("data-grid-child-id")
-      ) {
-        return true;
-      }
-
-      const tagName = String(node.tagName || "").toLowerCase();
-      if (
-        (tagName.startsWith("owb-") || tagName.startsWith("site-")) &&
-        tagName !== "owb-collection-editor" &&
-        tagName !== "owb-collection"
-      ) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  onCollectionPointerDownCapture(event) {
-    if (!this.shouldForceCollectionEditingFromEvent(event)) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    void this.openSectionSettings();
-  }
-
-  updated(changedProperties) {
-    super.updated(changedProperties);
-
-    if (changedProperties.has("settingCollectionId")) {
-      void this.loadCollectionMetadata();
-    }
-  }
-
-  async loadCollectionOptions() {
-    try {
-      const collections = await dataLayer.listCollections();
-      this.collectionOptions = Array.isArray(collections)
-        ? collections.map((collection) => ({
-            label: collection?.title || collection?.id || "Collection",
-            value: collection?.id || "",
-          }))
-        : [];
-    } catch (error) {
-      console.error(error);
-      this.collectionOptions = [];
-    }
-  }
-
-  async loadCollectionMetadata() {
-    const collectionId = String(this.settingCollectionId || "").trim();
-    if (!collectionId) {
-      this.collectionItemsMetadata = [];
-      this.collectionMetadataAllowlist = [];
-      return;
-    }
-
-    try {
-      const [metadataResult, configResult] = await Promise.all([
-        dataLayer.getCollectionItemsMetadata(collectionId),
-        dataLayer.getCollectionConfig(collectionId),
-      ]);
-
-      this.collectionItemsMetadata = Array.isArray(metadataResult?.items)
-        ? metadataResult.items
-        : [];
-      this.collectionMetadataAllowlist = Array.isArray(
-        configResult?.collectionMetadataAllowlist,
-      )
-        ? configResult.collectionMetadataAllowlist
-            .map((value) => String(value || "").trim())
-            .filter(Boolean)
-        : [];
-    } catch (error) {
-      console.error(error);
-      this.collectionItemsMetadata = [];
-      this.collectionMetadataAllowlist = [];
-    }
-  }
-
-  getSortedItems(items = this.collectionItemsMetadata) {
-    const sortMode = String(this.settingCollectionSort || "disk");
-    const nextItems = [...items];
-
-    if (sortMode === "title-asc") {
-      nextItems.sort((a, b) =>
-        String(a?.title || "").localeCompare(String(b?.title || "")),
-      );
-      return nextItems;
-    }
-
-    if (sortMode === "title-desc") {
-      nextItems.sort((a, b) =>
-        String(b?.title || "").localeCompare(String(a?.title || "")),
-      );
-      return nextItems;
-    }
-
-    if (sortMode === "id-asc") {
-      nextItems.sort((a, b) =>
-        String(a?.id || "").localeCompare(String(b?.id || "")),
-      );
-      return nextItems;
-    }
-
-    if (sortMode === "id-desc") {
-      nextItems.sort((a, b) =>
-        String(b?.id || "").localeCompare(String(a?.id || "")),
-      );
-      return nextItems;
-    }
-
-    if (sortMode === "publishedAt-desc") {
-      nextItems.sort(
-        (a, b) =>
-          new Date(b?.metadata?.metadata?.publishedAt || 0).getTime() -
-          new Date(a?.metadata?.metadata?.publishedAt || 0).getTime(),
-      );
-      return nextItems;
-    }
-
-    if (sortMode === "publishedAt-asc") {
-      nextItems.sort(
-        (a, b) =>
-          new Date(a?.metadata?.metadata?.publishedAt || 0).getTime() -
-          new Date(b?.metadata?.metadata?.publishedAt || 0).getTime(),
-      );
-      return nextItems;
-    }
-
     return nextItems;
   }
+  if (sortMode === "title-desc") {
+    nextItems.sort((a, b) =>
+      String(b?.title || "").localeCompare(String(a?.title || "")),
+    );
+    return nextItems;
+  }
+  if (sortMode === "id-asc") {
+    nextItems.sort((a, b) =>
+      String(a?.id || "").localeCompare(String(b?.id || "")),
+    );
+    return nextItems;
+  }
+  if (sortMode === "id-desc") {
+    nextItems.sort((a, b) =>
+      String(b?.id || "").localeCompare(String(a?.id || "")),
+    );
+    return nextItems;
+  }
+  if (sortMode === "publishedAt-desc") {
+    nextItems.sort(
+      (a, b) =>
+        new Date(b?.metadata?.metadata?.publishedAt || 0).getTime() -
+        new Date(a?.metadata?.metadata?.publishedAt || 0).getTime(),
+    );
+    return nextItems;
+  }
+  if (sortMode === "publishedAt-asc") {
+    nextItems.sort(
+      (a, b) =>
+        new Date(a?.metadata?.metadata?.publishedAt || 0).getTime() -
+        new Date(b?.metadata?.metadata?.publishedAt || 0).getTime(),
+    );
+    return nextItems;
+  }
+  return nextItems;
+}
 
-  getTokenMap(metadata = {}) {
-    const allowlist = Array.isArray(this.collectionMetadataAllowlist)
-      ? this.collectionMetadataAllowlist
-      : [];
-    const dynamicFields = [...new Set([...BASE_DYNAMIC_FIELDS, ...allowlist])];
-    const tokenMap = {};
+function getTokenMap(host, metadata = {}) {
+  const allowlist = Array.isArray(host.collectionMetadataAllowlist)
+    ? host.collectionMetadataAllowlist
+    : [];
+  const dynamicFields = [...new Set([...BASE_DYNAMIC_FIELDS, ...allowlist])];
+  const tokenMap = {};
 
-    for (const fieldName of dynamicFields) {
-      const normalizedFieldName = String(fieldName || "").trim();
-      if (!normalizedFieldName) {
-        continue;
+  for (const fieldName of dynamicFields) {
+    const normalizedFieldName = String(fieldName || "").trim();
+    if (!normalizedFieldName) continue;
+
+    const value =
+      metadata?.[normalizedFieldName] ??
+      getValueByPath(metadata?.metadata, normalizedFieldName) ??
+      getValueByPath(metadata, normalizedFieldName);
+
+    if (normalizedFieldName === "url" || normalizedFieldName === "sourceUrl") {
+      const pathValue = normalizePathTokenValue(value);
+      if (pathValue) {
+        tokenMap[normalizedFieldName] = pathValue;
+        tokenMap[normalizedFieldName.toUpperCase()] = pathValue;
       }
-
-      const value =
-        metadata?.[normalizedFieldName] ??
-        getValueByPath(metadata?.metadata, normalizedFieldName) ??
-        getValueByPath(metadata, normalizedFieldName);
-
-      if (
-        normalizedFieldName === "url" ||
-        normalizedFieldName === "sourceUrl"
-      ) {
-        const pathValue = normalizePathTokenValue(value);
-        if (pathValue) {
-          tokenMap[normalizedFieldName] = pathValue;
-          tokenMap[normalizedFieldName.toUpperCase()] = pathValue;
-        }
-        continue;
-      }
-
-      if (Array.isArray(value)) {
-        const joined = value.map((item) => String(item || "")).join(", ");
-        tokenMap[normalizedFieldName] = joined;
-        tokenMap[normalizedFieldName.toUpperCase()] = joined;
-        continue;
-      }
-
-      if (value === undefined || value === null) {
-        continue;
-      }
-
-      if (
-        typeof value === "string" ||
-        typeof value === "number" ||
-        typeof value === "boolean"
-      ) {
-        tokenMap[normalizedFieldName] = String(value);
-        tokenMap[normalizedFieldName.toUpperCase()] = String(value);
-      }
+      continue;
     }
 
-    return tokenMap;
+    if (Array.isArray(value)) {
+      const joined = value.map((item) => String(item || "")).join(", ");
+      tokenMap[normalizedFieldName] = joined;
+      tokenMap[normalizedFieldName.toUpperCase()] = joined;
+      continue;
+    }
+
+    if (value === undefined || value === null) continue;
+
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      tokenMap[normalizedFieldName] = String(value);
+      tokenMap[normalizedFieldName.toUpperCase()] = String(value);
+    }
   }
 
-  getAvailableDynamicFields() {
-    const allowlist = Array.isArray(this.collectionMetadataAllowlist)
-      ? this.collectionMetadataAllowlist
+  return tokenMap;
+}
+
+function getAvailableDynamicFields(host) {
+  const allowlist = Array.isArray(host.collectionMetadataAllowlist)
+    ? host.collectionMetadataAllowlist
+    : [];
+
+  const sampleMetadata =
+    host.collectionItemsMetadata?.[0]?.metadata &&
+    typeof host.collectionItemsMetadata[0].metadata === "object"
+      ? host.collectionItemsMetadata[0].metadata
+      : {};
+  const discoveredMetadataPaths = flattenObjectPaths(
+    sampleMetadata?.metadata || {},
+  ).sort((a, b) => a.localeCompare(b));
+
+  return [
+    ...new Set([
+      ...BASE_DYNAMIC_FIELDS,
+      ...allowlist,
+      ...discoveredMetadataPaths,
+    ]),
+  ];
+}
+
+async function loadCollectionOptions(host) {
+  try {
+    const collections = await dataLayer.listCollections();
+    host.collectionOptions = Array.isArray(collections)
+      ? collections.map((collection) => ({
+          label: collection?.title || collection?.id || "Collection",
+          value: collection?.id || "",
+        }))
       : [];
+  } catch (error) {
+    console.error(error);
+    host.collectionOptions = [];
+  }
+}
 
-    const sampleMetadata =
-      this.collectionItemsMetadata[0]?.metadata &&
-      typeof this.collectionItemsMetadata[0].metadata === "object"
-        ? this.collectionItemsMetadata[0].metadata
-        : {};
-    const discoveredMetadataPaths = flattenObjectPaths(
-      sampleMetadata?.metadata || {},
-    ).sort((a, b) => a.localeCompare(b));
-
-    return [
-      ...new Set([
-        ...BASE_DYNAMIC_FIELDS,
-        ...allowlist,
-        ...discoveredMetadataPaths,
-      ]),
-    ];
+async function loadCollectionMetadata(host) {
+  const collectionId = String(host.settingCollectionId || "").trim();
+  if (!collectionId) {
+    host.collectionItemsMetadata = [];
+    host.collectionMetadataAllowlist = [];
+    return;
   }
 
-  getCollectionRenderedChildNodes() {
-    const childNodes = super.getChildNodes();
-    if (!Array.isArray(childNodes) || childNodes.length === 0) {
-      return [];
+  try {
+    const [metadataResult, configResult] = await Promise.all([
+      dataLayer.getCollectionItemsMetadata(collectionId),
+      dataLayer.getCollectionConfig(collectionId),
+    ]);
+
+    host.collectionItemsMetadata = Array.isArray(metadataResult?.items)
+      ? metadataResult.items
+      : [];
+    host.collectionMetadataAllowlist = Array.isArray(
+      configResult?.collectionMetadataAllowlist,
+    )
+      ? configResult.collectionMetadataAllowlist
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+      : [];
+  } catch (error) {
+    console.error(error);
+    host.collectionItemsMetadata = [];
+    host.collectionMetadataAllowlist = [];
+  }
+}
+
+function shouldForceCollectionEditingFromEvent(host, event) {
+  if (host.isSettingsEditorOpen) return false;
+
+  const path = event.composedPath();
+  for (const node of path) {
+    if (!(node instanceof Element)) continue;
+    if (node === host) break;
+
+    if (
+      node.hasAttribute("data-editor-block") ||
+      node.hasAttribute("data-grid-child-id")
+    ) {
+      return true;
     }
 
-    const isSettingsFocused = this.isSettingsEditorOpen;
-    if (isSettingsFocused) {
-      return [childNodes[0]];
+    const tagName = String(node.tagName || "").toLowerCase();
+    if (
+      (tagName.startsWith("owb-") || tagName.startsWith("site-")) &&
+      tagName !== "owb-collection"
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+registerLayoutEditorProperties(OwbCollection, {
+  collectionOptions: { type: Array, state: true },
+  collectionItemsMetadata: { type: Array, state: true },
+  collectionMetadataAllowlist: { type: Array, state: true },
+  settingCollectionId: { type: String },
+  settingCollectionItemsCount: { type: String },
+  settingCollectionSort: { type: String },
+});
+
+const existingStyles = Array.isArray(OwbCollection.styles)
+  ? OwbCollection.styles
+  : [OwbCollection.styles];
+OwbCollection.styles = [
+  ...existingStyles,
+  unsafeCSS(blocksStyles),
+  unsafeCSS(sectionStyles),
+];
+
+const COLLECTION_VARIANT_CONFIG = {
+  variant: "collection",
+  getDefaultSettingsStateExtras() {
+    return { ...COLLECTION_DEFAULTS };
+  },
+  onVariantConnected(controller) {
+    const host = controller.host;
+    if (host.collectionOptions === undefined) host.collectionOptions = [];
+    if (host.collectionItemsMetadata === undefined)
+      host.collectionItemsMetadata = [];
+    if (host.collectionMetadataAllowlist === undefined)
+      host.collectionMetadataAllowlist = [];
+    for (const [key, value] of Object.entries(COLLECTION_DEFAULTS)) {
+      if (host[key] === undefined) host[key] = value;
     }
 
-    const firstChildTemplate = childNodes[0];
-    const sortedItems = this.getSortedItems();
-    const limitRaw = String(this.settingCollectionItemsCount || "all").trim();
+    if (!controller._collectionPointerListener) {
+      controller._collectionPointerListener = (event) => {
+        if (!shouldForceCollectionEditingFromEvent(host, event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void controller.openSectionSettings();
+      };
+      host.addEventListener(
+        "pointerdown",
+        controller._collectionPointerListener,
+        { capture: true },
+      );
+    }
+
+    void loadCollectionOptions(host);
+  },
+  onVariantUpdated(controller, changedProperties) {
+    if (changedProperties.has("settingCollectionId")) {
+      void loadCollectionMetadata(controller.host);
+    }
+  },
+  onVariantDisconnected(controller) {
+    if (controller._collectionPointerListener) {
+      controller.host.removeEventListener(
+        "pointerdown",
+        controller._collectionPointerListener,
+        { capture: true },
+      );
+      controller._collectionPointerListener = null;
+    }
+  },
+  getRenderedChildNodes(controller) {
+    const host = controller.host;
+    const templateChildren = getRawTemplateChildren(host);
+    if (templateChildren.length === 0) return [];
+
+    if (host.isSettingsEditorOpen) {
+      return [templateChildren[0]];
+    }
+
+    const firstChildTemplate = templateChildren[0];
+    const sortedItems = getSortedItems(host);
+    const limitRaw = String(host.settingCollectionItemsCount || "all").trim();
     const limit =
       limitRaw === "all"
         ? sortedItems.length
@@ -442,21 +428,16 @@ class OwbCollectionEditor extends OwbLayoutContainerEditor {
     const selectedItems = sortedItems.slice(0, limit);
 
     return selectedItems.map((item, index) => {
-      const tokenMap = this.getTokenMap(item?.metadata || {});
+      const tokenMap = getTokenMap(host, item?.metadata || {});
       const clonedTemplate = cloneNodeWithIdSuffix(
         firstChildTemplate,
         `collection-${index + 1}`,
       );
-
       return applyTokensRecursively(clonedTemplate, tokenMap);
     });
-  }
-
-  getChildNodes() {
-    return this.getCollectionRenderedChildNodes();
-  }
-
-  renderGeneralSettingsExtras() {
+  },
+  renderGeneralSettingsExtras(controller) {
+    const host = controller.host;
     const countOptions = [
       { label: "All", value: "all" },
       { label: "1", value: "1" },
@@ -468,19 +449,21 @@ class OwbCollectionEditor extends OwbLayoutContainerEditor {
       { label: "12", value: "12" },
     ];
 
-    const dynamicFields = this.getAvailableDynamicFields();
+    const dynamicFields = getAvailableDynamicFields(host);
+    const options = Array.isArray(host.collectionOptions)
+      ? host.collectionOptions
+      : [];
 
     return html`
-      ${super.renderGeneralSettingsExtras()}
       <settings-section title="Collection">
         <editor-select
           label="Collection"
-          .options=${this.collectionOptions.length > 0
-            ? this.collectionOptions
+          .options=${options.length > 0
+            ? options
             : [{ label: "No collections available", value: "" }]}
-          .value=${this.settingCollectionId}
+          .value=${host.settingCollectionId}
           @change=${(event) => {
-            this.settings.updateSettingsState({
+            host.settings.updateSettingsState({
               settingCollectionId: event.detail.value,
             });
           }}
@@ -488,9 +471,9 @@ class OwbCollectionEditor extends OwbLayoutContainerEditor {
         <editor-select
           label="Number of items"
           .options=${countOptions}
-          .value=${this.settingCollectionItemsCount}
+          .value=${host.settingCollectionItemsCount}
           @change=${(event) => {
-            this.settings.updateSettingsState({
+            host.settings.updateSettingsState({
               settingCollectionItemsCount: event.detail.value,
             });
           }}
@@ -498,9 +481,9 @@ class OwbCollectionEditor extends OwbLayoutContainerEditor {
         <editor-select
           label="Sort"
           .options=${COLLECTION_SORT_OPTIONS}
-          .value=${this.settingCollectionSort}
+          .value=${host.settingCollectionSort}
           @change=${(event) => {
-            this.settings.updateSettingsState({
+            host.settings.updateSettingsState({
               settingCollectionSort: event.detail.value,
             });
           }}
@@ -513,8 +496,33 @@ class OwbCollectionEditor extends OwbLayoutContainerEditor {
         </div>
       </settings-section>
     `;
-  }
-}
+  },
+};
+
+OwbCollection.editorPlugin = {
+  onConnected(host) {
+    if (!host._layoutEditor) {
+      host._layoutEditor = new LayoutEditorController(
+        host,
+        COLLECTION_VARIANT_CONFIG,
+      );
+    }
+    host._layoutEditor.onConnected();
+  },
+  onWillUpdate(host, changedProperties) {
+    host._layoutEditor?.onWillUpdate(changedProperties);
+  },
+  onUpdated(host, changedProperties) {
+    host._layoutEditor?.onUpdated(changedProperties);
+  },
+  onDisconnected(host) {
+    host._layoutEditor?.onDisconnected();
+    host._layoutEditor = null;
+  },
+  render(host) {
+    return host._layoutEditor?.render() ?? html``;
+  },
+};
 
 export const editorRenderCollection = (
   node,
@@ -523,7 +531,7 @@ export const editorRenderCollection = (
   renderNode,
   renderOptions = {},
 ) => {
-  return html`<owb-collection-editor
+  return html`<owb-collection
     class=${renderOptions.hostClass || ""}
     style=${renderOptions.hostStyle || ""}
     data-grid-child-id=${renderOptions.hostDataGridChildId || ""}
@@ -532,9 +540,5 @@ export const editorRenderCollection = (
     .renderNodeFn=${renderNode}
     .onPageConfigUpdated=${onPageConfigUpdated}
     @page-config-updated=${onPageConfigUpdated}
-  ></owb-collection-editor>`;
+  ></owb-collection>`;
 };
-
-if (!customElements.get("owb-collection-editor")) {
-  customElements.define("owb-collection-editor", OwbCollectionEditor);
-}
