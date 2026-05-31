@@ -68,6 +68,39 @@ export class OwbInput extends LitElement {
   }
 
   connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        const s = props?.settings;
+        if (s && typeof s === "object") {
+          if (s.settingFieldType !== undefined)
+            this.settingFieldType = String(s.settingFieldType);
+          if (s.settingLabel !== undefined)
+            this.settingLabel = String(s.settingLabel);
+          if (s.settingName !== undefined)
+            this.settingName = String(s.settingName);
+          if (s.settingRequired !== undefined)
+            this.settingRequired = toBool(s.settingRequired);
+          if (s.settingPlaceholder !== undefined)
+            this.settingPlaceholder = String(s.settingPlaceholder);
+          if (s.settingMin !== undefined)
+            this.settingMin = String(s.settingMin);
+          if (s.settingMax !== undefined)
+            this.settingMax = String(s.settingMax);
+          if (s.settingStep !== undefined)
+            this.settingStep = String(s.settingStep);
+          if (s.settingRows !== undefined)
+            this.settingRows = String(s.settingRows);
+          if (s.settingMinLength !== undefined)
+            this.settingMinLength = String(s.settingMinLength);
+          if (s.settingMaxLength !== undefined)
+            this.settingMaxLength = String(s.settingMaxLength);
+          if (s.settingPattern !== undefined)
+            this.settingPattern = String(s.settingPattern);
+        }
+      } catch (e) {}
+    }
     super.connectedCallback();
     if (OwbInput.editorPlugin) {
       window.addEventListener(
@@ -119,8 +152,44 @@ export class OwbInput extends LitElement {
     />`;
   }
 
+  renderLiveField() {
+    const name = this.settingName || "";
+    const placeholder = this.settingPlaceholder || "";
+    const minLength = this.settingMinLength || "";
+    const maxLength = this.settingMaxLength || "";
+    const required = toBool(this.settingRequired);
+
+    if (this.settingFieldType === "textarea") {
+      const rows = Number.parseInt(this.settingRows, 10);
+      return html`<textarea
+        class="form-input-textarea"
+        name=${name || nothing}
+        rows=${Number.isNaN(rows) || rows < 1 ? 4 : rows}
+        placeholder=${placeholder || nothing}
+        minlength=${minLength || nothing}
+        maxlength=${maxLength || nothing}
+        ?required=${required}
+      ></textarea>`;
+    }
+
+    return html`<input
+      class="form-input-field"
+      type=${this.settingFieldType === "number" ? "number" : "text"}
+      name=${name || nothing}
+      placeholder=${placeholder || nothing}
+      min=${this.settingMin || nothing}
+      max=${this.settingMax || nothing}
+      step=${this.settingStep || nothing}
+      minlength=${minLength || nothing}
+      maxlength=${maxLength || nothing}
+      pattern=${this.settingPattern || nothing}
+      ?required=${required}
+    />`;
+  }
+
   render() {
     const isEditorMode = OwbInput.editorPlugin !== null;
+    const required = toBool(this.settingRequired);
     return html` <link rel="stylesheet" href="/owb-styles/input.css" />
       <div
         class="form-input-block${isEditorMode && this.isSettingsOpen
@@ -133,11 +202,9 @@ export class OwbInput extends LitElement {
       >
         <label class="form-input-label">
           ${this.settingLabel || "Field label"}
-          ${this.settingRequired
-            ? html`<span class="form-input-required">*</span>`
-            : null}
+          ${required ? html`<span class="form-input-required">*</span>` : null}
         </label>
-        ${this.renderPreviewField()}
+        ${isEditorMode ? this.renderPreviewField() : this.renderLiveField()}
       </div>`;
   }
 }

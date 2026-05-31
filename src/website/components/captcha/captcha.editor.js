@@ -26,7 +26,7 @@ installEditorPlugin(OwbCaptcha, {
 
     EditorComponent.openFor(element, {
       defaultState: {
-        captchaChallengeUrl: "",
+        settingCaptchaChallengeUrl: "",
       },
       tabs: [{ id: "general", label: "General" }],
       content: () => {
@@ -34,15 +34,17 @@ installEditorPlugin(OwbCaptcha, {
         return html`
           <settings-section
             title="Captcha"
-            ?overridden=${editor.hasAnyOverriddenKeys("captchaChallengeUrl")}
+            ?overridden=${editor.hasAnyOverriddenKeys(
+              "settingCaptchaChallengeUrl",
+            )}
           >
             <editor-text-input
               label="Challenge URL"
               placeholder="https://example.com/challenge"
-              .value=${editor.captchaChallengeUrl}
+              .value=${editor.settingCaptchaChallengeUrl}
               @change=${(event) => {
                 editor.updateSettingsState({
-                  captchaChallengeUrl: event.detail.value,
+                  settingCaptchaChallengeUrl: event.detail.value,
                 });
               }}
             ></editor-text-input>

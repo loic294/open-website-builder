@@ -3,7 +3,7 @@ import { LitElement, html, nothing } from "lit";
 export const defaultCaptchaConfig = {
   type: "captcha",
   settings: {
-    captchaChallengeUrl: "",
+    settingCaptchaChallengeUrl: "",
   },
 };
 
@@ -27,6 +27,19 @@ export class OwbCaptcha extends LitElement {
   }
 
   connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        const s = props?.settings;
+        if (s && typeof s === "object") {
+          if (s.settingCaptchaChallengeUrl !== undefined)
+            this.settingCaptchaChallengeUrl = String(
+              s.settingCaptchaChallengeUrl,
+            );
+        }
+      } catch (e) {}
+    }
     super.connectedCallback();
     if (OwbCaptcha.editorPlugin) {
       window.addEventListener(
@@ -62,29 +75,44 @@ export class OwbCaptcha extends LitElement {
 
   render() {
     const isEditorMode = OwbCaptcha.editorPlugin !== null;
+    const challengeUrl = String(this.settingCaptchaChallengeUrl || "").trim();
 
-    return html`<link rel="stylesheet" href="/owb-styles/captcha.css" />
-      <div
-        class="captcha-block${isEditorMode && this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
-        data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbCaptcha.editorPlugin?.onPointerDown?.(this)
-          : nothing}
-      >
-        <div class="captcha-preview">
-          <span class="captcha-preview-icon">🔒</span>
-          <div>
-            <div class="captcha-preview-label">Captcha</div>
-            <div class="captcha-preview-sub">
-              ${this.settingCaptchaChallengeUrl
-                ? this.settingCaptchaChallengeUrl
-                : "No challenge URL set"}
+    if (isEditorMode) {
+      return html`<link rel="stylesheet" href="/owb-styles/captcha.css" />
+        <div
+          class="captcha-block${isEditorMode && this.isSettingsOpen
+            ? " is-settings-open"
+            : ""}"
+          data-editor-block=${isEditorMode ? "" : nothing}
+          @pointerdown=${isEditorMode
+            ? () => OwbCaptcha.editorPlugin?.onPointerDown?.(this)
+            : nothing}
+        >
+          <div class="captcha-preview">
+            <span class="captcha-preview-icon">🔒</span>
+            <div>
+              <div class="captcha-preview-label">Captcha</div>
+              <div class="captcha-preview-sub">
+                ${challengeUrl ? challengeUrl : "No challenge URL set"}
+              </div>
             </div>
           </div>
-        </div>
-      </div>`;
+        </div>`;
+    }
+
+    if (challengeUrl) {
+      return html`<link rel="stylesheet" href="/owb-styles/captcha.css" />
+        <altcha-widget challengeurl=${challengeUrl}></altcha-widget>
+        <script
+          type="module"
+          async
+          defer
+          src="https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist/altcha.min.js"
+          data-altcha-script
+        ></script>`;
+    }
+
+    return nothing;
   }
 }
 

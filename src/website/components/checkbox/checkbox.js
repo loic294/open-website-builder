@@ -47,6 +47,27 @@ export class OwbCheckbox extends LitElement {
   }
 
   connectedCallback() {
+    const dataProps = this.getAttribute("data-props");
+    if (dataProps) {
+      try {
+        const props = JSON.parse(dataProps);
+        const s = props?.settings;
+        if (s && typeof s === "object") {
+          if (s.settingCheckboxLabel !== undefined)
+            this.settingCheckboxLabel = String(s.settingCheckboxLabel);
+          if (s.settingCheckboxName !== undefined)
+            this.settingCheckboxName = String(s.settingCheckboxName);
+          if (s.settingCheckboxValue !== undefined)
+            this.settingCheckboxValue = String(s.settingCheckboxValue);
+          if (s.settingCheckboxDefaultChecked !== undefined)
+            this.settingCheckboxDefaultChecked = toBool(
+              s.settingCheckboxDefaultChecked,
+            );
+          if (s.settingCheckboxRequired !== undefined)
+            this.settingCheckboxRequired = toBool(s.settingCheckboxRequired);
+        }
+      } catch (e) {}
+    }
     super.connectedCallback();
     if (OwbCheckbox.editorPlugin) {
       window.addEventListener(
@@ -82,6 +103,10 @@ export class OwbCheckbox extends LitElement {
 
   render() {
     const isEditorMode = OwbCheckbox.editorPlugin !== null;
+    const required = toBool(this.settingCheckboxRequired);
+    const defaultChecked = toBool(this.settingCheckboxDefaultChecked);
+    const name = this.settingCheckboxName || "";
+    const value = this.settingCheckboxValue || "";
     return html`<link rel="stylesheet" href="/owb-styles/checkbox.css" />
       <div
         class="checkbox-block${isEditorMode && this.isSettingsOpen
@@ -95,14 +120,15 @@ export class OwbCheckbox extends LitElement {
         <label class="checkbox-preview">
           <input
             type="checkbox"
-            ?checked=${this.settingCheckboxDefaultChecked}
-            disabled
+            name=${isEditorMode || !name ? nothing : name}
+            value=${isEditorMode || !value ? nothing : value}
+            ?checked=${defaultChecked}
+            ?required=${!isEditorMode && required}
+            ?disabled=${isEditorMode}
           />
           <span class="checkbox-preview-label">
             ${this.settingCheckboxLabel || "Checkbox"}
-            ${this.settingCheckboxRequired
-              ? html`<span class="checkbox-required">*</span>`
-              : null}
+            ${required ? html`<span class="checkbox-required">*</span>` : null}
           </span>
         </label>
       </div>`;

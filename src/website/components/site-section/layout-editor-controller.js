@@ -1037,7 +1037,7 @@ export class LayoutEditorController {
       return {
         id: createNodeId("captcha"),
         type: "captcha",
-        settings: { captchaChallengeUrl: "" },
+        settings: { settingCaptchaChallengeUrl: "" },
       };
     }
     if (type === "checkbox") {

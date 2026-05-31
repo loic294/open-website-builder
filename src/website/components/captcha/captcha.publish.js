@@ -1,22 +1,21 @@
-import { escapeAttr } from "../../../../server/publish/publish-utils.js";
+import { html as litHtml } from "lit";
+import { OwbCaptcha } from "./captcha.js";
+import {
+  applyTokensToJson,
+  ssrRenderToString,
+} from "../../../../server/publish/publish-utils.js";
 
-const ALTCHA_SCRIPT_SRC =
-  "https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist/altcha.min.js";
+if (!customElements.get("owb-captcha")) {
+  customElements.define("owb-captcha", OwbCaptcha);
+}
 
-export function publishRenderCaptcha(node) {
-  const s = node?.settings ?? {};
-  const challengeUrl = String(
-    s.settingCaptchaChallengeUrl ?? s.captchaChallengeUrl ?? "",
-  ).trim();
-
-  if (!challengeUrl) {
-    return `<owb-captcha></owb-captcha>`;
-  }
-
-  return (
-    `<owb-captcha>` +
-    `<altcha-widget challengeurl="${escapeAttr(challengeUrl)}"></altcha-widget>` +
-    `<script type="module" async defer src="${ALTCHA_SCRIPT_SRC}" data-altcha-script></script>` +
-    `</owb-captcha>`
+export async function publishRenderCaptcha(node, context) {
+  const tokenValues = context?.tokenValues || {};
+  const s = applyTokensToJson(node?.settings ?? {}, tokenValues);
+  return await ssrRenderToString(
+    litHtml`<owb-captcha
+      .settingCaptchaChallengeUrl=${String(s.settingCaptchaChallengeUrl ?? "")}
+      data-props=${JSON.stringify({ settings: s })}
+    ></owb-captcha>`,
   );
 }

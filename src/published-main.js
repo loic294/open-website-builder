@@ -21,6 +21,9 @@ import { OwbNavbar } from "./website/components/navbar/navbar.js";
 import { OwbSection } from "./website/components/site-section/section.js";
 import { OwbContainer } from "./website/components/container/container.js";
 import { OwbForm } from "./website/components/form/form.js";
+import { OwbInput } from "./website/components/input/input.js";
+import { OwbCheckbox } from "./website/components/checkbox/checkbox.js";
+import { OwbCaptcha } from "./website/components/captcha/captcha.js";
 
 if (!customElements.get("owb-button")) {
   customElements.define("owb-button", OwbButton);
@@ -64,4 +67,16 @@ if (!customElements.get("owb-container")) {
 
 if (!customElements.get("owb-form")) {
   customElements.define("owb-form", OwbForm);
+}
+
+if (!customElements.get("owb-input")) {
+  customElements.define("owb-input", OwbInput);
+}
+
+if (!customElements.get("owb-checkbox")) {
+  customElements.define("owb-checkbox", OwbCheckbox);
+}
+
+if (!customElements.get("owb-captcha")) {
+  customElements.define("owb-captcha", OwbCaptcha);
 }
