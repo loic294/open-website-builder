@@ -1,5 +1,20 @@
 import { LitElement, html, nothing } from "lit";
 
+const ALTCHA_SCRIPT_SRC =
+  "https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist/altcha.min.js";
+
+function ensureAltchaScriptLoaded() {
+  if (typeof document === "undefined") return;
+  if (document.querySelector("script[data-altcha-script]")) return;
+  const script = document.createElement("script");
+  script.src = ALTCHA_SCRIPT_SRC;
+  script.type = "module";
+  script.async = true;
+  script.defer = true;
+  script.setAttribute("data-altcha-script", "");
+  document.head.appendChild(script);
+}
+
 export const defaultCaptchaConfig = {
   type: "captcha",
   settings: {
@@ -41,6 +56,9 @@ export class OwbCaptcha extends LitElement {
       } catch (e) {}
     }
     super.connectedCallback();
+    if (!OwbCaptcha.editorPlugin) {
+      ensureAltchaScriptLoaded();
+    }
     if (OwbCaptcha.editorPlugin) {
       window.addEventListener(
         "owb-active-settings-owner-changed",
@@ -102,14 +120,7 @@ export class OwbCaptcha extends LitElement {
 
     if (challengeUrl) {
       return html`<link rel="stylesheet" href="/owb-styles/captcha.css" />
-        <altcha-widget challengeurl=${challengeUrl}></altcha-widget>
-        <script
-          type="module"
-          async
-          defer
-          src="https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist/altcha.min.js"
-          data-altcha-script
-        ></script>`;
+        <altcha-widget challengeurl=${challengeUrl}></altcha-widget>`;
     }
 
     return nothing;
