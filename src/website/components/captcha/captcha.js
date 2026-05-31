@@ -1,18 +1,14 @@
 import { LitElement, html, nothing } from "lit";
 
-const ALTCHA_SCRIPT_SRC =
-  "https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist/altcha.min.js";
+let altchaLoadPromise = null;
 
-function ensureAltchaScriptLoaded() {
-  if (typeof document === "undefined") return;
-  if (document.querySelector("script[data-altcha-script]")) return;
-  const script = document.createElement("script");
-  script.src = ALTCHA_SCRIPT_SRC;
-  script.type = "module";
-  script.async = true;
-  script.defer = true;
-  script.setAttribute("data-altcha-script", "");
-  document.head.appendChild(script);
+function ensureAltchaLoaded() {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (customElements.get("altcha-widget")) return Promise.resolve();
+  if (!altchaLoadPromise) {
+    altchaLoadPromise = import("altcha");
+  }
+  return altchaLoadPromise;
 }
 
 export const defaultCaptchaConfig = {
@@ -57,7 +53,7 @@ export class OwbCaptcha extends LitElement {
     }
     super.connectedCallback();
     if (!OwbCaptcha.editorPlugin) {
-      ensureAltchaScriptLoaded();
+      ensureAltchaLoaded();
     }
     if (OwbCaptcha.editorPlugin) {
       window.addEventListener(
@@ -120,7 +116,10 @@ export class OwbCaptcha extends LitElement {
 
     if (challengeUrl) {
       return html`<link rel="stylesheet" href="/owb-styles/captcha.css" />
-        <altcha-widget challengeurl=${challengeUrl}></altcha-widget>`;
+        <altcha-widget
+          display="floating"
+          challengeurl=${challengeUrl}
+        ></altcha-widget>`;
     }
 
     return nothing;

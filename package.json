@@ -26,6 +26,7 @@
     "@tiptap/extension-underline": "^3.23.5",
     "@tiptap/pm": "^3.23.5",
     "@tiptap/starter-kit": "^3.23.5",
+    "altcha": "^3.0.10",
     "cheerio": "^1.0.0-rc.12",
     "fast-xml-parser": "^5.8.0",
     "lit": "^3.1.0",

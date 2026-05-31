@@ -25,6 +25,9 @@ export default defineConfig({
     rollupOptions: {
       // Bundle everything; the published.js must be self-contained.
       external: [],
+      output: {
+        inlineDynamicImports: true,
+      },
     },
   },
 });

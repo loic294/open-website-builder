@@ -5,6 +5,7 @@ import {
   LayoutEditorController,
   registerLayoutEditorProperties,
 } from "./layout-editor-controller.js";
+import editorStyles from "./styles.editor.css?inline";
 
 // Add editor reactive properties to OwbSection (must happen before first
 // instance is created — i.e. before the editor renders any section).
@@ -17,7 +18,11 @@ const existingStyles = Array.isArray(OwbSection.styles)
   : OwbSection.styles
     ? [OwbSection.styles]
     : [];
-OwbSection.styles = [...existingStyles, unsafeCSS(blocksStyles)];
+OwbSection.styles = [
+  ...existingStyles,
+  unsafeCSS(editorStyles),
+  unsafeCSS(blocksStyles),
+];
 
 const SECTION_VARIANT_CONFIG = {
   variant: "section",
