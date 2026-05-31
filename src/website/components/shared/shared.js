@@ -1,6 +1,5 @@
-import { LitElement, html, nothing, unsafeCSS } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { dataLayer } from "../../../editor/data/data-layer.js";
-import styles from "./styles.css?inline";
 
 export const defaultSharedConfig = {
   type: "shared",
@@ -20,8 +19,6 @@ export class OwbShared extends LitElement {
     sharedComponentOptions: { state: true },
     isSettingsOpen: { state: true },
   };
-
-  static styles = [unsafeCSS(styles)];
 
   constructor() {
     super();
@@ -185,6 +182,10 @@ export class OwbShared extends LitElement {
 
   render() {
     const isEditorMode = OwbShared.editorPlugin !== null;
+    const stylesheetLink = html`<link
+      rel="stylesheet"
+      href="/owb-styles/shared.css"
+    />`;
     const sharedContent = (() => {
       if (this.loading) {
         return html`
@@ -228,6 +229,7 @@ export class OwbShared extends LitElement {
     })();
 
     return html`
+      ${stylesheetLink}
       <div
         data-editor-block=${isEditorMode ? "" : nothing}
         class="shared-block ${isEditorMode && this.isSettingsOpen

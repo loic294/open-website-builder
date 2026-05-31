@@ -12,12 +12,11 @@ import {
   SIMPLE_ICON_LIBRARY,
   FEATURED_ICONS,
 } from "./social-media.js";
-import styles from "./styles.css?inline";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 export { defaultSocialMediaConfig };
 
-OwbSocialMedia.styles = [unsafeCSS(blocksStyles), unsafeCSS(styles)];
+OwbSocialMedia.styles = [unsafeCSS(blocksStyles)];
 
 // ---------------------------------------------------------------------------
 // Helpers: update items in the content tree

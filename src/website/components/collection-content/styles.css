@@ -1,0 +1,16 @@
+:host {
+  display: block;
+}
+
+.collection-content-placeholder {
+  padding: 16px;
+  border: 1px dashed var(--editor-muted-text-color);
+  border-radius: var(--editor-sharp-radius);
+  background: color-mix(
+    in srgb,
+    var(--editor-background) 60%,
+    var(--editor-white-color)
+  );
+  color: var(--editor-muted-text-color);
+  font-size: 12px;
+}

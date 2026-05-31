@@ -1,5 +1,4 @@
-import { LitElement, html, css, nothing, unsafeCSS } from "lit";
-import styles from "./styles.css?inline";
+import { LitElement, html, nothing } from "lit";
 
 export const defaultInputConfig = {
   type: "input",
@@ -47,15 +46,6 @@ export class OwbInput extends LitElement {
     settingPattern: { type: String },
     isSettingsOpen: { state: true },
   };
-
-  static styles = [
-    unsafeCSS(styles),
-    css`
-      :host {
-        display: block;
-      }
-    `,
-  ];
 
   constructor() {
     super();
@@ -131,23 +121,24 @@ export class OwbInput extends LitElement {
 
   render() {
     const isEditorMode = OwbInput.editorPlugin !== null;
-    return html`<div
-      class="form-input-block${isEditorMode && this.isSettingsOpen
-        ? " is-settings-open"
-        : ""}"
-      data-editor-block=${isEditorMode ? "" : nothing}
-      @pointerdown=${isEditorMode
-        ? () => OwbInput.editorPlugin?.onPointerDown?.(this)
-        : nothing}
-    >
-      <label class="form-input-label">
-        ${this.settingLabel || "Field label"}
-        ${this.settingRequired
-          ? html`<span class="form-input-required">*</span>`
-          : null}
-      </label>
-      ${this.renderPreviewField()}
-    </div>`;
+    return html` <link rel="stylesheet" href="/owb-styles/input.css" />
+      <div
+        class="form-input-block${isEditorMode && this.isSettingsOpen
+          ? " is-settings-open"
+          : ""}"
+        data-editor-block=${isEditorMode ? "" : nothing}
+        @pointerdown=${isEditorMode
+          ? () => OwbInput.editorPlugin?.onPointerDown?.(this)
+          : nothing}
+      >
+        <label class="form-input-label">
+          ${this.settingLabel || "Field label"}
+          ${this.settingRequired
+            ? html`<span class="form-input-required">*</span>`
+            : null}
+        </label>
+        ${this.renderPreviewField()}
+      </div>`;
   }
 }
 

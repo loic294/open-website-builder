@@ -48,7 +48,6 @@ function buildPageHtml({ title, bodyHtml }) {
       ${bodyHtml}
     </div>
     <script type="module" src="./published.js"></script>
-    <script type="module" src="./publish-runtime.js"></script>
     <script defer src="https://analytics.loicbellemarealford.ca/script.js" data-website-id="7653ba01-64a9-4d8c-8b9d-8d623c194126" data-domains="loicbellemarealford.ca" data-performance="true" data-do-not-track="true"></script>
   </body>
 </html>`;

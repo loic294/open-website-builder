@@ -24,15 +24,10 @@ import { EditorComponent } from "../../../editor/components/layout/editor-compon
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbText, defaultTextConfig } from "./text.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
-import styles from "./styles.css?inline";
 
 export { defaultTextConfig };
 
-OwbText.styles = [].concat(
-  OwbText.styles || [],
-  unsafeCSS(blocksStyles),
-  unsafeCSS(styles),
-);
+OwbText.styles = [].concat(OwbText.styles || [], unsafeCSS(blocksStyles));
 
 const FontSize = Extension.create({
   name: "fontSize",

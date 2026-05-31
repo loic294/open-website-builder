@@ -1,6 +1,5 @@
 import { html, unsafeCSS } from "lit";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
-import sectionStyles from "../site-section/styles.css?inline";
 import { OwbContainer } from "./container.js";
 import {
   LayoutEditorController,
@@ -14,11 +13,7 @@ registerLayoutEditorProperties(OwbContainer);
 const existingStyles = Array.isArray(OwbContainer.styles)
   ? OwbContainer.styles
   : [OwbContainer.styles];
-OwbContainer.styles = [
-  ...existingStyles,
-  unsafeCSS(blocksStyles),
-  unsafeCSS(sectionStyles),
-];
+OwbContainer.styles = [...existingStyles, unsafeCSS(blocksStyles)];
 
 const CONTAINER_VARIANT_CONFIG = {
   variant: "container",

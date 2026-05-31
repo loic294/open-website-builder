@@ -1,5 +1,4 @@
-import { LitElement, html, css, nothing, unsafeCSS } from "lit";
-import styles from "./styles.css?inline";
+import { LitElement, html, nothing } from "lit";
 
 export const defaultCaptchaConfig = {
   type: "captcha",
@@ -17,15 +16,6 @@ export class OwbCaptcha extends LitElement {
     settingCaptchaChallengeUrl: { type: String },
     isSettingsOpen: { state: true },
   };
-
-  static styles = [
-    unsafeCSS(styles),
-    css`
-      :host {
-        display: block;
-      }
-    `,
-  ];
 
   constructor() {
     super();
@@ -73,27 +63,28 @@ export class OwbCaptcha extends LitElement {
   render() {
     const isEditorMode = OwbCaptcha.editorPlugin !== null;
 
-    return html`<div
-      class="captcha-block${isEditorMode && this.isSettingsOpen
-        ? " is-settings-open"
-        : ""}"
-      data-editor-block=${isEditorMode ? "" : nothing}
-      @pointerdown=${isEditorMode
-        ? () => OwbCaptcha.editorPlugin?.onPointerDown?.(this)
-        : nothing}
-    >
-      <div class="captcha-preview">
-        <span class="captcha-preview-icon">🔒</span>
-        <div>
-          <div class="captcha-preview-label">Captcha</div>
-          <div class="captcha-preview-sub">
-            ${this.settingCaptchaChallengeUrl
-              ? this.settingCaptchaChallengeUrl
-              : "No challenge URL set"}
+    return html`<link rel="stylesheet" href="/owb-styles/captcha.css" />
+      <div
+        class="captcha-block${isEditorMode && this.isSettingsOpen
+          ? " is-settings-open"
+          : ""}"
+        data-editor-block=${isEditorMode ? "" : nothing}
+        @pointerdown=${isEditorMode
+          ? () => OwbCaptcha.editorPlugin?.onPointerDown?.(this)
+          : nothing}
+      >
+        <div class="captcha-preview">
+          <span class="captcha-preview-icon">🔒</span>
+          <div>
+            <div class="captcha-preview-label">Captcha</div>
+            <div class="captcha-preview-sub">
+              ${this.settingCaptchaChallengeUrl
+                ? this.settingCaptchaChallengeUrl
+                : "No challenge URL set"}
+            </div>
           </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
   }
 }
 

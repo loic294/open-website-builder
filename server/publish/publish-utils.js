@@ -7,6 +7,15 @@ export function escapeAttr(value) {
     .replace(/"/g, "&quot;");
 }
 
+export function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function configScript(obj) {
   return `<script type="application/json" data-owb-config>${JSON.stringify(obj)}</script>`;
 }

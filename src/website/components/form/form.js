@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 import {
@@ -20,34 +20,6 @@ export const defaultFormConfig = {
 
 export class OwbForm extends LitElement {
   static editorPlugin = null;
-
-  static styles = css`
-    :host {
-      display: block;
-    }
-    .owb-form-container {
-      position: relative;
-      padding: var(--section-padding-top, 7rem)
-        var(--section-padding-right, 2rem) var(--section-padding-bottom, 6rem)
-        var(--section-padding-left, 2rem);
-      margin: 0 auto;
-    }
-    .owb-form-container.is-normal-width {
-      max-width: 960px;
-    }
-    .owb-form-container.is-full-width {
-      max-width: 100%;
-    }
-    .owb-form {
-      display: grid;
-      gap: 12px;
-    }
-    .owb-form-success {
-      margin: 10px 0 0;
-      color: var(--website-success-color, #267e3e);
-      font-weight: 600;
-    }
-  `;
 
   static properties = {
     settings: { type: Object },
@@ -161,6 +133,8 @@ export class OwbForm extends LitElement {
     const isEditorMode = OwbForm.editorPlugin !== null;
 
     return html`
+      <link rel="stylesheet" href="/owb-styles/site-section.css" />
+      <link rel="stylesheet" href="/owb-styles/form.css" />
       ${spacingCss
         ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
         : null}

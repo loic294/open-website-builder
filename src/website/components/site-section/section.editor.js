@@ -1,6 +1,5 @@
 import { html, unsafeCSS } from "lit";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
-import styles from "./styles.css?inline";
 import { OwbSection } from "./section.js";
 import {
   LayoutEditorController,
@@ -15,12 +14,10 @@ registerLayoutEditorProperties(OwbSection);
 // (block chrome, grid handles, section controls, etc.).
 const existingStyles = Array.isArray(OwbSection.styles)
   ? OwbSection.styles
-  : [OwbSection.styles];
-OwbSection.styles = [
-  ...existingStyles,
-  unsafeCSS(blocksStyles),
-  unsafeCSS(styles),
-];
+  : OwbSection.styles
+    ? [OwbSection.styles]
+    : [];
+OwbSection.styles = [...existingStyles, unsafeCSS(blocksStyles)];
 
 const SECTION_VARIANT_CONFIG = {
   variant: "section",

@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 
@@ -9,12 +9,6 @@ export const defaultSliderConfig = {
 
 export class OwbSlider extends LitElement {
   static editorPlugin = null;
-
-  static styles = css`
-    :host {
-      display: block;
-    }
-  `;
 
   static properties = {
     images: { type: Array },

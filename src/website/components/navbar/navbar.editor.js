@@ -2,12 +2,11 @@ import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { dataLayer } from "../../../editor/data/data-layer.js";
-import styles from "./styles.css?inline";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 import { OwbNavbar } from "./navbar.js";
 
-OwbNavbar.styles = [unsafeCSS(blocksStyles), unsafeCSS(styles)];
+OwbNavbar.styles = [unsafeCSS(blocksStyles)];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

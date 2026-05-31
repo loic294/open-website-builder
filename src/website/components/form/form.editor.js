@@ -1,6 +1,5 @@
 import { html, unsafeCSS } from "lit";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
-import sectionStyles from "../site-section/styles.css?inline";
 import { OwbForm } from "./form.js";
 import {
   LayoutEditorController,
@@ -27,12 +26,10 @@ registerLayoutEditorProperties(OwbForm, {
 
 const existingStyles = Array.isArray(OwbForm.styles)
   ? OwbForm.styles
-  : [OwbForm.styles];
-OwbForm.styles = [
-  ...existingStyles,
-  unsafeCSS(blocksStyles),
-  unsafeCSS(sectionStyles),
-];
+  : OwbForm.styles
+    ? [OwbForm.styles]
+    : [];
+OwbForm.styles = [...existingStyles, unsafeCSS(blocksStyles)];
 
 const FORM_VARIANT_CONFIG = {
   variant: "form",

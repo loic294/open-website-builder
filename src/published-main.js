@@ -1,8 +1,7 @@
 /**
  * Browser entry point for published sites.
  *
- * Imports all Lit-based owb-* components and registers them. Replaces
- * publish-runtime.js as components are progressively migrated to Lit.
+ * Imports all Lit-based owb-* components and registers them.
  *
  * Only import *.js component files here — never *.editor.js sidecars.
  */

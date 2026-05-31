@@ -1,7 +1,6 @@
 import { html, unsafeCSS } from "lit";
 import { dataLayer } from "../../../editor/data/data-layer.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
-import sectionStyles from "../site-section/styles.css?inline";
 import { OwbCollection } from "./collection.js";
 import {
   LayoutEditorController,
@@ -356,11 +355,7 @@ registerLayoutEditorProperties(OwbCollection, {
 const existingStyles = Array.isArray(OwbCollection.styles)
   ? OwbCollection.styles
   : [OwbCollection.styles];
-OwbCollection.styles = [
-  ...existingStyles,
-  unsafeCSS(blocksStyles),
-  unsafeCSS(sectionStyles),
-];
+OwbCollection.styles = [...existingStyles, unsafeCSS(blocksStyles)];
 
 const COLLECTION_VARIANT_CONFIG = {
   variant: "collection",

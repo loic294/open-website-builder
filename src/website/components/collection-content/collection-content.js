@@ -1,4 +1,4 @@
-import { html, LitElement, css } from "lit";
+import { html, LitElement } from "lit";
 
 export class OwbCollectionContent extends LitElement {
   static editorPlugin = null;
@@ -8,25 +8,6 @@ export class OwbCollectionContent extends LitElement {
     pageConfig: { type: Object },
     isSettingsOpen: { state: true },
   };
-
-  static styles = css`
-    :host {
-      display: block;
-    }
-
-    .collection-content-placeholder {
-      padding: 16px;
-      border: 1px dashed var(--editor-muted-text-color);
-      border-radius: var(--editor-sharp-radius);
-      background: color-mix(
-        in srgb,
-        var(--editor-background) 60%,
-        var(--editor-white-color)
-      );
-      color: var(--editor-muted-text-color);
-      font-size: 12px;
-    }
-  `;
 
   constructor() {
     super();
@@ -73,6 +54,7 @@ export class OwbCollectionContent extends LitElement {
   render() {
     const isEditorMode = OwbCollectionContent.editorPlugin !== null;
     return html`
+      <link rel="stylesheet" href="/owb-styles/collection-content.css" />
       <div
         class="collection-content-placeholder${isEditorMode &&
         this.isSettingsOpen

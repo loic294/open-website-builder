@@ -1,4 +1,4 @@
-import { html, LitElement, css } from "lit";
+import { html, LitElement } from "lit";
 import { defaultSectionConfig } from "../site-section/site-section.js";
 
 export const defaultCollectionConfig = {
@@ -14,18 +14,6 @@ export const defaultCollectionConfig = {
 
 export class OwbCollection extends LitElement {
   static editorPlugin = null;
-
-  static styles = [
-    css`
-      :host {
-        display: block;
-      }
-
-      .collection {
-        margin: 0 auto;
-      }
-    `,
-  ];
 
   static properties = {
     settings: { type: Object },
@@ -79,7 +67,9 @@ export class OwbCollection extends LitElement {
     if (typeof pluginRender === "function") {
       return pluginRender(this);
     }
-    return html`<div class="collection"><slot></slot></div>`;
+    return html`<link rel="stylesheet" href="/owb-styles/site-section.css" />
+      <link rel="stylesheet" href="/owb-styles/collection.css" />
+      <div class="collection"><slot></slot></div>`;
   }
 }
 

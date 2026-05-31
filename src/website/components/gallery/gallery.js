@@ -1,4 +1,4 @@
-import { LitElement, html, css, isServer, nothing } from "lit";
+import { LitElement, html, isServer, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 import { createElement, X, ChevronLeft, ChevronRight } from "lucide";
@@ -10,74 +10,6 @@ export const defaultGalleryConfig = {
 
 export class OwbGallery extends LitElement {
   static editorPlugin = null;
-
-  static styles = css`
-    :host {
-      display: block;
-    }
-
-    .lightbox {
-      border: none;
-      padding: 0;
-      background: rgba(255, 255, 255, 0.95);
-      max-width: 100vw;
-      max-height: 100dvh;
-      width: 100vw;
-      height: 100dvh;
-    }
-
-    .lightbox::backdrop {
-      background: rgba(255, 255, 255, 0.5);
-    }
-
-    .lightbox-inner {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-      padding: 24px;
-      box-sizing: border-box;
-      position: relative;
-    }
-
-    .lightbox img {
-      max-width: min(92vw, 1200px);
-      max-height: 90dvh;
-      object-fit: contain;
-      display: block;
-    }
-
-    .lightbox-close,
-    .lightbox-nav {
-      position: absolute;
-      border: 0;
-      border-radius: 999px;
-      width: 38px;
-      height: 38px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.18);
-      color: #000;
-      cursor: pointer;
-      font-size: 18px;
-      line-height: 1;
-    }
-
-    .lightbox-close {
-      top: 16px;
-      right: 16px;
-    }
-
-    .lightbox-nav.is-prev {
-      left: 16px;
-    }
-
-    .lightbox-nav.is-next {
-      right: 16px;
-    }
-  `;
 
   static properties = {
     images: { type: Array },
