@@ -23,18 +23,34 @@ installEditorPlugin(OwbInput, {
     }
 
     const settings = element.node?.settings || {};
-    element.settingFieldType = String(settings.fieldType || "text");
-    element.settingLabel = String(settings.label || "Field label");
-    element.settingName = String(settings.name || "field");
-    element.settingRequired = toBool(settings.required || false);
-    element.settingPlaceholder = String(settings.placeholder || "");
-    element.settingMin = String(settings.min || "");
-    element.settingMax = String(settings.max || "");
-    element.settingStep = String(settings.step || "");
-    element.settingRows = String(settings.rows || "4");
-    element.settingMinLength = String(settings.minLength || "");
-    element.settingMaxLength = String(settings.maxLength || "");
-    element.settingPattern = String(settings.pattern || "");
+    element.settingFieldType = String(
+      settings.settingFieldType ?? settings.fieldType ?? "text",
+    );
+    element.settingLabel = String(
+      settings.settingLabel ?? settings.label ?? "Field label",
+    );
+    element.settingName = String(
+      settings.settingName ?? settings.name ?? "field",
+    );
+    element.settingRequired = toBool(
+      settings.settingRequired ?? settings.required ?? false,
+    );
+    element.settingPlaceholder = String(
+      settings.settingPlaceholder ?? settings.placeholder ?? "",
+    );
+    element.settingMin = String(settings.settingMin ?? settings.min ?? "");
+    element.settingMax = String(settings.settingMax ?? settings.max ?? "");
+    element.settingStep = String(settings.settingStep ?? settings.step ?? "");
+    element.settingRows = String(settings.settingRows ?? settings.rows ?? "4");
+    element.settingMinLength = String(
+      settings.settingMinLength ?? settings.minLength ?? "",
+    );
+    element.settingMaxLength = String(
+      settings.settingMaxLength ?? settings.maxLength ?? "",
+    );
+    element.settingPattern = String(
+      settings.settingPattern ?? settings.pattern ?? "",
+    );
   },
 
   onPointerDown(element) {
@@ -44,18 +60,18 @@ installEditorPlugin(OwbInput, {
 
     EditorComponent.openFor(element, {
       defaultState: {
-        fieldType: "text",
-        label: "Field label",
-        name: "field",
-        required: false,
-        placeholder: "",
-        min: "",
-        max: "",
-        step: "",
-        rows: "4",
-        minLength: "",
-        maxLength: "",
-        pattern: "",
+        settingFieldType: "text",
+        settingLabel: "Field label",
+        settingName: "field",
+        settingRequired: false,
+        settingPlaceholder: "",
+        settingMin: "",
+        settingMax: "",
+        settingStep: "",
+        settingRows: "4",
+        settingMinLength: "",
+        settingMaxLength: "",
+        settingPattern: "",
       },
       tabs: [{ id: "general", label: "General" }],
       content: () => {
@@ -63,18 +79,20 @@ installEditorPlugin(OwbInput, {
         return html`
           <settings-section
             title="Field type"
-            ?overridden=${editor.hasAnyOverriddenKeys("fieldType")}
+            ?overridden=${editor.hasAnyOverriddenKeys("settingFieldType")}
           >
             <editor-select
               label="Type"
-              .value=${editor.fieldType}
+              .value=${editor.settingFieldType}
               .options=${[
                 { label: "Text input", value: "text" },
                 { label: "Number input", value: "number" },
                 { label: "Textarea", value: "textarea" },
               ]}
               @change=${(event) => {
-                editor.updateSettingsState({ fieldType: event.detail.value });
+                editor.updateSettingsState({
+                  settingFieldType: event.detail.value,
+                });
               }}
             ></editor-select>
           </settings-section>
@@ -82,147 +100,162 @@ installEditorPlugin(OwbInput, {
           <settings-section
             title="Field"
             ?overridden=${editor.hasAnyOverriddenKeys(
-              "label",
-              "name",
-              "placeholder",
-              "required",
+              "settingLabel",
+              "settingName",
+              "settingPlaceholder",
+              "settingRequired",
             )}
           >
             <editor-text-input
               label="Label"
-              .value=${editor.label}
+              .value=${editor.settingLabel}
               @change=${(event) => {
-                editor.updateSettingsState({ label: event.detail.value });
+                editor.updateSettingsState({
+                  settingLabel: event.detail.value,
+                });
               }}
             ></editor-text-input>
             <editor-text-input
               label="Name"
-              .value=${editor.name}
+              .value=${editor.settingName}
               @change=${(event) => {
-                editor.updateSettingsState({ name: event.detail.value });
+                editor.updateSettingsState({
+                  settingName: event.detail.value,
+                });
               }}
             ></editor-text-input>
             <editor-text-input
               label="Placeholder"
-              .value=${editor.placeholder}
+              .value=${editor.settingPlaceholder}
               @change=${(event) => {
-                editor.updateSettingsState({ placeholder: event.detail.value });
+                editor.updateSettingsState({
+                  settingPlaceholder: event.detail.value,
+                });
               }}
             ></editor-text-input>
             <editor-select
               label="Required"
-              .value=${String(editor.required)}
+              .value=${String(editor.settingRequired)}
               .options=${[
                 { label: "No", value: "false" },
                 { label: "Yes", value: "true" },
               ]}
               @change=${(event) => {
                 editor.updateSettingsState({
-                  required: event.detail.value === "true",
+                  settingRequired: event.detail.value === "true",
                 });
               }}
             ></editor-select>
           </settings-section>
 
-          ${editor.fieldType === "number"
+          ${editor.settingFieldType === "number"
             ? html`
                 <settings-section
                   title="Number options"
                   ?overridden=${editor.hasAnyOverriddenKeys(
-                    "min",
-                    "max",
-                    "step",
+                    "settingMin",
+                    "settingMax",
+                    "settingStep",
                   )}
                 >
                   <editor-text-input
                     label="Min"
                     type="number"
-                    .value=${editor.min}
+                    .value=${editor.settingMin}
                     @change=${(event) => {
-                      editor.updateSettingsState({ min: event.detail.value });
+                      editor.updateSettingsState({
+                        settingMin: event.detail.value,
+                      });
                     }}
                   ></editor-text-input>
                   <editor-text-input
                     label="Max"
                     type="number"
-                    .value=${editor.max}
+                    .value=${editor.settingMax}
                     @change=${(event) => {
-                      editor.updateSettingsState({ max: event.detail.value });
+                      editor.updateSettingsState({
+                        settingMax: event.detail.value,
+                      });
                     }}
                   ></editor-text-input>
                   <editor-text-input
                     label="Step"
                     type="number"
-                    .value=${editor.step}
+                    .value=${editor.settingStep}
                     @change=${(event) => {
-                      editor.updateSettingsState({ step: event.detail.value });
+                      editor.updateSettingsState({
+                        settingStep: event.detail.value,
+                      });
                     }}
                   ></editor-text-input>
                 </settings-section>
               `
             : null}
-          ${editor.fieldType === "textarea"
+          ${editor.settingFieldType === "textarea"
             ? html`
                 <settings-section
                   title="Textarea options"
-                  ?overridden=${editor.hasAnyOverriddenKeys("rows")}
+                  ?overridden=${editor.hasAnyOverriddenKeys("settingRows")}
                 >
                   <editor-text-input
                     label="Rows"
                     type="number"
-                    .value=${editor.rows}
+                    .value=${editor.settingRows}
                     @change=${(event) => {
-                      editor.updateSettingsState({ rows: event.detail.value });
+                      editor.updateSettingsState({
+                        settingRows: event.detail.value,
+                      });
                     }}
                   ></editor-text-input>
                 </settings-section>
               `
             : null}
-          ${editor.fieldType === "text" || editor.fieldType === "textarea"
+          ${editor.settingFieldType === "text" ||
+          editor.settingFieldType === "textarea"
             ? html`
                 <settings-section
                   title="Validation"
                   ?overridden=${editor.hasAnyOverriddenKeys(
-                    "minLength",
-                    "maxLength",
+                    "settingMinLength",
+                    "settingMaxLength",
                   )}
                 >
                   <editor-text-input
                     label="Min length"
                     type="number"
-                    .value=${editor.minLength}
+                    .value=${editor.settingMinLength}
                     @change=${(event) => {
                       editor.updateSettingsState({
-                        minLength: event.detail.value,
+                        settingMinLength: event.detail.value,
                       });
                     }}
                   ></editor-text-input>
                   <editor-text-input
                     label="Max length"
                     type="number"
-                    .value=${editor.maxLength}
+                    .value=${editor.settingMaxLength}
                     @change=${(event) => {
                       editor.updateSettingsState({
-                        maxLength: event.detail.value,
+                        settingMaxLength: event.detail.value,
                       });
                     }}
                   ></editor-text-input>
                 </settings-section>
               `
             : null}
-          ${editor.fieldType === "text"
+          ${editor.settingFieldType === "text"
             ? html`
                 <settings-section
                   title="Text options"
-                  ?overridden=${editor.hasAnyOverriddenKeys("pattern")}
+                  ?overridden=${editor.hasAnyOverriddenKeys("settingPattern")}
                 >
                   <editor-text-input
                     label="Pattern"
                     placeholder="[A-Za-z]+"
-                    .value=${editor.pattern}
+                    .value=${editor.settingPattern}
                     @change=${(event) => {
                       editor.updateSettingsState({
-                        pattern: event.detail.value,
+                        settingPattern: event.detail.value,
                       });
                     }}
                   ></editor-text-input>

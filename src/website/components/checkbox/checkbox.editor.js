@@ -27,15 +27,23 @@ installEditorPlugin(OwbCheckbox, {
 
     const settings = element.node?.settings || {};
     element.settingCheckboxLabel = String(
-      settings.checkboxLabel || "I agree to the terms",
+      settings.settingCheckboxLabel ??
+        settings.checkboxLabel ??
+        "I agree to the terms",
     );
-    element.settingCheckboxName = String(settings.checkboxName || "agreement");
-    element.settingCheckboxValue = String(settings.checkboxValue || "");
+    element.settingCheckboxName = String(
+      settings.settingCheckboxName ?? settings.checkboxName ?? "agreement",
+    );
+    element.settingCheckboxValue = String(
+      settings.settingCheckboxValue ?? settings.checkboxValue ?? "",
+    );
     element.settingCheckboxDefaultChecked = toBool(
-      settings.checkboxDefaultChecked || false,
+      settings.settingCheckboxDefaultChecked ??
+        settings.checkboxDefaultChecked ??
+        false,
     );
     element.settingCheckboxRequired = toBool(
-      settings.checkboxRequired || false,
+      settings.settingCheckboxRequired ?? settings.checkboxRequired ?? false,
     );
   },
 
@@ -46,11 +54,11 @@ installEditorPlugin(OwbCheckbox, {
 
     EditorComponent.openFor(element, {
       defaultState: {
-        checkboxLabel: "I agree to the terms",
-        checkboxName: "agreement",
-        checkboxValue: "",
-        checkboxDefaultChecked: false,
-        checkboxRequired: false,
+        settingCheckboxLabel: "I agree to the terms",
+        settingCheckboxName: "agreement",
+        settingCheckboxValue: "",
+        settingCheckboxDefaultChecked: false,
+        settingCheckboxRequired: false,
       },
       tabs: [{ id: "general", label: "General" }],
       content: () => {
@@ -59,63 +67,63 @@ installEditorPlugin(OwbCheckbox, {
           <settings-section
             title="Checkbox"
             ?overridden=${editor.hasAnyOverriddenKeys(
-              "checkboxLabel",
-              "checkboxName",
-              "checkboxValue",
-              "checkboxDefaultChecked",
-              "checkboxRequired",
+              "settingCheckboxLabel",
+              "settingCheckboxName",
+              "settingCheckboxValue",
+              "settingCheckboxDefaultChecked",
+              "settingCheckboxRequired",
             )}
           >
             <editor-text-input
               label="Label"
-              .value=${editor.checkboxLabel}
+              .value=${editor.settingCheckboxLabel}
               @change=${(event) => {
                 editor.updateSettingsState({
-                  checkboxLabel: event.detail.value,
+                  settingCheckboxLabel: event.detail.value,
                 });
               }}
             ></editor-text-input>
             <editor-text-input
               label="Name"
-              .value=${editor.checkboxName}
+              .value=${editor.settingCheckboxName}
               @change=${(event) => {
                 editor.updateSettingsState({
-                  checkboxName: event.detail.value,
+                  settingCheckboxName: event.detail.value,
                 });
               }}
             ></editor-text-input>
             <editor-text-input
               label="Value"
-              .value=${editor.checkboxValue}
+              .value=${editor.settingCheckboxValue}
               @change=${(event) => {
                 editor.updateSettingsState({
-                  checkboxValue: event.detail.value,
+                  settingCheckboxValue: event.detail.value,
                 });
               }}
             ></editor-text-input>
             <editor-select
               label="Checked by default"
-              .value=${String(editor.checkboxDefaultChecked)}
+              .value=${String(editor.settingCheckboxDefaultChecked)}
               .options=${[
                 { label: "No", value: "false" },
                 { label: "Yes", value: "true" },
               ]}
               @change=${(event) => {
                 editor.updateSettingsState({
-                  checkboxDefaultChecked: event.detail.value === "true",
+                  settingCheckboxDefaultChecked: event.detail.value === "true",
                 });
               }}
             ></editor-select>
             <editor-select
               label="Required"
-              .value=${String(editor.checkboxRequired)}
+              .value=${String(editor.settingCheckboxRequired)}
               .options=${[
                 { label: "No", value: "false" },
                 { label: "Yes", value: "true" },
               ]}
               @change=${(event) => {
                 editor.updateSettingsState({
-                  checkboxRequired: event.detail.value === "true",
+                  settingCheckboxRequired: event.detail.value === "true",
                 });
               }}
             ></editor-select>
