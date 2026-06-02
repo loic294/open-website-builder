@@ -79,6 +79,7 @@ export function getDefaultLayoutSettingsState() {
     settingPaddingLeft: "",
     settingPaddingRight: "",
     settingFlexDirection: "row",
+    settingFlexWrap: "nowrap",
     settingFlexHorizontal: "start",
     settingFlexVertical: "start",
     settingFlexJustifyContent: "flex-start",
@@ -1378,6 +1379,7 @@ export class LayoutEditorController {
             "settingGap",
             "settingRowHeight",
             "settingFlexDirection",
+            "settingFlexWrap",
             "settingFlexHorizontal",
             "settingFlexVertical",
             "settingFlexJustifyContent",
@@ -1401,6 +1403,7 @@ export class LayoutEditorController {
               gap: host.settingGap,
               rowHeight: host.settingRowHeight,
               flexDirection: host.settingFlexDirection,
+              flexWrap: host.settingFlexWrap,
               flexHorizontal: host.settingFlexHorizontal,
               flexVertical: host.settingFlexVertical,
               flexJustifyContent: host.settingFlexJustifyContent,
@@ -1423,6 +1426,7 @@ export class LayoutEditorController {
                 settingGap: next.gap,
                 settingRowHeight: next.rowHeight,
                 settingFlexDirection: next.flexDirection,
+                settingFlexWrap: next.flexWrap,
                 settingFlexHorizontal: next.flexHorizontal,
                 settingFlexVertical: next.flexVertical,
                 settingFlexJustifyContent: next.flexJustifyContent,
@@ -1595,6 +1599,9 @@ export class LayoutEditorController {
     if (host.settingAlignmentMode === "flex" && !isGridChildEditingEnabled) {
       layoutStyleParts.push("display: flex;");
       layoutStyleParts.push(`flex-direction: ${host.settingFlexDirection};`);
+      if (host.settingFlexWrap) {
+        layoutStyleParts.push(`flex-wrap: ${host.settingFlexWrap};`);
+      }
       layoutStyleParts.push(
         `justify-content: ${host.settingFlexJustifyContent};`,
       );
@@ -1957,6 +1964,7 @@ export function registerLayoutEditorProperties(RuntimeClass, extras = {}) {
     settingPaddingLeft: { type: String },
     settingPaddingRight: { type: String },
     settingFlexDirection: { type: String },
+    settingFlexWrap: { type: String },
     settingFlexHorizontal: { type: String },
     settingFlexVertical: { type: String },
     settingFlexJustifyContent: { type: String },

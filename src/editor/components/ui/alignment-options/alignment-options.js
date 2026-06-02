@@ -23,6 +23,7 @@ import styles from "./styles.css?inline";
 const DEFAULT_VALUE = {
   mode: "block",
   flexDirection: "row",
+  flexWrap: "nowrap",
   gap: "",
   rowHeight: "30px",
   flexHorizontal: "start",
@@ -131,6 +132,10 @@ export class EditorAlignmentOptions extends LitElement {
 
   onFlexDirectionChange(direction) {
     this.emitChange({ flexDirection: direction });
+  }
+
+  onFlexWrapChange(wrap) {
+    this.emitChange({ flexWrap: wrap });
   }
 
   onFlexHorizontalChange(horizontal) {
@@ -438,6 +443,28 @@ export class EditorAlignmentOptions extends LitElement {
           (next) => this.onFlexDirectionChange(next),
           value.flexDirection,
           directionOptions,
+        )}
+        ${this.renderOptionGroup(
+          "Wrap",
+          (next) => this.onFlexWrapChange(next),
+          value.flexWrap,
+          [
+            {
+              value: "nowrap",
+              label: "No wrap",
+              tooltip: "Flex wrap: nowrap",
+            },
+            {
+              value: "wrap",
+              label: "Wrap",
+              tooltip: "Flex wrap: wrap",
+            },
+            {
+              value: "wrap-reverse",
+              label: "Reverse",
+              tooltip: "Flex wrap: wrap-reverse",
+            },
+          ],
         )}
         ${this.renderPrimaryWithMore({
           title: "Justify content",

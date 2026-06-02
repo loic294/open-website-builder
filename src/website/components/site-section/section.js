@@ -61,6 +61,9 @@ export function getContainerInlineStyle(settings = {}) {
     parts.push(
       `flex-direction: ${String(settings.settingFlexDirection || "row")}`,
     );
+    if (settings.settingFlexWrap) {
+      parts.push(`flex-wrap: ${String(settings.settingFlexWrap)}`);
+    }
     parts.push(
       `justify-content: ${String(settings.settingFlexJustifyContent || "flex-start")}`,
     );

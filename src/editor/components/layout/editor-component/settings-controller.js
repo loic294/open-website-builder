@@ -856,6 +856,10 @@ export class SettingsController {
       void this.host.openSectionSettings();
       return;
     }
+    if (typeof this.host._layoutEditor?.openSectionSettings === "function") {
+      void this.host._layoutEditor.openSectionSettings();
+      return;
+    }
 
     const editorBlock = this.host.renderRoot?.querySelector(
       "[data-editor-block]",
