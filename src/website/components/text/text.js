@@ -9,21 +9,15 @@ export const defaultTextConfig = {
 
 function normalizeTextLinksToSameTab(rawHtml) {
   const raw = String(rawHtml ?? "");
-  try {
-    const template = document.createElement("template");
-    if (!template.content?.querySelectorAll) {
-      return raw;
-    }
-    template.innerHTML = raw;
-    const anchors = template.content.querySelectorAll("a");
-    anchors.forEach((anchor) => {
-      anchor.removeAttribute("target");
-      anchor.removeAttribute("rel");
-    });
-    return template.innerHTML;
-  } catch {
-    return raw;
-  }
+  return raw.replace(/<a\b[^>]*>/gi, (tag) =>
+    tag
+      .replace(/\s+target\s*=\s*"[^"]*"/gi, "")
+      .replace(/\s+target\s*=\s*'[^']*'/gi, "")
+      .replace(/\s+target\s*=\s*[^\s>]+/gi, "")
+      .replace(/\s+rel\s*=\s*"[^"]*"/gi, "")
+      .replace(/\s+rel\s*=\s*'[^']*'/gi, "")
+      .replace(/\s+rel\s*=\s*[^\s>]+/gi, ""),
+  );
 }
 
 export class OwbText extends LitElement {
