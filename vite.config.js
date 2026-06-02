@@ -120,7 +120,19 @@ export default defineConfig({
             `src/website/components/${componentName}/styles.css`,
           );
           try {
-            const css = await readFile(filePath, "utf8");
+            let css = await readFile(filePath, "utf8");
+            if (componentName === "captcha") {
+              try {
+                const altchaCss = await readFile(
+                  resolve(
+                    __dirname,
+                    "node_modules/altcha/dist/external/altcha.css",
+                  ),
+                  "utf8",
+                );
+                css = `${css}\n/* altcha */\n${altchaCss}`;
+              } catch {}
+            }
             response.statusCode = 200;
             response.setHeader("Content-Type", "text/css; charset=utf-8");
             response.end(css);

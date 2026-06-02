@@ -15,7 +15,7 @@ installEditorPlugin(OwbCaptcha, {
     }
 
     element.settingCaptchaChallengeUrl = String(
-      element.node?.settings?.captchaChallengeUrl || "",
+      element.node?.settings?.settingCaptchaChallengeUrl || "",
     );
   },
 

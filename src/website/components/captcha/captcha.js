@@ -118,7 +118,7 @@ export class OwbCaptcha extends LitElement {
       return html`<link rel="stylesheet" href="/owb-styles/captcha.css" />
         <altcha-widget
           display="floating"
-          challengeurl=${challengeUrl}
+          challenge=${challengeUrl}
         ></altcha-widget>`;
     }
 

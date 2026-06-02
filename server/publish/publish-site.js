@@ -179,6 +179,24 @@ async function copyComponentStyles(appRoot, outputDir) {
       // Missing style files are optional in published output.
     }
   }
+
+  // Altcha renders into the captcha component's shadow DOM; bundle its CSS
+  // alongside captcha styles so the widget is styled in published output.
+  try {
+    const altchaCssPath = resolve(
+      appRoot,
+      "node_modules/altcha/dist/external/altcha.css",
+    );
+    const altchaCss = await readFile(altchaCssPath, "utf8");
+    const captchaCssPath = resolve(stylesDir, "captcha.css");
+    let existing = "";
+    try {
+      existing = await readFile(captchaCssPath, "utf8");
+    } catch {}
+    await writeFile(captchaCssPath, `${existing}\n/* altcha */\n${altchaCss}`);
+  } catch {
+    // Altcha CSS is optional; skip silently if not installed.
+  }
 }
 
 export async function publishSite({ contentRoot, outputDir, appRoot }) {
