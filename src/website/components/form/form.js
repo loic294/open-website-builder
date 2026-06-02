@@ -26,6 +26,7 @@ export class OwbForm extends LitElement {
     node: { type: Object },
     pageConfig: { type: Object },
     _submitted: { state: true },
+    _submitError: { state: true },
     isSettingsOpen: { state: true },
   };
 
@@ -35,6 +36,7 @@ export class OwbForm extends LitElement {
     this.node = null;
     this.pageConfig = null;
     this._submitted = false;
+    this._submitError = "";
     this.isSettingsOpen = false;
     this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
@@ -54,6 +56,9 @@ export class OwbForm extends LitElement {
         this._onActiveOwnerChanged,
       );
       OwbForm.editorPlugin.onConnected?.(this);
+    } else {
+      this._onHostClick = this._onHostClick.bind(this);
+      this.addEventListener("click", this._onHostClick);
     }
   }
 
@@ -64,6 +69,8 @@ export class OwbForm extends LitElement {
         this._onActiveOwnerChanged,
       );
       OwbForm.editorPlugin.onDisconnected?.(this);
+    } else if (this._onHostClick) {
+      this.removeEventListener("click", this._onHostClick);
     }
     super.disconnectedCallback();
   }
@@ -96,18 +103,121 @@ export class OwbForm extends LitElement {
 
   _handleSubmit(event) {
     event.preventDefault();
+    this._submit();
+  }
+
+  _onHostClick(event) {
+    const path = event.composedPath();
+    const submitter = path.find(
+      (el) =>
+        el &&
+        el.tagName === "BUTTON" &&
+        String(el.type || "").toLowerCase() === "submit",
+    );
+    if (!submitter) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this._submit();
+  }
+
+  _collectFormFields() {
+    const fields = [];
+    const seen = new Set();
+    const visit = (node) => {
+      if (!node || seen.has(node)) return;
+      seen.add(node);
+      const local = node.localName;
+      if (local === "input" || local === "textarea" || local === "select") {
+        fields.push(node);
+        return;
+      }
+      const children = node.children;
+      if (children) {
+        for (const child of children) visit(child);
+      }
+      if (node.shadowRoot) {
+        for (const child of node.shadowRoot.children) visit(child);
+      }
+    };
+    for (const child of this.children) visit(child);
+    return fields;
+  }
+
+  async _submit() {
     const settings = this.settings || {};
+    const action = String(settings.formActionUrl || "").trim();
+    const method = String(settings.formMethod || "post").toLowerCase();
     const submitMode = String(settings.formSubmitMode || "success-message");
     const redirectUrl = String(settings.formRedirectUrl || "").trim();
+    const fields = this._collectFormFields();
 
-    if (submitMode === "redirect") {
-      if (redirectUrl && typeof window !== "undefined") {
-        window.location.assign(redirectUrl);
+    for (const f of fields) {
+      if (typeof f.checkValidity === "function" && !f.checkValidity()) {
+        if (typeof f.reportValidity === "function") f.reportValidity();
+        return;
       }
+    }
+
+    if (!action) {
+      if (submitMode === "redirect" && redirectUrl) {
+        window.location.assign(redirectUrl);
+        return;
+      }
+      this._submitted = true;
       return;
     }
 
-    this._submitted = true;
+    const params = new URLSearchParams();
+    for (const f of fields) {
+      const name = f.name;
+      if (!name) continue;
+      const type = String(f.type || "").toLowerCase();
+      if (type === "submit" || type === "button" || type === "reset") continue;
+      if (type === "checkbox" || type === "radio") {
+        if (f.checked) params.append(name, f.value || "on");
+        continue;
+      }
+      params.append(name, f.value ?? "");
+    }
+
+    if (submitMode === "redirect" && redirectUrl) {
+      this._submitError = "";
+      let ok = false;
+      try {
+        const res = await fetch(action, {
+          method: method === "get" ? "GET" : "POST",
+          mode: "cors",
+          headers:
+            method === "get"
+              ? undefined
+              : { "Content-Type": "application/x-www-form-urlencoded" },
+          body: method === "get" ? undefined : params.toString(),
+        });
+        ok = res.ok;
+      } catch (e) {}
+      if (!ok) {
+        this._submitError =
+          "Sorry, something went wrong submitting the form. Please try again.";
+        return;
+      }
+      window.location.assign(redirectUrl);
+      return;
+    }
+
+    const hidden = document.createElement("form");
+    hidden.action = action;
+    hidden.method = method === "get" ? "get" : "post";
+    hidden.enctype = "application/x-www-form-urlencoded";
+    hidden.style.display = "none";
+    for (const [k, v] of params.entries()) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = k;
+      input.value = v;
+      hidden.appendChild(input);
+    }
+    document.body.appendChild(hidden);
+    hidden.submit();
   }
 
   render() {
@@ -162,6 +272,11 @@ export class OwbForm extends LitElement {
                 @submit=${this._handleSubmit}
               >
                 <slot></slot>
+                ${this._submitError
+                  ? html`<p class="owb-form-error" role="alert">
+                      ${this._submitError}
+                    </p>`
+                  : null}
               </form>
             `}
       </div>

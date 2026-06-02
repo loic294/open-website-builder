@@ -27,3 +27,9 @@
   color: var(--website-success-color, #267e3e);
   font-weight: 600;
 }
+
+.owb-form-error {
+  margin: 10px 0 0;
+  color: var(--website-error-color, #b3261e);
+  font-weight: 600;
+}
