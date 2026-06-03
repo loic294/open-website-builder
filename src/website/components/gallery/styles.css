@@ -38,8 +38,8 @@
 }
 
 .lightbox img {
-  max-width: min(92vw, 1200px);
-  max-height: 90dvh;
+  max-width: calc(96vw - 48px);
+  max-height: 92vh;
   object-fit: contain;
   display: block;
 }
@@ -127,7 +127,7 @@
 
 .gallery-lightbox-image {
   display: block;
-  max-width: min(92vw, 1200px);
+  max-width: min(92vw, 3600px);
   max-height: 90vh;
   object-fit: contain;
 }
