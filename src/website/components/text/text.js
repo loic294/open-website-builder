@@ -115,7 +115,7 @@ export class OwbText extends LitElement {
           ? () => OwbText.editorPlugin?.onPointerDown?.(this)
           : nothing}
       >
-        ${unsafeHTML(normalizedContent)}
+        ${isEditorMode ? nothing : unsafeHTML(normalizedContent)}
       </div>
     `;
   }

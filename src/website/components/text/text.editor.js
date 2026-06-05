@@ -1,4 +1,4 @@
-import { html, unsafeCSS } from "lit";
+import { html, render, unsafeCSS } from "lit";
 import { Editor, Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import BubbleMenu from "@tiptap/extension-bubble-menu";
@@ -351,6 +351,73 @@ function openTextSettings(element) {
   });
 }
 
+function renderBubbleMenu(menuEl, element) {
+  const editor = element._tipTapEditor;
+  const isActive = (name, attrs) =>
+    editor ? editor.isActive(name, attrs) : false;
+  const btn = (label, icon, active, onClick) => html`
+    <editor-btn
+      style=${`light icon${active ? " active" : ""}`}
+      title=${label}
+      @mousedown=${(event) => event.preventDefault()}
+      @click=${onClick}
+    >
+      ${createElement(icon)}
+    </editor-btn>
+  `;
+  const currentHeading = getCurrentHeadingStyle(element);
+  const currentAlign = ["left", "center", "right", "justify"].find((align) =>
+    isActive({ textAlign: align }),
+  );
+  render(
+    html`
+      <select
+        class="toolbar-select heading-style-select"
+        title="Block style"
+        .value=${currentHeading}
+        @mousedown=${(event) => event.stopPropagation()}
+        @change=${(event) => setHeadingStyle(element, event.target.value)}
+      >
+        <option value="paragraph" ?selected=${currentHeading === "paragraph"}>
+          Paragraph
+        </option>
+        <option value="1" ?selected=${currentHeading === "1"}>H1</option>
+        <option value="2" ?selected=${currentHeading === "2"}>H2</option>
+        <option value="3" ?selected=${currentHeading === "3"}>H3</option>
+        <option value="4" ?selected=${currentHeading === "4"}>H4</option>
+        <option value="5" ?selected=${currentHeading === "5"}>H5</option>
+        <option value="6" ?selected=${currentHeading === "6"}>H6</option>
+      </select>
+      ${btn("Bold", Bold, isActive("bold"), () =>
+        runEditorCommand(element, (chain) => chain.toggleBold()),
+      )}
+      ${btn("Italic", Italic, isActive("italic"), () =>
+        runEditorCommand(element, (chain) => chain.toggleItalic()),
+      )}
+      ${btn("Bullet list", List, isActive("bulletList"), () =>
+        runEditorCommand(element, (chain) => chain.toggleBulletList()),
+      )}
+      ${btn("Ordered list", ListOrdered, isActive("orderedList"), () =>
+        runEditorCommand(element, (chain) => chain.toggleOrderedList()),
+      )}
+      ${btn("Link", Link2, isActive("link"), () => toggleLink(element))}
+      ${btn("Align left", AlignLeft, currentAlign === "left", () =>
+        runEditorCommand(element, (chain) => chain.setTextAlign("left")),
+      )}
+      ${btn("Align center", AlignCenter, currentAlign === "center", () =>
+        runEditorCommand(element, (chain) => chain.setTextAlign("center")),
+      )}
+      ${btn("Align right", AlignRight, currentAlign === "right", () =>
+        runEditorCommand(element, (chain) => chain.setTextAlign("right")),
+      )}
+      ${btn("Justify", AlignJustify, currentAlign === "justify", () =>
+        runEditorCommand(element, (chain) => chain.setTextAlign("justify")),
+      )}
+    `,
+    menuEl,
+  );
+}
+
 function ensureEditor(element) {
   const editorEl = element.renderRoot?.querySelector(".text-block");
   if (!editorEl || element._tipTapEditor) {
@@ -382,6 +449,10 @@ function ensureEditor(element) {
     content: String(element.content ?? ""),
     onSelectionUpdate: () => {
       element._lastSelectionRange = editor.state.selection;
+      renderBubbleMenu(menuEl, element);
+    },
+    onTransaction: () => {
+      renderBubbleMenu(menuEl, element);
     },
     onFocus: () => {
       element._lastSelectionRange = editor.state.selection;
@@ -420,6 +491,7 @@ function ensureEditor(element) {
 
   element._tipTapEditor = editor;
   element._bubbleMenuElement = menuEl;
+  renderBubbleMenu(menuEl, element);
 }
 
 installEditorPlugin(OwbText, {
@@ -433,6 +505,8 @@ installEditorPlugin(OwbText, {
         editor.commands.setContent(element.content || "", false);
       }
     }
+
+    ensureEditor(element);
   },
 
   onConnected(element) {
@@ -451,7 +525,7 @@ installEditorPlugin(OwbText, {
     };
 
     window.addEventListener("owb-focus-node", element._onFocusNodeRequest);
-    ensureEditor(element);
+    element.updateComplete.then(() => ensureEditor(element));
   },
 
   onDisconnected(element) {

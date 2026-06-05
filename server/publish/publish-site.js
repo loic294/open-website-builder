@@ -346,6 +346,8 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
     resolve(outputDir, "images"),
   );
 
+  await copyDirectoryRecursive(resolve(contentRoot, "public"), outputDir);
+
   const published = [];
   const warnings = [];
 
