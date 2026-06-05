@@ -541,7 +541,9 @@ function escapeXml(value) {
 }
 
 async function writeSitemap({ outputDir, published, siteUrl }) {
-  const trimmedSiteUrl = String(siteUrl || "").trim().replace(/\/+$/, "");
+  const trimmedSiteUrl = String(siteUrl || "")
+    .trim()
+    .replace(/\/+$/, "");
   const seen = new Set();
   const entries = [];
 
