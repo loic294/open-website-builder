@@ -110,7 +110,8 @@ export class OwbCollapsable extends LitElement {
   }
 
   _hydrateFromSettings(s) {
-    if (s.settingTitle !== undefined) this.settingTitle = String(s.settingTitle);
+    if (s.settingTitle !== undefined)
+      this.settingTitle = String(s.settingTitle);
     if (s.settingIconStyle !== undefined)
       this.settingIconStyle = String(s.settingIconStyle);
     if (s.settingIconPosition !== undefined)
@@ -151,8 +152,7 @@ export class OwbCollapsable extends LitElement {
 
   _titleInlineStyle() {
     const parts = [];
-    if (this.settingTitleColor)
-      parts.push(`color: ${this.settingTitleColor}`);
+    if (this.settingTitleColor) parts.push(`color: ${this.settingTitleColor}`);
     if (this.settingTitleBackgroundColor)
       parts.push(`background-color: ${this.settingTitleBackgroundColor}`);
     if (this.settingTitleBorderColor)
