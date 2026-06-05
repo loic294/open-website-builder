@@ -13,9 +13,12 @@ function toBool(value) {
   return String(value || "").toLowerCase() === "true";
 }
 
+const TEMPLATE_VARIABLE_PATTERN = /^\{\{\s*[a-zA-Z0-9_-]+\s*\}\}$/;
+
 function tryParseYoutubeId(raw) {
   const value = String(raw || "").trim();
   if (!value) return "";
+  if (TEMPLATE_VARIABLE_PATTERN.test(value)) return value;
   const match = value.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_\-]{6,})/,
   );
@@ -26,6 +29,7 @@ function tryParseYoutubeId(raw) {
 function tryParseYoutubeListId(raw) {
   const value = String(raw || "").trim();
   if (!value) return "";
+  if (TEMPLATE_VARIABLE_PATTERN.test(value)) return value;
   const match = value.match(/[?&]list=([A-Za-z0-9_\-]+)/);
   if (match) return match[1];
   return value.replace(/[^A-Za-z0-9_\-]/g, "");

@@ -65,6 +65,7 @@ export class OwbCollapsable extends LitElement {
     this.settingTitleBorderColor = "";
     this.isSettingsOpen = false;
     this._isOpen = true;
+    this._userToggled = false;
     this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
 
@@ -80,7 +81,9 @@ export class OwbCollapsable extends LitElement {
         }
       } catch (e) {}
     }
-    this._isOpen = Boolean(this.settingDefaultOpen);
+    if (!this._userToggled) {
+      this._isOpen = Boolean(this.settingDefaultOpen);
+    }
     super.connectedCallback();
     if (OwbCollapsable.editorPlugin) {
       window.addEventListener(
@@ -147,6 +150,7 @@ export class OwbCollapsable extends LitElement {
       return;
     }
     event.preventDefault();
+    this._userToggled = true;
     this._isOpen = !this._isOpen;
   }
 
@@ -162,8 +166,14 @@ export class OwbCollapsable extends LitElement {
 
   render() {
     const isEditorMode = OwbCollapsable.editorPlugin !== null;
-    const spacingCss = getSpacingStyleBlock(this.settings || {});
-    const isOpen = isEditorMode ? true : this._isOpen;
+    const settings = this.settings || {};
+    const spacingCss = getSpacingStyleBlock(settings);
+    const customCss = String(settings.customCss || "").trim();
+    const isOpen = isEditorMode
+      ? true
+      : this._userToggled
+        ? this._isOpen
+        : Boolean(this.settingDefaultOpen);
     const iconStyle = this.settingIconStyle || "chevron";
     const iconPosition = this.settingIconPosition === "left" ? "left" : "right";
     const iconSvg = renderIcon(iconStyle, isOpen);
@@ -204,6 +214,7 @@ export class OwbCollapsable extends LitElement {
       ${spacingCss
         ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
         : null}
+      ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
         class=${blockClasses}
         data-editor-block=${isEditorMode ? "" : nothing}

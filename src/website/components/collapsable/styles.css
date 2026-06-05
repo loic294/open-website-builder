@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .collapsable-block {
   display: block;
   width: 100%;
