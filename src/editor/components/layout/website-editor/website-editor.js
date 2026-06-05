@@ -18,6 +18,7 @@ import "../../../../website/components/text/text.js";
 import "../../../../website/components/image/image.js";
 import "../../../../website/components/button/button.js";
 import "../../../../website/components/embed/embed.js";
+import "../../../../website/components/youtube/youtube.js";
 import "../../../../website/components/social-media/social-media.js";
 import "../../../../website/components/gallery/gallery.js";
 import "../../../../website/components/slider/slider.js";

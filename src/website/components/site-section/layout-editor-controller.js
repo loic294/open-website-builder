@@ -33,6 +33,7 @@ export const BLOCK_INSERT_OPTIONS = [
   { label: "Image", value: "image" },
   { label: "Button", value: "button" },
   { label: "Embed", value: "embed" },
+  { label: "YouTube video", value: "youtube" },
   { label: "Container", value: "container" },
   { label: "Form", value: "form" },
   { label: "Social media", value: "social-media" },
@@ -978,6 +979,29 @@ export class LayoutEditorController {
     }
     if (type === "embed") {
       return { id: createNodeId("embed"), type: "embed", html: "" };
+    }
+    if (type === "youtube") {
+      return {
+        id: createNodeId("youtube"),
+        type: "youtube",
+        settings: {
+          settingVideoId: "",
+          settingListId: "",
+          settingListType: "",
+          settingAspectRatio: "16:9",
+          settingAutoplay: false,
+          settingControls: true,
+          settingLoop: false,
+          settingPlaysinline: false,
+          settingColor: "red",
+          settingFs: true,
+          settingIvLoadPolicy: true,
+          settingCcLoadPolicy: false,
+          settingDisablekb: false,
+          settingRel: false,
+          settingEnablejsapi: false,
+        },
+      };
     }
     if (type === "social-media") {
       return {
