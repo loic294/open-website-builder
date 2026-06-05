@@ -358,12 +358,18 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
 
     const urlPath = normalizePublishedUrlPath(pageConfig?.url, fileBaseName);
     let outputPath;
+    let outputFileName;
     if (!urlPath) {
       outputPath = resolve(outputDir, "index.html");
+      outputFileName = "index.html";
+    } else if (urlPath === "404") {
+      outputPath = resolve(outputDir, "404.html");
+      outputFileName = "404.html";
     } else {
       const outputDirectory = resolve(outputDir, urlPath);
       await mkdir(outputDirectory, { recursive: true });
       outputPath = resolve(outputDirectory, "index.html");
+      outputFileName = `${urlPath}/index.html`;
     }
 
     const { html, warnings: pageWarnings } = await generatePageHtml({
@@ -383,7 +389,7 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
 
     published.push({
       pageId: pageConfig?.id || fileBaseName,
-      fileName: urlPath ? `${urlPath}/index.html` : "index.html",
+      fileName: outputFileName,
       outputPath,
     });
 
