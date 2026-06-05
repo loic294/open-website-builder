@@ -199,7 +199,12 @@ async function copyComponentStyles(appRoot, outputDir) {
   }
 }
 
-export async function publishSite({ contentRoot, outputDir, appRoot }) {
+export async function publishSite({
+  contentRoot,
+  outputDir,
+  appRoot,
+  siteUrl,
+}) {
   const pagesDir = resolve(contentRoot, "pages");
   const sharedDir = resolve(contentRoot, "shared");
   const collectionsDir = resolve(contentRoot, "collections");
@@ -495,10 +500,73 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
     }
   }
 
+  const sitemapResult = await writeSitemap({
+    outputDir,
+    published,
+    siteUrl,
+  });
+  if (sitemapResult?.fileName) {
+    published.push(sitemapResult);
+  }
+
   return {
     ok: true,
     outputDir,
     pages: published,
     warnings,
+  };
+}
+
+function publishedEntryToUrlPath(fileName) {
+  const normalized = String(fileName || "").replace(/^\/+/, "");
+  if (!normalized || normalized === "index.html") {
+    return "/";
+  }
+  if (normalized === "404.html") {
+    return null;
+  }
+  if (normalized.endsWith("/index.html")) {
+    return `/${normalized.slice(0, -"index.html".length)}`;
+  }
+  return `/${normalized}`;
+}
+
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+async function writeSitemap({ outputDir, published, siteUrl }) {
+  const trimmedSiteUrl = String(siteUrl || "").trim().replace(/\/+$/, "");
+  const seen = new Set();
+  const entries = [];
+
+  for (const entry of published) {
+    const urlPath = publishedEntryToUrlPath(entry?.fileName);
+    if (!urlPath || seen.has(urlPath)) {
+      continue;
+    }
+    seen.add(urlPath);
+    const loc = trimmedSiteUrl ? `${trimmedSiteUrl}${urlPath}` : urlPath;
+    entries.push(`  <url><loc>${escapeXml(loc)}</loc></url>`);
+  }
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries.join("\n")}
+</urlset>
+`;
+
+  const outputPath = resolve(outputDir, "sitemap.xml");
+  await writeFile(outputPath, xml, "utf8");
+
+  return {
+    pageId: "sitemap",
+    fileName: "sitemap.xml",
+    outputPath,
   };
 }
