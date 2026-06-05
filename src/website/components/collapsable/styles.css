@@ -1,0 +1,78 @@
+.collapsable-block {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--owb-collapsable-border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--owb-section-child-background-color, transparent);
+}
+
+.collapsable-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  appearance: none;
+}
+
+.collapsable-block.icon-left .collapsable-title {
+  flex-direction: row;
+}
+
+.collapsable-block.icon-right .collapsable-title {
+  flex-direction: row;
+}
+
+.collapsable-title-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.collapsable-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transition: transform 200ms ease;
+}
+
+.collapsable-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Chevron rotates 180° when closed (so it points down/up to suggest action). */
+.collapsable-block.icon-chevron.is-closed .collapsable-icon {
+  transform: rotate(-90deg);
+}
+
+.collapsable-block.is-open .collapsable-title {
+  border-bottom-color: var(--owb-collapsable-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.collapsable-content {
+  display: block;
+}
+
+.collapsable-content[hidden] {
+  display: none;
+}
+
+.collapsable-block.is-settings-open {
+  outline: 2px solid var(--editor-accent-color, #2563eb);
+  outline-offset: -2px;
+}

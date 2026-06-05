@@ -4,6 +4,7 @@ import "./website/components/text/text.editor.js";
 import "./website/components/image/image.editor.js";
 import "./website/components/embed/embed.editor.js";
 import "./website/components/youtube/youtube.editor.js";
+import "./website/components/collapsable/collapsable.editor.js";
 import "./website/components/gallery/gallery.editor.js";
 import "./website/components/slider/slider.editor.js";
 import "./website/components/social-media/social-media.editor.js";

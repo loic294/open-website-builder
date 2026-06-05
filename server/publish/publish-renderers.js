@@ -3,6 +3,7 @@ import { publishRenderImage } from "../../src/website/components/image/image.pub
 import { publishRenderButton } from "../../src/website/components/button/button.publish.js";
 import { publishRenderEmbed } from "../../src/website/components/embed/embed.publish.js";
 import { publishRenderYoutube } from "../../src/website/components/youtube/youtube.publish.js";
+import { publishRenderCollapsable } from "../../src/website/components/collapsable/collapsable.publish.js";
 import { publishRenderSocialMedia } from "../../src/website/components/social-media/social-media.publish.js";
 import { publishRenderGallery } from "../../src/website/components/gallery/gallery.publish.js";
 import { publishRenderSlider } from "../../src/website/components/slider/slider.publish.js";
@@ -23,6 +24,7 @@ export const publishRenderers = new Map([
   ["button", publishRenderButton],
   ["embed", publishRenderEmbed],
   ["youtube", publishRenderYoutube],
+  ["collapsable", publishRenderCollapsable],
   ["social-media", publishRenderSocialMedia],
   ["gallery", publishRenderGallery],
   ["slider", publishRenderSlider],

@@ -348,15 +348,11 @@ export class OwbYoutube extends LitElement {
       ${spacingCss
         ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
         : null}
-      <style>
-        .youtube-block {
-          aspect-ratio: ${aspectCss};
-        }
-      </style>
       <div
         class="youtube-block${isEditorMode && this.isSettingsOpen
           ? " is-settings-open"
           : ""}"
+        style="aspect-ratio: ${aspectCss};"
         data-editor-block=${isEditorMode ? "" : nothing}
         @pointerdown=${isEditorMode
           ? () => OwbYoutube.editorPlugin?.onPointerDown?.(this)

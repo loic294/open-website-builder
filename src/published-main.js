@@ -15,6 +15,7 @@ import { OwbText } from "./website/components/text/text.js";
 import { OwbImage } from "./website/components/image/image.js";
 import { OwbEmbed } from "./website/components/embed/embed.js";
 import { OwbYoutube } from "./website/components/youtube/youtube.js";
+import { OwbCollapsable } from "./website/components/collapsable/collapsable.js";
 import { OwbGallery } from "./website/components/gallery/gallery.js";
 import { OwbSlider } from "./website/components/slider/slider.js";
 import { OwbSocialMedia } from "./website/components/social-media/social-media.js";
@@ -44,6 +45,10 @@ if (!customElements.get("owb-embed")) {
 
 if (!customElements.get("owb-youtube")) {
   customElements.define("owb-youtube", OwbYoutube);
+}
+
+if (!customElements.get("owb-collapsable")) {
+  customElements.define("owb-collapsable", OwbCollapsable);
 }
 
 if (!customElements.get("owb-gallery")) {

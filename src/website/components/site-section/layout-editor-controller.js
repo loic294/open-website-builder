@@ -34,6 +34,7 @@ export const BLOCK_INSERT_OPTIONS = [
   { label: "Button", value: "button" },
   { label: "Embed", value: "embed" },
   { label: "YouTube video", value: "youtube" },
+  { label: "Collapsable", value: "collapsable" },
   { label: "Container", value: "container" },
   { label: "Form", value: "form" },
   { label: "Social media", value: "social-media" },
@@ -1028,6 +1029,21 @@ export class LayoutEditorController {
     }
     if (type === "container") {
       return { id: createNodeId("container"), type: "container", content: [] };
+    }
+    if (type === "collapsable") {
+      return {
+        id: createNodeId("collapsable"),
+        type: "collapsable",
+        settings: {
+          settingTitle: "Section title",
+          settingIconStyle: "chevron",
+          settingIconPosition: "right",
+          settingDefaultOpen: true,
+        },
+        content: [
+          { id: createNodeId("container"), type: "container", content: [] },
+        ],
+      };
     }
     if (type === "collection") {
       return {
