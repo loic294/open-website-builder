@@ -291,9 +291,11 @@ export async function publishSite({
         );
         const metadata = { ...(item && typeof item === "object" ? item : {}) };
         delete metadata.content;
-        const itemId = String(item?.id || toBaseName(fileName));
+        const fileBaseName = toBaseName(fileName);
+        const itemId = String(item?.id || fileBaseName);
         items.push({
           id: itemId,
+          fileBaseName,
           title: item?.title || itemId,
           metadata,
         });
@@ -437,11 +439,12 @@ export async function publishSite({
       if (!itemId) {
         continue;
       }
+      const fileBaseName = String(itemMeta?.fileBaseName || itemId);
 
       let itemConfig;
       try {
         itemConfig = await readJson(
-          resolve(collectionsDir, collectionId, `${itemId}.json`),
+          resolve(collectionsDir, collectionId, `${fileBaseName}.json`),
         );
       } catch {
         continue;
