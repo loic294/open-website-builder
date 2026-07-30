@@ -1,5 +1,6 @@
 import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { FileManager } from "../../../editor/components/layout/file-manager/file-manager.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbGallery, defaultGalleryConfig } from "./gallery.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
@@ -79,6 +80,16 @@ installEditorPlugin(OwbGallery, {
         const editor = EditorComponent.instance;
         return html`
           <settings-section title="Photos">
+            <button
+              type="button"
+              class="owb-browse-btn"
+              @click=${() =>
+                FileManager.open({
+                  mode: "multi",
+                  selected: element.images,
+                  onSelect: (paths) => updateGalleryImages(element, paths),
+                })}
+            >Browse Files…</button>
             <textarea
               class="gallery-textarea"
               .value=${element.images.join("\n")}

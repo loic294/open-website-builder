@@ -1,0 +1,713 @@
+:host {
+  display: contents;
+  font-family: inherit;
+}
+
+/* ─── Overlay ─────────────────────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Modal shell ──────────────────────────────────────────────────────────── */
+.modal {
+  background: var(--editor-surface-color, #fbfbfb);
+  color: var(--editor-text-color, #000);
+  width: min(1200px, 96vw);
+  height: min(780px, 92vh);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+/* ─── Header ───────────────────────────────────────────────────────────────── */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--editor-border-color, #e4e0db);
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--editor-text-color, #000);
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ─── Body ─────────────────────────────────────────────────────────────────── */
+.modal-body {
+  display: grid;
+  grid-template-columns: 200px 1fr 240px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Folders panel ────────────────────────────────────────────────────────── */
+.folders-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--editor-border-color, #e4e0db);
+  overflow: hidden;
+}
+
+.folders-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--editor-text-color, #000);
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  position: relative;
+}
+
+.folder-item:hover {
+  background: var(--editor-hover-surface, rgba(0, 0, 0, 0.04));
+}
+
+.folder-item.active {
+  background: color-mix(in srgb, var(--editor-primary-color, #ffc700) 18%, transparent);
+  font-weight: 600;
+}
+
+.folder-item svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--editor-muted-text-color, #888);
+}
+
+.folder-item.active svg {
+  color: var(--editor-text-color, #000);
+}
+
+.folder-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-rename-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  border: 1px solid var(--editor-primary-color, #ffc700);
+  background: var(--editor-surface-color, #fff);
+  color: var(--editor-text-color, #000);
+  padding: 1px 4px;
+  outline: none;
+}
+
+.folder-edit-btn {
+  display: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--editor-muted-text-color, #888);
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.folder-edit-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.folder-item:hover .folder-edit-btn,
+.folder-item.active .folder-edit-btn {
+  display: inline-flex;
+}
+
+.folder-edit-btn:hover {
+  color: var(--editor-text-color, #000);
+}
+
+.folders-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--editor-border-color, #e4e0db);
+  padding: 8px;
+}
+
+.add-folder-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--editor-muted-text-color, #888);
+  text-align: left;
+}
+
+.add-folder-btn:hover {
+  color: var(--editor-text-color, #000);
+}
+
+.add-folder-btn svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* ─── Images panel ─────────────────────────────────────────────────────────── */
+.images-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--editor-border-color, #e4e0db);
+}
+
+.images-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--editor-border-color, #e4e0db);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.images-count {
+  font-size: 12px;
+  color: var(--editor-muted-text-color, #888);
+  flex: 1;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 2px;
+}
+
+.view-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--editor-muted-text-color, #888);
+  border-radius: var(--editor-border-radius, 4px);
+}
+
+.view-btn:hover,
+.view-btn.active {
+  background: var(--editor-hover-surface, rgba(0, 0, 0, 0.06));
+  color: var(--editor-text-color, #000);
+}
+
+.view-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ─── Grid view ────────────────────────────────────────────────────────────── */
+.images-grid-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.image-tile {
+  position: relative;
+  aspect-ratio: 1;
+  cursor: pointer;
+  overflow: hidden;
+  background: var(--editor-hover-surface, rgba(0, 0, 0, 0.04));
+}
+
+.image-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.18s ease;
+}
+
+.image-tile:hover img {
+  transform: scale(1.04);
+}
+
+.image-tile-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 6px;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+
+.image-tile:hover .image-tile-overlay,
+.image-tile.selected .image-tile-overlay {
+  opacity: 1;
+}
+
+.image-tile-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.image-tile.selected .image-tile-checkbox {
+  background: var(--editor-primary-color, #ffc700);
+  border-color: var(--editor-primary-color, #ffc700);
+}
+
+.image-tile.selected .image-tile-checkbox::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #000;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.image-tile-zoom {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.image-tile-zoom svg {
+  width: 12px;
+  height: 12px;
+}
+
+.image-tile.selected {
+  outline: 3px solid var(--editor-primary-color, #ffc700);
+  outline-offset: -3px;
+}
+
+/* ─── Lightbox view ─────────────────────────────────────────────────────────── */
+.lightbox-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lightbox-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  position: relative;
+  overflow: hidden;
+}
+
+.lightbox-main img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.lightbox-nav.prev { left: 8px; }
+.lightbox-nav.next { right: 8px; }
+.lightbox-nav svg { width: 18px; height: 18px; }
+
+.lightbox-thumbs {
+  flex-shrink: 0;
+  height: 90px;
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  overflow-x: auto;
+  background: var(--editor-surface-color, #fbfbfb);
+  border-top: 1px solid var(--editor-border-color, #e4e0db);
+}
+
+.lightbox-thumb {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  flex-shrink: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.lightbox-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lightbox-thumb.focused {
+  outline: 3px solid var(--editor-primary-color, #ffc700);
+  outline-offset: -3px;
+}
+
+.lightbox-thumb.selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--editor-primary-color, #ffc700) 35%, transparent);
+}
+
+.lightbox-thumb-check {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  z-index: 1;
+}
+
+.lightbox-thumb.selected .lightbox-thumb-check {
+  background: var(--editor-primary-color, #ffc700);
+  border-color: var(--editor-primary-color, #ffc700);
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  color: var(--editor-muted-text-color, #888);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px;
+}
+
+.empty-state svg {
+  width: 40px;
+  height: 40px;
+  opacity: 0.4;
+}
+
+/* ─── Details panel ──────────────────────────────────────────────────────────── */
+.details-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.details-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.details-preview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: var(--editor-hover-surface, rgba(0, 0, 0, 0.04));
+  display: block;
+  margin-bottom: 14px;
+}
+
+.details-preview-empty {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--editor-hover-surface, rgba(0, 0, 0, 0.04));
+  color: var(--editor-muted-text-color, #888);
+  margin-bottom: 14px;
+}
+
+.details-preview-empty svg {
+  width: 32px;
+  height: 32px;
+  opacity: 0.4;
+}
+
+.detail-row {
+  margin-bottom: 10px;
+}
+
+.detail-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--editor-muted-text-color, #888);
+  margin-bottom: 3px;
+}
+
+.detail-value {
+  font-size: 12px;
+  color: var(--editor-text-color, #000);
+  word-break: break-all;
+}
+
+.detail-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.detail-filename-row input {
+  flex: 1;
+  font-size: 12px;
+  border: 1px solid var(--editor-primary-color, #ffc700);
+  background: var(--editor-surface-color, #fff);
+  color: var(--editor-text-color, #000);
+  padding: 2px 5px;
+  outline: none;
+  min-width: 0;
+}
+
+.detail-edit-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--editor-muted-text-color, #888);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.detail-edit-btn:hover {
+  color: var(--editor-text-color, #000);
+}
+
+.detail-edit-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.detail-description {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 56px;
+  font-size: 12px;
+  border: 1px solid var(--editor-border-color, #e4e0db);
+  background: var(--editor-surface-color, #fff);
+  color: var(--editor-text-color, #000);
+  padding: 5px 7px;
+  font-family: inherit;
+  outline: none;
+}
+
+.detail-description:focus {
+  border-color: var(--editor-primary-color, #ffc700);
+}
+
+.detail-delete-btn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--editor-text-danger, #d73c3c);
+  background: transparent;
+  color: var(--editor-text-danger, #d73c3c);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.detail-delete-btn:hover {
+  background: var(--editor-text-danger, #d73c3c);
+  color: white;
+}
+
+.detail-delete-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────────────── */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--editor-border-color, #e4e0db);
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--editor-muted-text-color, #888);
+  font-size: 12px;
+}
+
+.footer-right {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Shared button styles ─────────────────────────────────────────────────── */
+.btn {
+  padding: 7px 16px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--editor-border-color, #e4e0db);
+  color: var(--editor-text-color, #000);
+}
+
+.btn-ghost:hover {
+  background: var(--editor-hover-surface, rgba(0, 0, 0, 0.05));
+}
+
+.btn-primary {
+  background: var(--editor-primary-color, #ffc700);
+  color: var(--editor-text-color, #000);
+  border-color: var(--editor-primary-color, #ffc700);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--editor-primary-color, #ffc700) 85%, #000);
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Upload progress ───────────────────────────────────────────────────────── */
+.upload-progress {
+  font-size: 12px;
+  color: var(--editor-muted-text-color, #888);
+}
+
+/* ─── Confirmation dialog ───────────────────────────────────────────────────── */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-dialog {
+  background: var(--editor-surface-color, #fbfbfb);
+  padding: 24px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.confirm-dialog p {
+  font-size: 13px;
+  color: var(--editor-muted-text-color, #888);
+  margin: 0 0 20px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

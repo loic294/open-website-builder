@@ -219,6 +219,24 @@
   color: #b42318;
 }
 
+.owb-browse-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid var(--editor-border-color, #e4e0db);
+  color: var(--editor-text-color, #000);
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.owb-browse-btn:hover {
+  background: var(--editor-hover-surface, rgba(0, 0, 0, 0.05));
+}
+
 .settings-node-order {
   display: grid;
   gap: 6px;

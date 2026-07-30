@@ -17,7 +17,7 @@ function sendError(response, statusCode, message) {
   response.end(message);
 }
 
-export function createImagesMiddleware({ contentRoot }) {
+export function createImagesMiddleware({ contentRoot, r2 = null }) {
   const imagesRoot = resolve(contentRoot, "images");
   const allowedPrefix = `${imagesRoot}${sep}`;
 
@@ -78,6 +78,28 @@ export function createImagesMiddleware({ contentRoot }) {
         "code" in error &&
         error.code === "ENOENT"
       ) {
+        // Local file not found — try R2 if configured
+        if (r2) {
+          try {
+            const r2Key = `images/${relativeImagePath}`;
+            const r2Response = await r2.getObject(r2Key);
+            if (r2Response.ok) {
+              const contentType =
+                r2Response.headers.get("content-type") ||
+                imageMimeTypes[extname(relativeImagePath).toLowerCase()] ||
+                "application/octet-stream";
+              const buf = Buffer.from(await r2Response.arrayBuffer());
+              response.statusCode = 200;
+              response.setHeader("Content-Type", contentType);
+              response.setHeader("Content-Length", String(buf.length));
+              if (method === "HEAD") { response.end(); return; }
+              response.end(buf);
+              return;
+            }
+          } catch {
+            // fall through to 404
+          }
+        }
         sendError(response, 404, "Image not found");
         return;
       }

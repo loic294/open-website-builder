@@ -1,10 +1,14 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFile, stat } from "node:fs/promises";
 import { createJsonDataResolvers } from "./server/data/json-data-resolvers.js";
 import { createDataApiMiddleware } from "./server/data/data-api-middleware.js";
 import { createImagesMiddleware } from "./server/data/images-middleware.js";
+import { createFilesApiMiddleware } from "./server/files/files-api-middleware.js";
+import { createR2Client } from "./server/files/r2-client.js";
+import { createMetadataStore } from "./server/files/metadata-store.js";
+import { createFoldersStore } from "./server/files/folders-store.js";
 import { publishSite } from "./server/publish/publish-site.js";
 import {
   importSquarespaceXml,
@@ -101,7 +105,21 @@ function createPublishedPreviewMiddleware({ publishedDir }) {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, __dirname, "");
+
+  const r2Config = {
+    accountId: env.CLOUDFLARE_ACCOUNT_ID || "",
+    bucketName: env.CLOUDFLARE_R2_BUCKET_NAME || "",
+    accessKeyId: env.CLOUDFLARE_R2_ACCESS_KEY_ID || "",
+    secretAccessKey: env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || "",
+  };
+
+  const r2 = r2Config.accountId ? createR2Client(r2Config) : null;
+  const metadataStore = createMetadataStore({ contentRoot });
+  const foldersStore = createFoldersStore({ contentRoot });
+
+  return {
   plugins: [
     {
       name: "component-styles",
@@ -146,7 +164,8 @@ export default defineConfig({
     {
       name: "data-api",
       configureServer(server) {
-        server.middlewares.use(createImagesMiddleware({ contentRoot }));
+        server.middlewares.use(createImagesMiddleware({ contentRoot, r2 }));
+        server.middlewares.use(createFilesApiMiddleware({ r2, metadataStore, foldersStore }));
         const jsonResolvers = createJsonDataResolvers({ contentRoot });
         const resolvers = {
           ...jsonResolvers,
@@ -228,4 +247,5 @@ export default defineConfig({
       ],
     },
   },
+  };
 });

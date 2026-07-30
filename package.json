@@ -27,10 +27,13 @@
     "@tiptap/pm": "^3.23.5",
     "@tiptap/starter-kit": "^3.23.5",
     "altcha": "^3.0.10",
+    "aws4": "^1.13.2",
+    "busboy": "^1.6.0",
     "cheerio": "^1.0.0-rc.12",
     "fast-xml-parser": "^5.8.0",
     "lit": "^3.1.0",
     "lucide": "^1.16.0",
+    "sharp": "^0.35.3",
     "simple-icons": "^16.20.0"
   },
   "devDependencies": {

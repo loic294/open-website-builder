@@ -1,5 +1,6 @@
 import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { FileManager } from "../../../editor/components/layout/file-manager/file-manager.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbImage, getImageMode } from "./image.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
@@ -70,6 +71,18 @@ const imageEditorPlugin = {
                   imageEditorPlugin._updateImageUrl(element, e.detail.value);
                 }}
               ></editor-text-input>
+              <button
+                type="button"
+                class="owb-browse-btn"
+                @click=${() =>
+                  FileManager.open({
+                    mode: "single",
+                    selected: element.url ? [element.url] : [],
+                    onSelect: ([path]) => {
+                      imageEditorPlugin._updateImageUrl(element, path || "");
+                    },
+                  })}
+              >Browse Files…</button>
 
               <editor-radio-button
                 .options=${[

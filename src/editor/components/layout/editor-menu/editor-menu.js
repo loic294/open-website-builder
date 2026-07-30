@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Database,
   Files,
+  FolderOpen,
   GripVertical,
   PanelLeftClose,
   PanelLeftOpen,
@@ -13,6 +14,7 @@ import {
   createElement,
 } from "lucide";
 import { dataLayer } from "../../../data/data-layer.js";
+import { FileManager } from "../file-manager/file-manager.js";
 import styles from "./styles.css?inline";
 
 const MENU_COLLAPSED_STORAGE_KEY = "editor-menu-collapsed";
@@ -1230,6 +1232,15 @@ class EditorMenu extends LitElement {
           `}
 
       <div class="sidebar-footer">
+        <button
+          class="settings-button"
+          type="button"
+          title="File Manager"
+          @click=${() => FileManager.open({ mode: "multi", onSelect: () => {} })}
+        >
+          ${createElement(FolderOpen)}
+          <span class="settings-label">File Manager</span>
+        </button>
         <button
           class="settings-button"
           type="button"

@@ -1,4 +1,5 @@
 import { EditorComponent } from "./editor/components/layout/editor-component/editor-component.js";
+import { FileManager } from "./editor/components/layout/file-manager/file-manager.js";
 import "./website/components/button/button.editor.js";
 import "./website/components/text/text.editor.js";
 import "./website/components/image/image.editor.js";
@@ -29,3 +30,7 @@ import "./editor/components/ui/settings-section/settings-section.js";
 const editorRoot = document.createElement("editor-root");
 document.body.appendChild(editorRoot);
 EditorComponent.instance = editorRoot;
+
+const fileManagerRoot = document.createElement("file-manager-root");
+document.body.appendChild(fileManagerRoot);
+FileManager.instance = fileManagerRoot;
