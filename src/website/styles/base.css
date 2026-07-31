@@ -26,6 +26,10 @@ body {
   line-height: 1.2;
 }
 
+.owb-loading .website {
+  visibility: hidden;
+}
+
 .website h1,
 .website h2,
 .website h3,

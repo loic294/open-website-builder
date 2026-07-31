@@ -27,6 +27,61 @@ import { OwbInput } from "./website/components/input/input.js";
 import { OwbCheckbox } from "./website/components/checkbox/checkbox.js";
 import { OwbCaptcha } from "./website/components/captcha/captcha.js";
 
+function waitForDocument() {
+  if (document.readyState !== "loading") return Promise.resolve();
+
+  return new Promise((resolve) => {
+    document.addEventListener("DOMContentLoaded", resolve, { once: true });
+  });
+}
+
+function getPublishedComponentHosts() {
+  return [...document.querySelectorAll("*")].filter((element) =>
+    element.localName.startsWith("owb-"),
+  );
+}
+
+function waitForStylesheet(link) {
+  if (link.sheet) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    const timeout = window.setTimeout(resolve, 2500);
+    const finish = () => {
+      window.clearTimeout(timeout);
+      resolve();
+    };
+    link.addEventListener("load", finish, { once: true });
+    link.addEventListener("error", finish, { once: true });
+  });
+}
+
+async function revealPublishedPage() {
+  await waitForDocument();
+
+  const hosts = getPublishedComponentHosts();
+  await Promise.allSettled(
+    hosts.map((host) => host.updateComplete || Promise.resolve()),
+  );
+
+  const styleLinks = hosts.flatMap((host) =>
+    host.shadowRoot
+      ? [...host.shadowRoot.querySelectorAll('link[rel="stylesheet"]')]
+      : [],
+  );
+  await Promise.allSettled(styleLinks.map(waitForStylesheet));
+
+  if (document.fonts?.ready) {
+    await Promise.race([
+      document.fonts.ready,
+      new Promise((resolve) => window.setTimeout(resolve, 2500)),
+    ]);
+  }
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  window.clearTimeout(window.__owbRevealTimeout);
+  document.documentElement.classList.remove("owb-loading");
+}
+
 if (!customElements.get("owb-button")) {
   customElements.define("owb-button", OwbButton);
 }
@@ -90,3 +145,5 @@ if (!customElements.get("owb-checkbox")) {
 if (!customElements.get("owb-captcha")) {
   customElements.define("owb-captcha", OwbCaptcha);
 }
+
+revealPublishedPage();

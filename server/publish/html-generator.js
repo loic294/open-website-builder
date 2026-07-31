@@ -1,6 +1,6 @@
 import "@lit-labs/ssr/lib/install-global-dom-shim.js";
 
-import { publishRenderers } from "./publish-renderers.js";
+const { publishRenderers } = await import("./publish-renderers.js");
 
 async function renderNode(node, context) {
   if (!node || typeof node !== "object") return "";
@@ -91,10 +91,16 @@ function buildPageHtml({ pageConfig = {}, bodyHtml, siteConfig = {} }) {
   const analyticsScript = String(siteConfig?.analyticsScript || "").trim();
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="owb-loading">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      window.__owbRevealTimeout = window.setTimeout(function () {
+        document.documentElement.classList.remove("owb-loading");
+      }, 4000);
+    </script>
+    <noscript><style>.owb-loading .website { visibility: visible; }</style></noscript>
     <link rel="icon" type="image/x-icon" href="/images/favicon.png" />
     <title>${safeTitle}</title>
     ${description ? `<meta name="description" content="${escapeHtml(description)}" />` : ""}
@@ -104,6 +110,7 @@ function buildPageHtml({ pageConfig = {}, bodyHtml, siteConfig = {} }) {
     <link rel="stylesheet" href="https://use.typekit.net/fsb3crk.css" />
     <link rel="stylesheet" href="./theme.css" />
     <link rel="stylesheet" href="./base.css" />
+    <link rel="modulepreload" href="./published.js" />
     <script type="module" src="./published.js"></script>
   </head>
   <body>

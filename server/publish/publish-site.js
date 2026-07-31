@@ -50,6 +50,7 @@ function useAbsolutePublishAssetPaths(html) {
   return String(html || "")
     .replace(/href="\.\/theme\.css"/g, 'href="/theme.css"')
     .replace(/href="\.\/base\.css"/g, 'href="/base.css"')
+    .replace(/href="\.\/published\.js"/g, 'href="/published.js"')
     .replace(/src="\.\/published\.js"/g, 'src="/published.js"');
 }
 
