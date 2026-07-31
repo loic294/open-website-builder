@@ -42,6 +42,8 @@ class WebsiteEditor extends LitElement {
     currentSelection: { state: true },
     identityDraft: { state: true },
     sharedIdentityDraft: { state: true },
+    collectionMetadataFieldOptions: { state: true },
+    collectionMetadataFields: { state: true },
   };
 
   static styles = [
@@ -62,6 +64,7 @@ class WebsiteEditor extends LitElement {
     this.currentSelection = { type: "page", pageId: "index" };
     this.identityDraft = "index";
     this.collectionMetadataFieldOptions = [];
+    this.collectionMetadataFields = {};
     this.sharedIdentityDraft = {
       id: "",
       title: "",
@@ -84,25 +87,43 @@ class WebsiteEditor extends LitElement {
 
         if (valueType === "array") {
           acc[normalizedName] = {
+            ...(fieldConfig && typeof fieldConfig === "object"
+              ? fieldConfig
+              : {}),
             type: "array",
-            items: { type: "string" },
+            items: fieldConfig?.items || { type: "string" },
             ...(isRequired ? { required: true } : {}),
           };
+          if (!isRequired) {
+            delete acc[normalizedName].required;
+          }
           return acc;
         }
 
         if (valueType === "object") {
           acc[normalizedName] = {
+            ...(fieldConfig && typeof fieldConfig === "object"
+              ? fieldConfig
+              : {}),
             type: "object",
             ...(isRequired ? { required: true } : {}),
           };
+          if (!isRequired) {
+            delete acc[normalizedName].required;
+          }
           return acc;
         }
 
         acc[normalizedName] = {
+          ...(fieldConfig && typeof fieldConfig === "object"
+            ? fieldConfig
+            : {}),
           type: "string",
           ...(isRequired ? { required: true } : {}),
         };
+        if (!isRequired) {
+          delete acc[normalizedName].required;
+        }
         return acc;
       },
       {},
@@ -114,12 +135,41 @@ class WebsiteEditor extends LitElement {
           .filter(Boolean)
       : [];
 
+    const metadataFields = Object.entries(config?.metadataFields || {}).reduce(
+      (acc, [fieldName, fieldConfig]) => {
+        const normalizedName = this.normalizeMetadataPath(fieldName);
+        if (!normalizedName) {
+          return acc;
+        }
+
+        const type = ["number", "image"].includes(fieldConfig?.type)
+          ? fieldConfig.type
+          : "string";
+        acc[normalizedName] = {
+          ...(fieldConfig && typeof fieldConfig === "object"
+            ? fieldConfig
+            : {}),
+          type,
+          ...(fieldConfig?.required ? { required: true } : {}),
+        };
+        if (!fieldConfig?.required) {
+          delete acc[normalizedName].required;
+        }
+        return acc;
+      },
+      {},
+    );
+
+    const { type: _type, url: _url, ...persistedConfig } = config || {};
+
     const nextConfig = {
+      ...persistedConfig,
       id: String(
         config?.id || this.currentSelection?.collectionId || "",
       ).trim(),
       title: String(config?.title || "Collection").trim() || "Collection",
       fields: fieldsEntries,
+      metadataFields,
       content: Array.isArray(config?.content) ? config.content : [],
       collectionMetadataAllowlist: [...new Set(allowlist)],
     };
@@ -239,6 +289,7 @@ class WebsiteEditor extends LitElement {
   async loadSelectionFromRoute() {
     const selection = this.getRouteSelection();
     this.currentSelection = selection;
+    this.collectionMetadataFields = {};
     this.identityDraft =
       selection.type === "collection-config"
         ? selection.collectionId
@@ -270,10 +321,18 @@ class WebsiteEditor extends LitElement {
       }
 
       if (selection.type === "collection") {
-        const item = await dataLayer.getCollectionItemContent(
-          selection.collectionId,
-          selection.itemId,
-        );
+        const [item, collectionConfig] = await Promise.all([
+          dataLayer.getCollectionItemContent(
+            selection.collectionId,
+            selection.itemId,
+          ),
+          dataLayer.getCollectionConfig(selection.collectionId),
+        ]);
+        this.collectionMetadataFields =
+          collectionConfig?.metadataFields &&
+          typeof collectionConfig.metadataFields === "object"
+            ? collectionConfig.metadataFields
+            : {};
 
         this.pageConfig = {
           ...item,
@@ -515,6 +574,14 @@ class WebsiteEditor extends LitElement {
       .replace(/[^a-zA-Z0-9_-]/g, "_");
   }
 
+  normalizeMetadataPath(value) {
+    return String(value || "")
+      .split(".")
+      .map((segment) => this.normalizeKeySegment(segment))
+      .filter(Boolean)
+      .join(".");
+  }
+
   flattenObjectFields(value, prefix = "") {
     if (!value || typeof value !== "object") {
       return [];
@@ -539,7 +606,11 @@ class WebsiteEditor extends LitElement {
         continue;
       }
 
-      entries.push({ path, type: "string", value: nested });
+      entries.push({
+        path,
+        type: typeof nested === "number" ? "number" : "string",
+        value: nested,
+      });
     }
 
     return entries;
@@ -583,6 +654,207 @@ class WebsiteEditor extends LitElement {
     }
 
     current[segments[segments.length - 1]] = value;
+  }
+
+  deleteValueByPath(obj, path) {
+    const segments = String(path || "")
+      .split(".")
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    if (!segments.length) {
+      return;
+    }
+
+    const parents = [];
+    let current = obj;
+    for (let index = 0; index < segments.length - 1; index += 1) {
+      const segment = segments[index];
+      if (!current?.[segment] || typeof current[segment] !== "object") {
+        return;
+      }
+      parents.push([current, segment]);
+      current = current[segment];
+    }
+
+    delete current[segments[segments.length - 1]];
+    for (let index = parents.length - 1; index >= 0; index -= 1) {
+      const [parent, segment] = parents[index];
+      if (Object.keys(parent[segment] || {}).length > 0) {
+        break;
+      }
+      delete parent[segment];
+    }
+  }
+
+  coerceMetadataValue(rawValue, fieldType) {
+    if (fieldType === "number") {
+      if (String(rawValue ?? "").trim() === "") {
+        return null;
+      }
+      const value = Number(rawValue);
+      return Number.isFinite(value) ? value : null;
+    }
+    if (fieldType === "array") {
+      return String(rawValue || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return String(rawValue || "");
+  }
+
+  async persistCurrentMetadata(nextMetadata) {
+    const previousConfig = this.pageConfig;
+    const nextConfig = { ...this.pageConfig, metadata: nextMetadata };
+    this.pageConfig = nextConfig;
+
+    try {
+      if (this.currentSelection?.type === "collection") {
+        await dataLayer.updateCollectionItem(
+          this.currentSelection.collectionId,
+          this.currentSelection.itemId,
+          nextConfig,
+        );
+      } else if (this.currentSelection?.type === "page") {
+        await dataLayer.savePageConfig(
+          this.currentSelection?.pageId || "index",
+          nextConfig,
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      this.pageConfig = previousConfig;
+      window.alert(
+        error instanceof Error ? error.message : "Failed to save metadata",
+      );
+    }
+  }
+
+  async addGeneralMetadataField() {
+    const requestedPath = window.prompt("Metadata field name:");
+    if (!requestedPath) {
+      return;
+    }
+    const path = this.normalizeMetadataPath(requestedPath);
+    if (!path) {
+      window.alert("Enter a valid metadata field name.");
+      return;
+    }
+
+    if (
+      this.currentSelection?.type === "collection" &&
+      Object.prototype.hasOwnProperty.call(
+        this.collectionMetadataFields || {},
+        path,
+      )
+    ) {
+      window.alert(`Field is configured as collection metadata: ${path}`);
+      return;
+    }
+
+    const metadata = structuredClone(this.pageConfig?.metadata || {});
+    if (this.getValueByPath(metadata, path) !== undefined) {
+      window.alert(`Metadata field already exists: ${path}`);
+      return;
+    }
+    this.setValueByPath(metadata, path, "");
+    await this.persistCurrentMetadata(metadata);
+  }
+
+  async removeGeneralMetadataField(path) {
+    if (!window.confirm(`Remove metadata field "${path}"?`)) {
+      return;
+    }
+    const metadata = structuredClone(this.pageConfig?.metadata || {});
+    this.deleteValueByPath(metadata, path);
+    await this.persistCurrentMetadata(metadata);
+  }
+
+  getCollectionMetadataFieldDefinitions(config = this.pageConfig) {
+    return Object.entries(config?.metadataFields || {}).map(
+      ([name, fieldConfig]) => ({
+        name,
+        type: ["number", "image"].includes(fieldConfig?.type)
+          ? fieldConfig.type
+          : "string",
+        required: Boolean(fieldConfig?.required),
+      }),
+    );
+  }
+
+  async addCollectionMetadataField() {
+    const requestedName = window.prompt("Collection metadata field name:");
+    if (!requestedName) {
+      return;
+    }
+    const name = this.normalizeMetadataPath(requestedName);
+    const metadataFields = { ...(this.pageConfig?.metadataFields || {}) };
+    if (!name || metadataFields[name]) {
+      window.alert(
+        name ? `Metadata field already exists: ${name}` : "Invalid field name.",
+      );
+      return;
+    }
+    await this.applyCollectionConfigUpdate({
+      metadataFields: {
+        ...metadataFields,
+        [name]: { type: "string" },
+      },
+    });
+  }
+
+  async updateCollectionMetadataFieldName(previousName, nextName) {
+    const name = this.normalizeMetadataPath(nextName);
+    const metadataFields = { ...(this.pageConfig?.metadataFields || {}) };
+    if (
+      !name ||
+      name === previousName ||
+      !metadataFields[previousName] ||
+      metadataFields[name]
+    ) {
+      return;
+    }
+    metadataFields[name] = metadataFields[previousName];
+    delete metadataFields[previousName];
+    const allowlist = Array.isArray(
+      this.pageConfig?.collectionMetadataAllowlist,
+    )
+      ? this.pageConfig.collectionMetadataAllowlist.map((fieldPath) =>
+          fieldPath === previousName ? name : fieldPath,
+        )
+      : [];
+    await this.applyCollectionConfigUpdate({
+      metadataFields,
+      collectionMetadataAllowlist: [...new Set(allowlist)],
+    });
+  }
+
+  async updateCollectionMetadataField(fieldName, patch) {
+    const metadataFields = { ...(this.pageConfig?.metadataFields || {}) };
+    if (!metadataFields[fieldName]) {
+      return;
+    }
+    metadataFields[fieldName] = { ...metadataFields[fieldName], ...patch };
+    await this.applyCollectionConfigUpdate({ metadataFields });
+  }
+
+  async removeCollectionMetadataField(fieldName) {
+    if (!window.confirm(`Remove collection metadata field "${fieldName}"?`)) {
+      return;
+    }
+    const metadataFields = { ...(this.pageConfig?.metadataFields || {}) };
+    delete metadataFields[fieldName];
+    const collectionMetadataAllowlist = Array.isArray(
+      this.pageConfig?.collectionMetadataAllowlist,
+    )
+      ? this.pageConfig.collectionMetadataAllowlist.filter(
+          (fieldPath) => fieldPath !== fieldName,
+        )
+      : [];
+    await this.applyCollectionConfigUpdate({
+      metadataFields,
+      collectionMetadataAllowlist,
+    });
   }
 
   async loadCollectionMetadataFieldOptions(collectionId) {
@@ -785,32 +1057,12 @@ class WebsiteEditor extends LitElement {
         : {}),
     };
 
-    const nextValue =
-      fieldType === "array"
-        ? String(rawValue || "")
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean)
-        : String(rawValue || "");
-
-    this.setValueByPath(nextMetadata, path, nextValue);
-
-    const nextConfig = {
-      ...this.pageConfig,
-      metadata: nextMetadata,
-    };
-
-    this.pageConfig = nextConfig;
-
-    try {
-      await dataLayer.updateCollectionItem(
-        this.currentSelection.collectionId,
-        this.currentSelection.itemId,
-        nextConfig,
-      );
-    } catch (error) {
-      console.error(error);
-    }
+    this.setValueByPath(
+      nextMetadata,
+      path,
+      this.coerceMetadataValue(rawValue, fieldType),
+    );
+    await this.persistCurrentMetadata(nextMetadata);
   }
 
   getPageMetadataFields() {
@@ -978,6 +1230,131 @@ class WebsiteEditor extends LitElement {
     `;
   }
 
+  renderMetadataInput(field, updateField) {
+    const value = field.value ?? "";
+    if (field.type === "image") {
+      const imagePath = String(value || "");
+      return html`
+        <div class="metadata-control-stack">
+          <div class="image-picker-row">
+            <input
+              type="text"
+              class="input input-sm w-full"
+              .value=${imagePath}
+              @change=${(event) => updateField(event.target.value)}
+            />
+            <button
+              type="button"
+              class="btn btn-sm"
+              @click=${() =>
+                FileManager.open({
+                  mode: "single",
+                  selected: imagePath ? [imagePath] : [],
+                  onSelect: ([path]) => updateField(path || ""),
+                })}
+            >
+              Select
+            </button>
+          </div>
+          ${imagePath
+            ? html`<img
+                class="metadata-image-preview"
+                src=${imagePath}
+                alt=""
+              />`
+            : html``}
+        </div>
+      `;
+    }
+
+    return html`
+      <input
+        type=${field.type === "number" ? "number" : "text"}
+        class="input input-sm w-full"
+        .value=${Array.isArray(value) ? value.join(", ") : String(value ?? "")}
+        @change=${(event) => updateField(event.target.value)}
+      />
+    `;
+  }
+
+  renderGeneralMetadataCard(title, fields, updateField) {
+    return html`
+      <div class="card card-border card-sm bg-base-100 settings-card">
+        <div class="settings-section-header">
+          <h3>${title}</h3>
+          <button
+            type="button"
+            class="btn btn-sm"
+            @click=${() => this.addGeneralMetadataField()}
+          >
+            Add field
+          </button>
+        </div>
+        ${fields.length === 0
+          ? html`<p class="settings-empty">No metadata fields available.</p>`
+          : fields.map(
+              (field) => html`
+                <div class="metadata-value-row">
+                  <label class="settings-label">${field.path}</label>
+                  ${this.renderMetadataInput(field, (value) =>
+                    updateField(field.path, value, field.type),
+                  )}
+                  <button
+                    type="button"
+                    class="btn btn-error btn-sm btn-outline metadata-remove"
+                    title=${`Remove ${field.path}`}
+                    @click=${() => this.removeGeneralMetadataField(field.path)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              `,
+            )}
+      </div>
+    `;
+  }
+
+  renderConfiguredCollectionMetadataCard() {
+    const definitions = Object.entries(this.collectionMetadataFields || {}).map(
+      ([path, fieldConfig]) => ({
+        path,
+        type: ["number", "image"].includes(fieldConfig?.type)
+          ? fieldConfig.type
+          : "string",
+        required: Boolean(fieldConfig?.required),
+        value: this.getValueByPath(this.pageConfig?.metadata || {}, path),
+      }),
+    );
+
+    return html`
+      <div class="card card-border card-sm bg-base-100 settings-card">
+        <div class="settings-section-header">
+          <h3>Collection metadata</h3>
+        </div>
+        ${definitions.length === 0
+          ? html`<p class="settings-empty">
+              No collection metadata fields configured.
+            </p>`
+          : definitions.map(
+              (field) => html`
+                <div class="field-row field-row-compact">
+                  <label class="settings-label">
+                    ${field.path}${field.required ? " *" : ""}
+                  </label>
+                  ${this.renderMetadataInput(field, (value) =>
+                    this.updateCollectionItemMetadataField(
+                      field.path,
+                      value,
+                      field.type,
+                    ),
+                  )}
+                </div>
+              `,
+            )}
+      </div>
+    `;
+  }
+
   async updatePageBaseField(fieldName, value) {
     if (this.currentSelection?.type !== "page") {
       return;
@@ -1012,31 +1389,12 @@ class WebsiteEditor extends LitElement {
         : {}),
     };
 
-    const nextValue =
-      fieldType === "array"
-        ? String(rawValue || "")
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean)
-        : String(rawValue || "");
-
-    this.setValueByPath(nextMetadata, path, nextValue);
-
-    const nextConfig = {
-      ...this.pageConfig,
-      metadata: nextMetadata,
-    };
-
-    this.pageConfig = nextConfig;
-
-    try {
-      await dataLayer.savePageConfig(
-        this.currentSelection?.pageId || "index",
-        nextConfig,
-      );
-    } catch (error) {
-      console.error(error);
-    }
+    this.setValueByPath(
+      nextMetadata,
+      path,
+      this.coerceMetadataValue(rawValue, fieldType),
+    );
+    await this.persistCurrentMetadata(nextMetadata);
   }
 
   async saveCurrentIdentity() {
@@ -1212,34 +1570,12 @@ class WebsiteEditor extends LitElement {
         </div>
 
         ${this.renderSeoSettings()}
-
-        <div class="card card-border card-sm bg-base-100 settings-card">
-          <div class="settings-section-header">
-            <h3>Metadata fields</h3>
-          </div>
-          ${metadataFields.length === 0
-            ? html`<p class="settings-empty">No metadata fields available.</p>`
-            : html`${metadataFields.map(
-                (field) => html`
-                  <div class="field-row field-row-compact">
-                    <label class="settings-label">${field.path}</label>
-                    <input
-                      type="text"
-                      class="input input-sm w-full"
-                      .value=${Array.isArray(field.value)
-                        ? field.value.join(", ")
-                        : String(field.value ?? "")}
-                      @change=${(event) =>
-                        this.updatePageMetadataField(
-                          field.path,
-                          event.target.value,
-                          field.type,
-                        )}
-                    />
-                  </div>
-                `,
-              )}`}
-        </div>
+        ${this.renderGeneralMetadataCard(
+          "Metadata fields",
+          metadataFields,
+          (path, value, type) =>
+            this.updatePageMetadataField(path, value, type),
+        )}
 
         <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
@@ -1259,12 +1595,18 @@ class WebsiteEditor extends LitElement {
 
   renderCollectionConfigSettings() {
     const fields = this.getCollectionConfigFields();
+    const metadataFields = this.getCollectionMetadataFieldDefinitions();
     const selectedAllowlist = Array.isArray(
       this.pageConfig?.collectionMetadataAllowlist,
     )
       ? this.pageConfig.collectionMetadataAllowlist
       : [];
-    const metadataFieldOptions = this.collectionMetadataFieldOptions;
+    const metadataFieldOptions = [
+      ...new Set([
+        ...Object.keys(this.pageConfig?.metadataFields || {}),
+        ...this.collectionMetadataFieldOptions,
+      ]),
+    ].sort((a, b) => a.localeCompare(b));
 
     return html`
       <div class="settings-stack">
@@ -1273,6 +1615,72 @@ class WebsiteEditor extends LitElement {
             <h3>Collection</h3>
           </div>
           ${this.renderIdentitySetting()}
+        </div>
+
+        <div class="card card-border card-sm bg-base-100 settings-card">
+          <div class="settings-section-header">
+            <h3>Metadata fields</h3>
+            <button
+              type="button"
+              class="btn btn-sm"
+              @click=${() => this.addCollectionMetadataField()}
+            >
+              Add field
+            </button>
+          </div>
+
+          ${metadataFields.length === 0
+            ? html`<p class="settings-empty">
+                No collection metadata fields configured.
+              </p>`
+            : metadataFields.map(
+                (field) => html`
+                  <div class="field-row metadata-definition-row">
+                    <input
+                      type="text"
+                      class="input input-sm w-full"
+                      .value=${field.name}
+                      @change=${(event) =>
+                        this.updateCollectionMetadataFieldName(
+                          field.name,
+                          event.target.value,
+                        )}
+                    />
+                    <select
+                      class="select select-sm w-full"
+                      .value=${field.type}
+                      @change=${(event) =>
+                        this.updateCollectionMetadataField(field.name, {
+                          type: event.target.value,
+                        })}
+                    >
+                      <option value="string">Text</option>
+                      <option value="number">Number</option>
+                      <option value="image">Image</option>
+                    </select>
+                    <label class="settings-checkbox-label">
+                      <input
+                        type="checkbox"
+                        class="checkbox checkbox-sm"
+                        .checked=${field.required}
+                        @change=${(event) =>
+                          this.updateCollectionMetadataField(field.name, {
+                            required: event.target.checked,
+                          })}
+                      />
+                      Required
+                    </label>
+                    <button
+                      type="button"
+                      class="btn btn-error btn-sm btn-outline"
+                      @click=${() =>
+                        this.removeCollectionMetadataField(field.name)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                `,
+              )}
         </div>
 
         <div class="card card-border card-sm bg-base-100 settings-card">
@@ -1390,7 +1798,12 @@ class WebsiteEditor extends LitElement {
   }
 
   renderCollectionItemSettings() {
-    const metadataFields = this.getCollectionItemMetadataFields();
+    const configuredPaths = new Set(
+      Object.keys(this.collectionMetadataFields || {}),
+    );
+    const metadataFields = this.getCollectionItemMetadataFields().filter(
+      (field) => !configuredPaths.has(field.path),
+    );
     const tagsValue = Array.isArray(this.pageConfig?.tags)
       ? this.pageConfig.tags.join(", ")
       : "";
@@ -1460,34 +1873,13 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
         </div>
 
         ${this.renderSeoSettings()}
-
-        <div class="card card-border card-sm bg-base-100 settings-card">
-          <div class="settings-section-header">
-            <h3>Metadata fields</h3>
-          </div>
-          ${metadataFields.length === 0
-            ? html`<p class="settings-empty">No metadata fields available.</p>`
-            : html`${metadataFields.map(
-                (field) => html`
-                  <div class="field-row field-row-compact">
-                    <label class="settings-label">${field.path}</label>
-                    <input
-                      type="text"
-                      class="input input-sm w-full"
-                      .value=${Array.isArray(field.value)
-                        ? field.value.join(", ")
-                        : String(field.value ?? "")}
-                      @change=${(event) =>
-                        this.updateCollectionItemMetadataField(
-                          field.path,
-                          event.target.value,
-                          field.type,
-                        )}
-                    />
-                  </div>
-                `,
-              )}`}
-        </div>
+        ${this.renderConfiguredCollectionMetadataCard()}
+        ${this.renderGeneralMetadataCard(
+          "Other metadata",
+          metadataFields,
+          (path, value, type) =>
+            this.updateCollectionItemMetadataField(path, value, type),
+        )}
 
         <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">

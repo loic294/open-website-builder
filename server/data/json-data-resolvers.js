@@ -292,6 +292,7 @@ export function createJsonDataResolvers({ contentRoot }) {
         metadata: { type: "object", required: false },
         seo: { type: "object", required: false },
       },
+      metadataFields: {},
       content: getDefaultCollectionTemplate(),
       collectionMetadataAllowlist: [],
     };

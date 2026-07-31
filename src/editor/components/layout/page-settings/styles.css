@@ -99,6 +99,46 @@
   object-fit: cover;
 }
 
+.metadata-value-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+  padding-block: 0.5rem;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.metadata-value-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.metadata-value-row .settings-label {
+  grid-column: 1 / -1;
+}
+
+.metadata-control-stack {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.metadata-remove {
+  align-self: start;
+}
+
+.metadata-image-preview {
+  width: 100%;
+  max-height: 10rem;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  object-fit: cover;
+}
+
+.metadata-definition-row {
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.75fr);
+}
+
 .settings-empty {
   padding: 1rem;
 }

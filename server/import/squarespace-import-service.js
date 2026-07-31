@@ -750,6 +750,7 @@ async function ensureCollectionConfig(contentRoot, collectionId) {
       excerpt: { type: "string", required: false },
       tags: { type: "array", required: false },
     },
+    metadataFields: {},
   };
 
   await writeFile(configPath, toJsonString(config));
