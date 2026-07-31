@@ -121,10 +121,7 @@ export class OwbGallery extends LitElement {
     const cols = Math.max(1, Number.parseInt(settings.galleryColumns, 10) || 3);
     const format = String(settings.galleryFormat || "1 / 1");
     const gap = String(settings.galleryGap || "8px");
-    const thumbnailImageSize = getImageSize(
-      settings.galleryImageSize,
-      "thumb",
-    );
+    const thumbnailImageSize = getImageSize(settings.galleryImageSize, "thumb");
     const activeImage =
       this.lightboxIndex >= 0 ? images[this.lightboxIndex] : "";
     const activeHiresImage = getImageUrlForSize(activeImage, "hires");

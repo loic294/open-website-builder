@@ -3,10 +3,7 @@ import { EditorComponent } from "../../../editor/components/layout/editor-compon
 import { FileManager } from "../../../editor/components/layout/file-manager/file-manager.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbGallery, defaultGalleryConfig } from "./gallery.js";
-import {
-  getImageSize,
-  IMAGE_SIZE_OPTIONS,
-} from "../../utils/image-size.js";
+import { getImageSize, IMAGE_SIZE_OPTIONS } from "../../utils/image-size.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 export { defaultGalleryConfig };
@@ -103,7 +100,9 @@ installEditorPlugin(OwbGallery, {
                   selected: element.images,
                   onSelect: (paths) => updateGalleryImages(element, paths),
                 })}
-            >Browse Files…</button>
+            >
+              Browse Files…
+            </button>
             <textarea
               class="gallery-textarea"
               .value=${element.images.join("\n")}
