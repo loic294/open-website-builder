@@ -1,6 +1,12 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
-import { randomUUID } from "node:crypto";
+
+function slugify(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 export function createFoldersStore({ contentRoot }) {
   const foldersFile = resolve(contentRoot, "images/_folders.json");
@@ -26,7 +32,21 @@ export function createFoldersStore({ contentRoot }) {
 
     async createFolder(name) {
       const folders = await read();
-      const id = randomUUID();
+      const base = slugify(name) || name.slice(0, 32);
+      // append counter suffix if slug is already taken
+      let id = base;
+      let n = 2;
+      while (folders.some((f) => f.id === id)) id = `${base}-${n++}`;
+      const folder = { id, name };
+      folders.push(folder);
+      await write(folders);
+      return folder;
+    },
+
+    /** Used by the sync script to import a folder with an id that already exists in R2. */
+    async importFolder(id, name) {
+      const folders = await read();
+      if (folders.some((f) => f.id === id)) return folders.find((f) => f.id === id);
       const folder = { id, name };
       folders.push(folder);
       await write(folders);

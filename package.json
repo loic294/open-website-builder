@@ -8,7 +8,8 @@
     "build:pub": "vite build --config vite.pub.config.js",
     "preview": "vite preview",
     "publish": "npm run build:pub && node ./server/publish/publish-cli.js",
-    "upload": "npx wrangler pages deploy ./dist-publish --project-name=loicbellemarealford --branch main"
+    "upload": "npx wrangler pages deploy ./dist-publish --project-name=loicbellemarealford --branch main",
+    "sync-files": "node ./server/files/sync-from-r2.js"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",
@@ -30,6 +31,7 @@
     "aws4": "^1.13.2",
     "busboy": "^1.6.0",
     "cheerio": "^1.0.0-rc.12",
+    "exifr": "^7.1.3",
     "fast-xml-parser": "^5.8.0",
     "lit": "^3.1.0",
     "lucide": "^1.16.0",

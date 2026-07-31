@@ -279,7 +279,7 @@
 }
 
 .image-tile:hover .image-tile-overlay,
-.image-tile.selected .image-tile-overlay {
+.image-tile.picked .image-tile-overlay {
   opacity: 1;
 }
 
@@ -297,12 +297,12 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.image-tile.selected .image-tile-checkbox {
+.image-tile.picked .image-tile-checkbox {
   background: var(--editor-primary-color, #ffc700);
   border-color: var(--editor-primary-color, #ffc700);
 }
 
-.image-tile.selected .image-tile-checkbox::after {
+.image-tile.picked .image-tile-checkbox::after {
   content: "";
   display: block;
   width: 5px;
@@ -331,7 +331,7 @@
   height: 12px;
 }
 
-.image-tile.selected {
+.image-tile.managed-selected {
   outline: 3px solid var(--editor-primary-color, #ffc700);
   outline-offset: -3px;
 }
@@ -408,12 +408,12 @@
   display: block;
 }
 
-.lightbox-thumb.focused {
+.lightbox-thumb.managed-selected {
   outline: 3px solid var(--editor-primary-color, #ffc700);
   outline-offset: -3px;
 }
 
-.lightbox-thumb.selected::after {
+.lightbox-thumb.picked::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -434,7 +434,7 @@
   z-index: 1;
 }
 
-.lightbox-thumb.selected .lightbox-thumb-check {
+.lightbox-thumb.picked .lightbox-thumb-check {
   background: var(--editor-primary-color, #ffc700);
   border-color: var(--editor-primary-color, #ffc700);
 }
@@ -515,6 +515,50 @@
   font-size: 12px;
   color: var(--editor-text-color, #000);
   word-break: break-all;
+}
+
+.detail-section-title {
+  margin: 18px 0 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--editor-border-color, #e4e0db);
+  color: var(--editor-text-color, #000);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detail-metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.detail-place-fields {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.detail-place-fields label {
+  display: grid;
+  gap: 3px;
+}
+
+.detail-place-fields input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 5px 7px;
+  border: 1px solid var(--editor-border-color, #e4e0db);
+  background: var(--editor-surface-color, #fff);
+  color: var(--editor-text-color, #000);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.detail-place-fields input:focus {
+  border-color: var(--editor-primary-color, #ffc700);
 }
 
 .detail-filename-row {
@@ -710,4 +754,71 @@
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+/* Show controls for the image currently displayed in the details panel. */
+.image-tile.focused .image-tile-overlay {
+  opacity: 1;
+}
+
+/* ─── Batch actions in header ────────────────────────────────────────────────── */
+.batch-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.batch-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--editor-border-color, #e4e0db);
+  margin: 0 4px;
+}
+
+/* ─── Move-to-folder popover ─────────────────────────────────────────────────── */
+.move-popover-wrap {
+  position: relative;
+}
+
+.move-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  background: var(--editor-surface-color, #fbfbfb);
+  border: 1px solid var(--editor-border-color, #e4e0db);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  min-width: 180px;
+  padding: 4px 0;
+}
+
+.move-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--editor-text-color, #000);
+  text-align: left;
+}
+
+.move-popover-item:hover {
+  background: var(--editor-hover-surface, rgba(0, 0, 0, 0.05));
+}
+
+.move-popover-item svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: var(--editor-muted-text-color, #888);
+}
+
+.move-popover-empty {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--editor-muted-text-color, #888);
 }

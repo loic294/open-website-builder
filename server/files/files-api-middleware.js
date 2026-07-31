@@ -162,6 +162,11 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
           width: meta.width,
           height: meta.height,
           format: meta.format,
+          camera: meta.camera,
+          lens: meta.lens,
+          originalLocation: meta.originalLocation,
+          place: meta.place,
+          generatedLocationStripped: meta.generatedLocationStripped,
           description: "",
           uploadedAt: new Date().toISOString(),
         };
@@ -245,12 +250,119 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       }
 
       // -----------------------------------------------------------------------
+      // Override the human-readable photo location
+      // -----------------------------------------------------------------------
+      if (method === "PATCH" && parts[0] === "images" && parts[1] === "place") {
+        const { folderId, basename: bname, city, stateProvince, country } = await readJsonBody(request);
+        if (!folderId || !bname) {
+          sendError(response, 400, "folderId and basename are required");
+          return;
+        }
+        const clean = (value) => typeof value === "string" && value.trim() ? value.trim() : null;
+        const override = {
+          city: clean(city),
+          stateProvince: clean(stateProvince),
+          country: clean(country),
+        };
+        const updated = await metadataStore.updatePlaceOverride(
+          folderId,
+          bname,
+          Object.values(override).some(Boolean) ? override : null,
+        );
+        sendJson(response, 200, updated);
+        return;
+      }
+
+      // -----------------------------------------------------------------------
       // Reprocess existing R2 files
       // -----------------------------------------------------------------------
       if (method === "POST" && parts[0] === "reprocess" && parts.length === 1) {
         const { folderId } = await readJsonBody(request);
         const results = await reprocessFolder(folderId, r2, metadataStore, foldersStore);
         sendJson(response, 200, { reprocessed: results.length, results });
+        return;
+      }
+
+      // -----------------------------------------------------------------------
+      // Move images to another folder
+      // -----------------------------------------------------------------------
+      if (method === "POST" && parts[0] === "images" && parts[1] === "move") {
+        const { images, targetFolderId } = await readJsonBody(request);
+        if (!Array.isArray(images) || !targetFolderId) {
+          sendError(response, 400, "images array and targetFolderId are required");
+          return;
+        }
+        const targetFolder = await foldersStore.getFolder(targetFolderId);
+        const results = [];
+        for (const { folderId, basename: bname } of images) {
+          try {
+            const oldPaths = buildImagePaths(folderId, bname);
+            const newPaths = buildImagePaths(targetFolderId, bname);
+            for (const version of ["original", "thumb", "small", "hires"]) {
+              const getResp = await r2.getObject(oldPaths[version].key);
+              if (getResp.ok) {
+                const buf = Buffer.from(await getResp.arrayBuffer());
+                await r2.putObject(newPaths[version].key, buf, getResp.headers.get("content-type") || "image/jpeg");
+              }
+            }
+            await r2.deleteObjects(Object.values(oldPaths).map((e) => e.key));
+            const existing = await metadataStore.getMetadata(folderId, bname);
+            if (existing) {
+              await metadataStore.saveMetadata(targetFolderId, bname, {
+                ...existing,
+                folderId: targetFolderId,
+                folderName: targetFolder?.name || targetFolderId,
+                filePath: newPaths.original.path,
+                thumbPath: newPaths.thumb.path,
+                smallPath: newPaths.small.path,
+                hiresPath: newPaths.hires.path,
+              });
+              await metadataStore.deleteMetadata(folderId, bname);
+            }
+            results.push({ basename: bname, ok: true });
+          } catch (err) {
+            results.push({ basename: bname, ok: false, error: String(err?.message) });
+          }
+        }
+        sendJson(response, 200, { results });
+        return;
+      }
+
+      // -----------------------------------------------------------------------
+      // Strip location metadata — regenerates derived versions only, original untouched
+      // -----------------------------------------------------------------------
+      if (method === "POST" && parts[0] === "images" && parts[1] === "strip-location") {
+        const { images } = await readJsonBody(request);
+        if (!Array.isArray(images)) { sendError(response, 400, "images array is required"); return; }
+        const results = [];
+        for (const { folderId, basename: bname } of images) {
+          try {
+            const paths = buildImagePaths(folderId, bname);
+            const getResp = await r2.getObject(paths.original.key);
+            if (!getResp.ok) { results.push({ basename: bname, ok: false, error: "Not found in R2" }); continue; }
+            const buf = Buffer.from(await getResp.arrayBuffer());
+            const { versions } = await processImage(buf, bname, {
+              stripLocation: true,
+              resolvePlace: false,
+            });
+            await Promise.all([
+              r2.putObject(paths.thumb.key, versions.thumb, "image/jpeg"),
+              r2.putObject(paths.small.key, versions.small, "image/jpeg"),
+              r2.putObject(paths.hires.key, versions.hires, "image/jpeg"),
+            ]);
+            const existing = await metadataStore.getMetadata(folderId, bname);
+            if (existing) {
+              await metadataStore.saveMetadata(folderId, bname, {
+                ...existing,
+                generatedLocationStripped: true,
+              });
+            }
+            results.push({ basename: bname, ok: true });
+          } catch (err) {
+            results.push({ basename: bname, ok: false, error: String(err?.message) });
+          }
+        }
+        sendJson(response, 200, { results });
         return;
       }
 
@@ -277,7 +389,7 @@ async function deleteFolderAndContents(folderId, r2, metadataStore, foldersStore
 async function reprocessFolder(folderId, r2, metadataStore, foldersStore) {
   const { processImage } = await import("./image-processor.js");
   const prefix = folderId ? `images/${folderId}/` : "images/";
-  const { contents } = await r2.listObjects(prefix);
+  const { contents } = await r2.listAllObjects(prefix);
   // Only process original files (no suffix like _thumb, _small, _hires)
   const originals = contents.filter(
     (c) => !/_thumb\.jpg$/.test(c.key) && !/_small\.jpg$/.test(c.key) && !/_hires\.jpg$/.test(c.key),
@@ -317,6 +429,14 @@ async function reprocessFolder(folderId, r2, metadataStore, foldersStore) {
         width: meta.width,
         height: meta.height,
         format: meta.format,
+        camera: meta.camera,
+        lens: meta.lens,
+        originalLocation: meta.originalLocation,
+        place: {
+          detected: meta.place.detected,
+          override: existing.place?.override || null,
+        },
+        generatedLocationStripped: meta.generatedLocationStripped,
         description: existing.description || "",
         uploadedAt: existing.uploadedAt || new Date().toISOString(),
       };

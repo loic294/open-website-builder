@@ -114,7 +114,7 @@ export function createR2Client({ accountId, bucketName, accessKeyId, secretAcces
   }
 
   return {
-    /** List objects under a key prefix. Returns parsed XML list. */
+    /** List objects with a virtual-directory delimiter (one level deep). */
     async listObjects(prefix = "") {
       const response = await r2Fetch("GET", "", {
         queryParams: { "list-type": "2", prefix, delimiter: "/" },
@@ -124,6 +124,28 @@ export function createR2Client({ accountId, bucketName, accessKeyId, secretAcces
       }
       const xml = await response.text();
       return parseListBucketResult(xml);
+    },
+
+    /** List ALL objects under a prefix recursively, paginating through the full result set. */
+    async listAllObjects(prefix = "") {
+      const allContents = [];
+      let continuationToken = null;
+
+      do {
+        const queryParams = { "list-type": "2", prefix };
+        if (continuationToken) queryParams["continuation-token"] = continuationToken;
+
+        const response = await r2Fetch("GET", "", { queryParams });
+        if (!response.ok) {
+          throw new Error(`R2 listAllObjects failed: ${response.status} ${await response.text()}`);
+        }
+        const xml = await response.text();
+        const page = parseListBucketResult(xml);
+        allContents.push(...page.contents);
+        continuationToken = parseNextContinuationToken(xml);
+      } while (continuationToken);
+
+      return { contents: allContents };
     },
 
     /** Stream a single object. Returns the fetch Response. */
@@ -200,4 +222,9 @@ function parseListBucketResult(xml) {
 function extractTag(xml, tag) {
   const m = xml.match(new RegExp(`<${tag}>(.*?)<\\/${tag}>`));
   return m ? m[1] : "";
+}
+
+function parseNextContinuationToken(xml) {
+  const m = xml.match(/<NextContinuationToken>([\s\S]*?)<\/NextContinuationToken>/);
+  return m ? m[1] : null;
 }

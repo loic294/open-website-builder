@@ -2,11 +2,13 @@ import { LitElement, html, unsafeCSS } from "lit";
 import {
   ChevronLeft,
   ChevronRight,
+  FolderInput,
   FolderOpen,
   FolderPlus,
   Grid2x2,
   Image,
   LayoutTemplate,
+  MapPinOff,
   Pencil,
   Trash2,
   Upload,
@@ -79,6 +81,31 @@ const API = {
     });
     return r.json();
   },
+  async updatePlace(folderId, basename, place) {
+    const r = await fetch("/__data/files/images/place", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ folderId, basename, ...place }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async moveImages(images, targetFolderId) {
+    const r = await fetch("/__data/files/images/move", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ images, targetFolderId }),
+    });
+    return r.json();
+  },
+  async stripLocation(images) {
+    const r = await fetch("/__data/files/images/strip-location", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ images }),
+    });
+    return r.json();
+  },
 };
 
 function formatBytes(bytes) {
@@ -98,12 +125,15 @@ export class FileManager extends LitElement {
     _activeFolderId: { state: true },
     _viewMode: { state: true },
     _focusedImage: { state: true },
-    _selectedPaths: { state: true },
+    _pickerSelectedPaths: { state: true },
+    _managedSelectedPaths: { state: true },
     _renamingFolderId: { state: true },
     _renamingFilename: { state: true },
     _uploadProgress: { state: true },
+    _batchProgress: { state: true },
     _confirmAction: { state: true },
     _mode: { state: true },
+    _movePopoverOpen: { state: true },
   };
 
   // Singleton instance set by editor-main.js
@@ -132,26 +162,38 @@ export class FileManager extends LitElement {
     this._activeFolderId = null;
     this._viewMode = "grid";
     this._focusedImage = null;
-    this._selectedPaths = [];
+    this._pickerSelectedPaths = [];
+    this._managedSelectedPaths = [];
     this._renamingFolderId = null;
     this._renamingFilename = null;
     this._uploadProgress = null;
+    this._batchProgress = null;
     this._confirmAction = null;
+    this._movePopoverOpen = false;
     this._onSelect = null;
+    // not reactive — track independent anchors for picker and management ranges
+    this._lastPickerClickedIdx = null;
+    this._lastManagedClickedIdx = null;
+    this._boundKeydown = this._handleKeydown.bind(this);
   }
 
   async _openModal({ mode, selected, onSelect }) {
     this._mode = mode;
-    this._selectedPaths = Array.isArray(selected) ? [...selected] : [];
+    this._pickerSelectedPaths = Array.isArray(selected) ? [...selected] : [];
+    this._managedSelectedPaths = [];
     this._onSelect = onSelect;
     this._open = true;
     this._viewMode = "grid";
     this._focusedImage = null;
+    this._lastPickerClickedIdx = null;
+    this._lastManagedClickedIdx = null;
+    this._movePopoverOpen = false;
+    document.addEventListener("keydown", this._boundKeydown);
     await this._loadFolders();
     await this._loadImages();
     // Pre-focus an already-selected image in the details panel
-    if (this._selectedPaths.length) {
-      const match = this._images.find((img) => img.filePath === this._selectedPaths[0]);
+    if (this._pickerSelectedPaths.length) {
+      const match = this._images.find((img) => img.filePath === this._pickerSelectedPaths[0]);
       if (match) this._focusedImage = match;
     }
   }
@@ -159,6 +201,19 @@ export class FileManager extends LitElement {
   _closeModal() {
     this._open = false;
     this._confirmAction = null;
+    this._movePopoverOpen = false;
+    document.removeEventListener("keydown", this._boundKeydown);
+  }
+
+  _handleKeydown(e) {
+    if (!this._open || this._viewMode !== "lightbox") return;
+    if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      this._lightboxNav(-1);
+    } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      this._lightboxNav(1);
+    }
   }
 
   async _loadFolders() {
@@ -185,24 +240,54 @@ export class FileManager extends LitElement {
   async _selectFolder(folderId) {
     this._activeFolderId = folderId;
     this._focusedImage = null;
+    this._managedSelectedPaths = [];
+    this._lastPickerClickedIdx = null;
+    this._lastManagedClickedIdx = null;
     await this._loadImages();
   }
 
-  _toggleSelection(img) {
-    const path = img.filePath;
-    const already = this._selectedPaths.includes(path);
-    if (this._mode === "single") {
-      this._selectedPaths = already ? [] : [path];
-    } else {
-      this._selectedPaths = already
-        ? this._selectedPaths.filter((p) => p !== path)
-        : [...this._selectedPaths, path];
-    }
+  _selectManagedImage(img, event) {
+    const idx = this._images.findIndex((item) => item.filePath === img.filePath);
     this._focusedImage = img;
+
+    if (event?.shiftKey && this._lastManagedClickedIdx !== null) {
+      const from = Math.min(this._lastManagedClickedIdx, idx);
+      const to = Math.max(this._lastManagedClickedIdx, idx);
+      this._managedSelectedPaths = this._images.slice(from, to + 1).map((item) => item.filePath);
+    } else if (event?.metaKey || event?.ctrlKey) {
+      const alreadySelected = this._managedSelectedPaths.includes(img.filePath);
+      this._managedSelectedPaths = alreadySelected
+        ? this._managedSelectedPaths.filter((path) => path !== img.filePath)
+        : [...this._managedSelectedPaths, img.filePath];
+      this._lastManagedClickedIdx = idx;
+    } else {
+      this._managedSelectedPaths = [img.filePath];
+      this._lastManagedClickedIdx = idx;
+    }
+  }
+
+  _togglePickerSelection(img, event) {
+    const idx = this._images.findIndex((i) => i.filePath === img.filePath);
+    const alreadySelected = this._pickerSelectedPaths.includes(img.filePath);
+
+    if (this._mode === "single") {
+      this._pickerSelectedPaths = alreadySelected ? [] : [img.filePath];
+      this._lastPickerClickedIdx = idx;
+    } else if (event?.shiftKey && this._lastPickerClickedIdx !== null) {
+      const from = Math.min(this._lastPickerClickedIdx, idx);
+      const to = Math.max(this._lastPickerClickedIdx, idx);
+      const rangePaths = this._images.slice(from, to + 1).map((i) => i.filePath);
+      this._pickerSelectedPaths = [...new Set([...this._pickerSelectedPaths, ...rangePaths])];
+    } else {
+      this._pickerSelectedPaths = alreadySelected
+        ? this._pickerSelectedPaths.filter((path) => path !== img.filePath)
+        : [...this._pickerSelectedPaths, img.filePath];
+      this._lastPickerClickedIdx = idx;
+    }
   }
 
   _confirmSelect() {
-    if (this._onSelect) this._onSelect([...this._selectedPaths]);
+    if (this._onSelect) this._onSelect([...this._pickerSelectedPaths]);
     this._closeModal();
   }
 
@@ -229,7 +314,9 @@ export class FileManager extends LitElement {
 
   _askDeleteFolder(folder) {
     this._confirmAction = {
+      title: "Delete folder?",
       message: `Delete folder "${folder.name}" and all its images? This cannot be undone.`,
+      confirmLabel: "Delete",
       onConfirm: async () => {
         this._confirmAction = null;
         await API.deleteFolder(folder.id);
@@ -243,7 +330,8 @@ export class FileManager extends LitElement {
   // ── Image management ─────────────────────────────────────────────────────────
 
   async _handleFileInput(e) {
-    const files = Array.from(e.target.files || []);
+    const input = e.target;
+    const files = Array.from(input?.files || []);
     if (!files.length) return;
     const folderId = this._activeFolderId || "root";
     this._uploadProgress = `Uploading 0 / ${files.length}…`;
@@ -260,7 +348,7 @@ export class FileManager extends LitElement {
       }
     }
     this._uploadProgress = null;
-    e.target.value = "";
+    if (input) input.value = "";
     await this._loadImages();
   }
 
@@ -278,12 +366,15 @@ export class FileManager extends LitElement {
 
   _askDeleteImage(img) {
     this._confirmAction = {
+      title: "Delete image?",
       message: `Delete "${img.basename}"? This cannot be undone.`,
+      confirmLabel: "Delete",
       onConfirm: async () => {
         this._confirmAction = null;
         await API.deleteImage(img.folderId, img.basename);
         if (this._focusedImage?.basename === img.basename) this._focusedImage = null;
-        this._selectedPaths = this._selectedPaths.filter((p) => p !== img.filePath);
+        this._pickerSelectedPaths = this._pickerSelectedPaths.filter((path) => path !== img.filePath);
+        this._managedSelectedPaths = this._managedSelectedPaths.filter((path) => path !== img.filePath);
         await this._loadImages();
       },
     };
@@ -302,6 +393,86 @@ export class FileManager extends LitElement {
     }
   }
 
+  async _savePlaceOverride(img, field, value) {
+    const override = img.place?.override || {};
+    const updated = await API.updatePlace(img.folderId, img.basename, {
+      city: field === "city" ? value : override.city,
+      stateProvince: field === "stateProvince" ? value : override.stateProvince,
+      country: field === "country" ? value : override.country,
+    });
+    this._images = this._images.map((item) =>
+      item.basename === img.basename && item.folderId === img.folderId ? updated : item,
+    );
+    if (this._focusedImage?.basename === img.basename && this._focusedImage?.folderId === img.folderId) {
+      this._focusedImage = updated;
+    }
+  }
+
+  // ── Batch actions ─────────────────────────────────────────────────────────────
+
+  _getManagedImages() {
+    return this._images.filter((img) => this._managedSelectedPaths.includes(img.filePath));
+  }
+
+  _batchDelete() {
+    const imgs = this._getManagedImages();
+    if (!imgs.length) return;
+    this._confirmAction = {
+      title: `Delete ${imgs.length} image${imgs.length !== 1 ? "s" : ""}?`,
+      message: `Permanently delete ${imgs.length} selected image${imgs.length !== 1 ? "s" : ""}? This cannot be undone.`,
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        this._confirmAction = null;
+        let done = 0;
+        this._batchProgress = `Deleting 0 / ${imgs.length}…`;
+        for (const img of imgs) {
+          await API.deleteImage(img.folderId, img.basename).catch(() => {});
+          done++;
+          this._batchProgress = done < imgs.length ? `Deleting ${done} / ${imgs.length}…` : null;
+        }
+        this._batchProgress = null;
+        const deletedPaths = new Set(imgs.map((img) => img.filePath));
+        this._pickerSelectedPaths = this._pickerSelectedPaths.filter((path) => !deletedPaths.has(path));
+        this._managedSelectedPaths = [];
+        this._focusedImage = null;
+        await this._loadImages();
+      },
+    };
+  }
+
+  async _batchMove(targetFolderId) {
+    this._movePopoverOpen = false;
+    const managedImages = this._getManagedImages();
+    const imgs = managedImages.map(({ folderId, basename }) => ({ folderId, basename }));
+    if (!imgs.length) return;
+    this._batchProgress = `Moving ${imgs.length} image${imgs.length !== 1 ? "s" : ""}…`;
+    await API.moveImages(imgs, targetFolderId).catch(console.error);
+    this._batchProgress = null;
+    const movedPaths = new Set(managedImages.map((img) => img.filePath));
+    this._pickerSelectedPaths = this._pickerSelectedPaths.filter((path) => !movedPaths.has(path));
+    this._managedSelectedPaths = [];
+    this._focusedImage = null;
+    await this._loadImages();
+  }
+
+  _batchStripLocation() {
+    const imgs = this._getManagedImages();
+    if (!imgs.length) return;
+    this._confirmAction = {
+      title: "Remove location metadata?",
+      message: `Regenerate the resized versions of ${imgs.length} image${imgs.length !== 1 ? "s" : ""} without GPS/location EXIF data. The originals in R2 will not be changed.`,
+      confirmLabel: "Remove Location",
+      onConfirm: async () => {
+        this._confirmAction = null;
+        const payload = imgs.map(({ folderId, basename }) => ({ folderId, basename }));
+        this._batchProgress = `Stripping location from ${imgs.length} image${imgs.length !== 1 ? "s" : ""}…`;
+        await API.stripLocation(payload).catch(console.error);
+        this._batchProgress = null;
+        await this._loadImages();
+      },
+    };
+  }
+
   // ── Lightbox navigation ───────────────────────────────────────────────────────
 
   _lightboxNav(delta) {
@@ -311,6 +482,13 @@ export class FileManager extends LitElement {
       : -1;
     const next = (idx + delta + this._images.length) % this._images.length;
     this._focusedImage = this._images[next];
+    this.updateComplete.then(() => this._scrollFocusedThumb());
+  }
+
+  _scrollFocusedThumb() {
+    this.renderRoot
+      ?.querySelector(".lightbox-thumb.focused")
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -335,12 +513,67 @@ export class FileManager extends LitElement {
   }
 
   _renderHeader() {
+    const selCount = this._managedSelectedPaths.length;
+    const progress = this._batchProgress || this._uploadProgress;
     return html`
       <div class="modal-header">
         <h2 class="modal-title">File Manager</h2>
         <div class="header-actions">
-          ${this._uploadProgress
-            ? html`<span class="upload-progress">${this._uploadProgress}</span>`
+          ${progress ? html`<span class="upload-progress">${progress}</span>` : ""}
+          ${selCount > 0
+            ? html`
+                <div class="batch-actions">
+                  <button
+                    class="btn btn-ghost"
+                    type="button"
+                    title="Delete selected"
+                    @click=${() => this._batchDelete()}
+                  >
+                    ${createElement(Trash2)} Delete
+                  </button>
+                  <div class="move-popover-wrap">
+                    <button
+                      class="btn btn-ghost"
+                      type="button"
+                      title="Move selected to folder"
+                      @click=${(e) => {
+                        e.stopPropagation();
+                        this._movePopoverOpen = !this._movePopoverOpen;
+                      }}
+                    >
+                      ${createElement(FolderInput)} Move
+                    </button>
+                    ${this._movePopoverOpen
+                      ? html`
+                          <div class="move-popover" @click=${(e) => e.stopPropagation()}>
+                            ${this._folders.length
+                              ? this._folders.map(
+                                  (f) => html`
+                                    <button
+                                      class="move-popover-item"
+                                      type="button"
+                                      @click=${() => this._batchMove(f.id)}
+                                    >
+                                      ${createElement(FolderOpen)} ${f.name}
+                                    </button>
+                                  `,
+                                )
+                              : html`<div class="move-popover-empty">No folders</div>`}
+                          </div>
+                        `
+                      : ""}
+                  </div>
+                  <button
+                    class="btn btn-ghost"
+                    type="button"
+                    title="Strip GPS/location from generated versions"
+                    @click=${() => this._batchStripLocation()}
+                  >
+                    ${createElement(MapPinOff)} Remove Location
+                  </button>
+                  <div class="batch-divider"></div>
+                </div>
+              `
             : ""}
           <button
             class="btn btn-primary"
@@ -355,7 +588,7 @@ export class FileManager extends LitElement {
             accept="image/*"
             multiple
             style="display:none"
-            @change=${this._handleFileInput}
+            @change=${(e) => this._handleFileInput(e)}
           />
         </div>
       </div>
@@ -423,7 +656,7 @@ export class FileManager extends LitElement {
           ${folderItems}
         </div>
         <div class="folders-footer">
-          <button class="add-folder-btn" type="button" @click=${this._createFolder}>
+          <button class="add-folder-btn" type="button" @click=${() => this._createFolder()}>
             ${createElement(FolderPlus)}
             Add new folder
           </button>
@@ -433,13 +666,13 @@ export class FileManager extends LitElement {
   }
 
   _renderImagesPanel() {
-    const { _images, _viewMode, _selectedPaths, _focusedImage } = this;
+    const { _images, _viewMode, _managedSelectedPaths, _focusedImage } = this;
 
     const toolbar = html`
       <div class="images-toolbar">
         <span class="images-count">
           ${_images.length} image${_images.length !== 1 ? "s" : ""}
-          ${_selectedPaths.length ? ` · ${_selectedPaths.length} selected` : ""}
+          ${_managedSelectedPaths.length ? ` · ${_managedSelectedPaths.length} selected` : ""}
         </span>
         <div class="view-toggle">
           <button
@@ -467,7 +700,7 @@ export class FileManager extends LitElement {
       : this._renderLightboxView();
 
     return html`
-      <section class="images-panel">
+      <section class="images-panel" @click=${() => { this._movePopoverOpen = false; }}>
         ${toolbar}
         ${body}
       </section>
@@ -475,7 +708,7 @@ export class FileManager extends LitElement {
   }
 
   _renderGridView() {
-    const { _images, _selectedPaths } = this;
+    const { _images, _pickerSelectedPaths, _managedSelectedPaths, _focusedImage } = this;
 
     if (!_images.length) {
       return html`
@@ -492,11 +725,15 @@ export class FileManager extends LitElement {
       <div class="images-grid-scroll">
         <div class="images-grid">
           ${_images.map((img) => {
-            const selected = _selectedPaths.includes(img.filePath);
+            const picked = _pickerSelectedPaths.includes(img.filePath);
+            const managed = _managedSelectedPaths.includes(img.filePath);
+            const focused =
+              _focusedImage?.basename === img.basename &&
+              _focusedImage?.folderId === img.folderId;
             return html`
               <div
-                class="image-tile ${selected ? "selected" : ""}"
-                @click=${() => this._toggleSelection(img)}
+                class="image-tile ${picked ? "picked" : ""} ${managed ? "managed-selected" : ""} ${focused ? "focused" : ""}"
+                @click=${(e) => this._selectManagedImage(img, e)}
               >
                 <img
                   src=${img.thumbPath || img.filePath}
@@ -504,7 +741,14 @@ export class FileManager extends LitElement {
                   loading="lazy"
                 />
                 <div class="image-tile-overlay">
-                  <div class="image-tile-checkbox"></div>
+                  <div
+                    class="image-tile-checkbox"
+                    title=${picked ? "Remove from image selection" : "Add to image selection"}
+                    @click=${(e) => {
+                      e.stopPropagation();
+                      this._togglePickerSelection(img, e);
+                    }}
+                  ></div>
                   <button
                     class="image-tile-zoom"
                     type="button"
@@ -513,6 +757,7 @@ export class FileManager extends LitElement {
                       e.stopPropagation();
                       this._focusedImage = img;
                       this._viewMode = "lightbox";
+                      this.updateComplete.then(() => this._scrollFocusedThumb());
                     }}
                   >
                     ${createElement(ZoomIn)}
@@ -527,7 +772,7 @@ export class FileManager extends LitElement {
   }
 
   _renderLightboxView() {
-    const { _images, _focusedImage, _selectedPaths } = this;
+    const { _images, _focusedImage, _pickerSelectedPaths, _managedSelectedPaths } = this;
 
     if (!_images.length) {
       return html`
@@ -550,7 +795,6 @@ export class FileManager extends LitElement {
           <img
             src=${mainImg.smallPath || mainImg.filePath}
             alt=${mainImg.originalFilename || mainImg.basename}
-            @click=${() => this._toggleSelection(mainImg)}
           />
           <button class="lightbox-nav prev" type="button" @click=${() => this._lightboxNav(-1)}>
             ${createElement(ChevronLeft)}
@@ -562,14 +806,19 @@ export class FileManager extends LitElement {
         <div class="lightbox-thumbs">
           ${_images.map((img) => {
             const focused = _focusedImage?.basename === img.basename && _focusedImage?.folderId === img.folderId;
-            const selected = _selectedPaths.includes(img.filePath);
+            const picked = _pickerSelectedPaths.includes(img.filePath);
+            const managed = _managedSelectedPaths.includes(img.filePath);
             return html`
               <div
-                class="lightbox-thumb ${focused ? "focused" : ""} ${selected ? "selected" : ""}"
-                @click=${() => { this._focusedImage = img; this._toggleSelection(img); }}
+                class="lightbox-thumb ${focused ? "focused" : ""} ${picked ? "picked" : ""} ${managed ? "managed-selected" : ""}"
+                @click=${(e) => this._selectManagedImage(img, e)}
               >
                 <img src=${img.thumbPath || img.filePath} alt=${img.basename} loading="lazy" />
-                <div class="lightbox-thumb-check"></div>
+                <div
+                  class="lightbox-thumb-check"
+                  title=${picked ? "Remove from image selection" : "Add to image selection"}
+                  @click=${(e) => { e.stopPropagation(); this._togglePickerSelection(img, e); }}
+                ></div>
               </div>
             `;
           })}
@@ -580,6 +829,8 @@ export class FileManager extends LitElement {
 
   _renderDetailsPanel() {
     const img = this._focusedImage;
+    const detectedPlace = img?.place?.detected || {};
+    const placeOverride = img?.place?.override || {};
 
     return html`
       <aside class="details-panel">
@@ -639,6 +890,91 @@ export class FileManager extends LitElement {
                   <div class="detail-value">${img.format || "—"}</div>
                 </div>
 
+                <div class="detail-section-title">Capture metadata</div>
+
+                <div class="detail-row">
+                  <div class="detail-label">Camera make</div>
+                  <div class="detail-value">${img.camera?.make || "—"}</div>
+                </div>
+
+                <div class="detail-row">
+                  <div class="detail-label">Camera model</div>
+                  <div class="detail-value">${img.camera?.model || "—"}</div>
+                </div>
+
+                <div class="detail-row">
+                  <div class="detail-label">Lens make</div>
+                  <div class="detail-value">${img.lens?.make || "—"}</div>
+                </div>
+
+                <div class="detail-row">
+                  <div class="detail-label">Lens model</div>
+                  <div class="detail-value">${img.lens?.model || "—"}</div>
+                </div>
+
+                <div class="detail-metadata-grid">
+                  <div>
+                    <div class="detail-label">Focal length</div>
+                    <div class="detail-value">${img.lens?.focalLengthMm != null ? `${img.lens.focalLengthMm} mm` : "—"}</div>
+                  </div>
+                  <div>
+                    <div class="detail-label">Aperture</div>
+                    <div class="detail-value">${img.lens?.aperture != null ? `f/${img.lens.aperture}` : "—"}</div>
+                  </div>
+                  <div>
+                    <div class="detail-label">ISO</div>
+                    <div class="detail-value">${img.lens?.iso ?? "—"}</div>
+                  </div>
+                </div>
+
+                <div class="detail-section-title">Location</div>
+
+                <div class="detail-row">
+                  <div class="detail-label">Original coordinates</div>
+                  <div class="detail-value">
+                    ${img.originalLocation
+                      ? `${img.originalLocation.latitude.toFixed(6)}, ${img.originalLocation.longitude.toFixed(6)}`
+                      : "—"}
+                  </div>
+                </div>
+
+                <div class="detail-row">
+                  <div class="detail-label">Generated photos</div>
+                  <div class="detail-value">
+                    ${!img.originalLocation
+                      ? "No location in original"
+                      : img.generatedLocationStripped === true
+                      ? "Location stripped"
+                      : img.generatedLocationStripped === false
+                        ? "Location retained"
+                        : "Unknown"}
+                  </div>
+                </div>
+
+                <div class="detail-place-fields">
+                  <label>
+                    <span class="detail-label">City</span>
+                    <input
+                      .value=${placeOverride.city ?? detectedPlace.city ?? ""}
+                      @blur=${(e) => this._savePlaceOverride(img, "city", e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span class="detail-label">State / Province</span>
+                    <input
+                      .value=${placeOverride.stateProvince ?? detectedPlace.stateProvince ?? ""}
+                      @blur=${(e) => this._savePlaceOverride(img, "stateProvince", e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span class="detail-label">Country</span>
+                    <input
+                      .value=${placeOverride.country ?? detectedPlace.country ?? ""}
+                      @blur=${(e) => this._savePlaceOverride(img, "country", e.target.value)}
+                    />
+                  </label>
+                </div>
+
                 <div class="detail-row">
                   <div class="detail-label">Description</div>
                   <textarea
@@ -671,7 +1007,7 @@ export class FileManager extends LitElement {
   }
 
   _renderFooter() {
-    const count = this._selectedPaths.length;
+    const count = this._pickerSelectedPaths.length;
     const label = this._mode === "single"
       ? "Select Image"
       : count > 0
@@ -691,7 +1027,7 @@ export class FileManager extends LitElement {
             class="btn btn-primary"
             type="button"
             ?disabled=${count === 0}
-            @click=${this._confirmSelect}
+            @click=${() => this._confirmSelect()}
           >
             ${label}
           </button>
@@ -701,18 +1037,18 @@ export class FileManager extends LitElement {
   }
 
   _renderConfirm() {
-    const { message, onConfirm } = this._confirmAction;
+    const { title, message, confirmLabel, onConfirm } = this._confirmAction;
     return html`
       <div class="confirm-overlay">
         <div class="confirm-dialog">
-          <h3>Are you sure?</h3>
+          <h3>${title || "Are you sure?"}</h3>
           <p>${message}</p>
           <div class="confirm-actions">
             <button class="btn btn-ghost" type="button" @click=${() => { this._confirmAction = null; }}>
               Cancel
             </button>
             <button class="btn btn-primary" style="background:var(--editor-text-danger,#d73c3c);border-color:var(--editor-text-danger,#d73c3c)" type="button" @click=${onConfirm}>
-              Delete
+              ${confirmLabel || "Confirm"}
             </button>
           </div>
         </div>

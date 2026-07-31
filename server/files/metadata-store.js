@@ -90,5 +90,17 @@ export function createMetadataStore({ contentRoot }) {
       if (!existing) throw new Error("Metadata not found");
       await this.saveMetadata(folderId, basename, { ...existing, description });
     },
+
+    async updatePlaceOverride(folderId, basename, override) {
+      const existing = await this.getMetadata(folderId, basename);
+      if (!existing) throw new Error("Metadata not found");
+      const place = {
+        detected: existing.place?.detected || null,
+        override,
+      };
+      const updated = { ...existing, place };
+      await this.saveMetadata(folderId, basename, updated);
+      return updated;
+    },
   };
 }
