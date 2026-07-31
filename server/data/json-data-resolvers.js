@@ -53,6 +53,19 @@ function sanitizeId(value) {
     .replace(/^-|-$/g, "");
 }
 
+function requireCanonicalUrl(value, entityLabel) {
+  const url = String(value || "").trim();
+  if (!url) {
+    throw new Error(`${entityLabel} url is required`);
+  }
+  if (!url.startsWith("/") || url.startsWith("//") || /[?#]/.test(url)) {
+    throw new Error(
+      `${entityLabel} url must be a root-relative path without a query or fragment`,
+    );
+  }
+  return url;
+}
+
 function buildCollectionRequiredFields(fields = {}) {
   return Object.entries(fields)
     .filter(([, fieldConfig]) => Boolean(fieldConfig?.required))
@@ -147,9 +160,10 @@ export function createJsonDataResolvers({ contentRoot }) {
     for (const fileName of pageFiles) {
       const filePath = resolve(pagesDir, fileName);
       const pageConfig = await readJsonFile(filePath);
+      const pageId = pageConfig?.id || toFileId(fileName);
       pages.push({
-        id: pageConfig?.id || toFileId(fileName),
-        url: pageConfig?.url || "/",
+        id: pageId,
+        url: requireCanonicalUrl(pageConfig?.url, `Page '${pageId}'`),
         title: pageConfig?.title || "Untitled",
       });
     }
@@ -164,7 +178,8 @@ export function createJsonDataResolvers({ contentRoot }) {
 
   async function savePageConfig(pageId, pageConfig) {
     const filePath = await resolvePageFilePath(pageId);
-    await writeFile(filePath, toJsonString(pageConfig));
+    const url = requireCanonicalUrl(pageConfig?.url, `Page '${pageId}'`);
+    await writeFile(filePath, toJsonString({ ...pageConfig, url }));
     return { ok: true, id: pageId };
   }
 
@@ -206,16 +221,19 @@ export function createJsonDataResolvers({ contentRoot }) {
       }
     }
 
+    const url = requireCanonicalUrl(
+      page?.url || `/${requestedId}`,
+      `Page '${requestedId}'`,
+    );
     const pageConfig = {
       type: "page",
       id: requestedId,
       title: page?.title || "Untitled",
-      url: page?.url || `/${requestedId}`,
+      url,
       seo: {
         title: String(page?.seo?.title || page?.title || "Untitled"),
         description: String(page?.seo?.description || ""),
         image: String(page?.seo?.image || ""),
-        canonicalUrl: String(page?.seo?.canonicalUrl || ""),
         noIndex: Boolean(page?.seo?.noIndex),
       },
       content:
@@ -496,19 +514,13 @@ export function createJsonDataResolvers({ contentRoot }) {
       const item = await readJsonFile(itemPath);
 
       const itemId = item?.id || toFileId(itemFile);
-      const rawUrl =
-        item?.url ||
-        item?.metadata?.url ||
-        item?.metadata?.sourceUrl ||
-        `/${normalizedCollectionId}/${itemId}`;
-      const computedUrl = String(rawUrl || "")
-        .split("?")[0]
-        .split("#")[0]
-        .replace(/^\/+/, "")
-        .replace(/\/+$/, "");
+      const url = requireCanonicalUrl(
+        item?.url,
+        `Collection item '${normalizedCollectionId}/${itemId}'`,
+      );
       const metadata = { ...(item && typeof item === "object" ? item : {}) };
       delete metadata.content;
-      metadata.url = computedUrl;
+      metadata.url = url;
 
       items.push({
         id: itemId,
@@ -545,11 +557,14 @@ export function createJsonDataResolvers({ contentRoot }) {
     const itemPayload = {
       id: itemId,
       ...item,
+      url: requireCanonicalUrl(
+        item?.url || `/${normalizedCollectionId}/${itemId}`,
+        `Collection item '${normalizedCollectionId}/${itemId}'`,
+      ),
       seo: {
         title: String(item?.seo?.title || item?.title || itemId),
         description: String(item?.seo?.description || item?.excerpt || ""),
         image: String(item?.seo?.image || ""),
-        canonicalUrl: String(item?.seo?.canonicalUrl || ""),
         noIndex: Boolean(item?.seo?.noIndex),
       },
       content:
@@ -570,7 +585,14 @@ export function createJsonDataResolvers({ contentRoot }) {
       `${normalizedItemId}.json`,
     );
 
-    const itemPayload = { id: normalizedItemId, ...item };
+    const itemPayload = {
+      id: normalizedItemId,
+      ...item,
+      url: requireCanonicalUrl(
+        item?.url,
+        `Collection item '${normalizedCollectionId}/${normalizedItemId}'`,
+      ),
+    };
     await writeFile(itemPath, toJsonString(itemPayload));
     return itemPayload;
   }

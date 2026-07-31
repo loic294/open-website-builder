@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:pub": "vite build --config vite.pub.config.js",
+    "check:urls": "node ./server/data/check-canonical-urls.js",
     "preview": "vite preview",
     "publish": "npm run build:pub && node ./server/publish/publish-cli.js",
     "upload": "npx wrangler pages deploy ./dist-publish --project-name=loicbellemarealford --branch main",

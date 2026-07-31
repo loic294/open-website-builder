@@ -64,10 +64,7 @@ function buildPageHtml({ pageConfig = {}, bodyHtml, siteConfig = {} }) {
     `${seoTitle}${String(siteConfig?.pageTitle || "")}`,
   );
   const description = String(seo?.description || "").trim();
-  const canonicalUrl = resolveAbsoluteUrl(
-    seo?.canonicalUrl || pageConfig?.url,
-    siteConfig?.siteUrl,
-  );
+  const canonicalUrl = resolveAbsoluteUrl(pageConfig?.url, siteConfig?.siteUrl);
   const imageUrl = resolveAbsoluteUrl(seo?.image, siteConfig?.siteUrl);
   const socialTags = [
     `<meta property="og:title" content="${escapeHtml(seoTitle)}" />`,

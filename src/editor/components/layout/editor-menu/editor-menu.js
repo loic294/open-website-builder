@@ -686,6 +686,7 @@ class EditorMenu extends LitElement {
       const created = await dataLayer.createPage({
         id: pageId,
         title,
+        url: `/${pageId}`,
       });
       await this.reloadGroupItems();
       this.navigateToSelection({
@@ -744,11 +745,10 @@ class EditorMenu extends LitElement {
         {
           id: fallbackId,
           title,
+          url: `/${normalizedCollectionId}/${fallbackId}`,
           excerpt: "",
           tags: [],
-          metadata: {
-            sourceUrl: `/${normalizedCollectionId}/${fallbackId}`,
-          },
+          metadata: {},
           content: [],
         },
       );
@@ -1028,7 +1028,7 @@ class EditorMenu extends LitElement {
                   <span class="flex min-w-0 flex-col items-start">
                     <span class="w-full truncate">${node.page.title}</span>
                     <span class="w-full truncate text-[9px] opacity-60">
-                      ${node.page.url || node.page.id}
+                      ${node.page.url}
                     </span>
                   </span>
                 `

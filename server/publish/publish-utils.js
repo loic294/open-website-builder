@@ -36,11 +36,12 @@ export const BASE_DYNAMIC_FIELDS = [
   "excerpt",
   "tags",
   "url",
-  "sourceUrl",
   "featuredImageUrl",
   "publishedAt",
   "categories",
 ];
+
+const IMPORT_REFERENCE_FIELDS = new Set(["sourceUrl", "slug"]);
 
 export function replaceTemplateTokens(value, tokenValues = {}) {
   if (!value) {
@@ -123,7 +124,7 @@ export function getTokenValueMap(metadata = {}, allowlist = []) {
 
   for (const fieldName of dynamicFields) {
     const normalized = String(fieldName || "").trim();
-    if (!normalized) {
+    if (!normalized || IMPORT_REFERENCE_FIELDS.has(normalized)) {
       continue;
     }
 
@@ -132,7 +133,7 @@ export function getTokenValueMap(metadata = {}, allowlist = []) {
       getValueByPath(metadata?.metadata, normalized) ??
       getValueByPath(metadata, normalized);
 
-    if (normalized === "url" || normalized === "sourceUrl") {
+    if (normalized === "url") {
       const pathValue = normalizePathTokenValue(value);
       if (pathValue) {
         tokenValues[normalized] = pathValue;

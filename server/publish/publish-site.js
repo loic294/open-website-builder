@@ -64,6 +64,19 @@ function normalizePublishedUrlPath(rawValue, fallbackValue = "") {
   return normalized;
 }
 
+function requirePublishedUrlPath(rawValue, entityLabel) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) {
+    throw new Error(`${entityLabel} url is required`);
+  }
+  if (!raw.startsWith("/") || raw.startsWith("//") || /[?#]/.test(raw)) {
+    throw new Error(
+      `${entityLabel} url must be a root-relative path without a query or fragment`,
+    );
+  }
+  return normalizePublishedUrlPath(raw);
+}
+
 function appendTokenValuesFromObject(target, value, prefix = "") {
   if (!value || typeof value !== "object") {
     return;
@@ -101,28 +114,22 @@ function appendTokenValuesFromObject(target, value, prefix = "") {
 
 function buildItemTemplateTokenValues(itemConfig = {}) {
   const tokenValues = {};
-
-  const rawUrl =
-    itemConfig?.url ||
-    itemConfig?.metadata?.url ||
-    itemConfig?.metadata?.sourceUrl;
-  const computedUrl = rawUrl
-    ? String(rawUrl)
-        .split("?")[0]
-        .split("#")[0]
-        .replace(/^\/+/, "")
-        .replace(/\/+$/, "")
-    : undefined;
+  const computedUrl = normalizePublishedUrlPath(itemConfig?.url);
 
   appendTokenValuesFromObject(tokenValues, {
     id: itemConfig?.id,
     title: itemConfig?.title,
     excerpt: itemConfig?.excerpt,
     tags: itemConfig?.tags,
-    url: computedUrl ?? itemConfig?.url,
+    url: computedUrl,
   });
 
-  appendTokenValuesFromObject(tokenValues, itemConfig?.metadata || {});
+  const templateMetadata = Object.fromEntries(
+    Object.entries(itemConfig?.metadata || {}).filter(
+      ([key]) => key !== "sourceUrl" && key !== "slug" && key !== "url",
+    ),
+  );
+  appendTokenValuesFromObject(tokenValues, templateMetadata);
   return tokenValues;
 }
 
@@ -364,7 +371,10 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
     const pageConfig = await readJson(pagePath);
     const fileBaseName = toBaseName(pageFileName);
 
-    const urlPath = normalizePublishedUrlPath(pageConfig?.url, fileBaseName);
+    const urlPath = requirePublishedUrlPath(
+      pageConfig?.url,
+      `Page '${pageConfig?.id || fileBaseName}'`,
+    );
     let outputPath;
     let outputFileName;
     if (!urlPath) {
@@ -452,15 +462,10 @@ export async function publishSite({ contentRoot, outputDir, appRoot }) {
         continue;
       }
 
-      const outputUrlPath = normalizePublishedUrlPath(
-        itemConfig?.metadata?.url ||
-          itemConfig?.metadata?.sourceUrl ||
-          itemConfig?.url,
-        `/collections/${collectionId}/${itemId}`,
+      const outputUrlPath = requirePublishedUrlPath(
+        itemConfig?.url,
+        `Collection item '${collectionId}/${itemId}'`,
       );
-      if (!outputUrlPath) {
-        continue;
-      }
 
       const outputDirectory = resolve(outputDir, outputUrlPath);
       const outputPath = resolve(outputDirectory, "index.html");

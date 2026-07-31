@@ -24,11 +24,12 @@ const BASE_DYNAMIC_FIELDS = [
   "excerpt",
   "tags",
   "url",
-  "sourceUrl",
   "featuredImageUrl",
   "publishedAt",
   "categories",
 ];
+
+const IMPORT_REFERENCE_FIELDS = new Set(["sourceUrl", "slug"]);
 
 const COLLECTION_DEFAULTS = {
   settingCollectionId: "",
@@ -209,14 +210,19 @@ function getTokenMap(host, metadata = {}) {
 
   for (const fieldName of dynamicFields) {
     const normalizedFieldName = String(fieldName || "").trim();
-    if (!normalizedFieldName) continue;
+    if (
+      !normalizedFieldName ||
+      IMPORT_REFERENCE_FIELDS.has(normalizedFieldName)
+    ) {
+      continue;
+    }
 
     const value =
       metadata?.[normalizedFieldName] ??
       getValueByPath(metadata?.metadata, normalizedFieldName) ??
       getValueByPath(metadata, normalizedFieldName);
 
-    if (normalizedFieldName === "url" || normalizedFieldName === "sourceUrl") {
+    if (normalizedFieldName === "url") {
       const pathValue = normalizePathTokenValue(value);
       if (pathValue) {
         tokenMap[normalizedFieldName] = pathValue;

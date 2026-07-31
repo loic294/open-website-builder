@@ -1156,7 +1156,6 @@ class WebsiteEditor extends LitElement {
       image: String(
         seo.image ?? this.pageConfig?.metadata?.featuredImageUrl ?? "",
       ),
-      canonicalUrl: String(seo.canonicalUrl ?? ""),
       noIndex: Boolean(seo.noIndex),
     };
   }
@@ -1262,18 +1261,6 @@ class WebsiteEditor extends LitElement {
           ${seo.image
             ? html`<img class="seo-image-preview" src=${seo.image} alt="" />`
             : html``}
-        </div>
-
-        <div class="field-row field-row-compact">
-          <label class="settings-label">Canonical URL</label>
-          <input
-            type="url"
-            class="input input-sm w-full"
-            .value=${seo.canonicalUrl}
-            placeholder=${String(this.pageConfig?.url || "")}
-            @change=${(event) =>
-              this.updateSeoField("canonicalUrl", event.target.value)}
-          />
         </div>
 
         <label class="settings-checkbox-label">
@@ -2089,7 +2076,7 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
               disabledTooltip=${true}
             ></editor-radio-button>
           </div>
-          <editor-btn @click=${this.onPublishClick}>Publish</editor-btn>
+          <editor-btn @click=${this.onPublishClick}>Save Changes</editor-btn>
           ${this.publishStatus
             ? html`<span
                 style="margin-left: 10px; font-size: 12px; opacity: 0.8;"

@@ -1170,7 +1170,6 @@ async function buildPageFromStaticHtml({
         title,
         description: seoDescription,
         image: "",
-        canonicalUrl: "",
         noIndex: false,
       },
       metadata: {
@@ -1260,6 +1259,7 @@ export async function importSquarespaceXml({
     const title = toTitle(toText(item?.title));
     const metadata = buildMetadata(item);
     const postType = sanitizeId(metadata.postType) || "post";
+    const importedUrl = toText(item?.link).trim() || "/";
 
     if (postType === "attachment") {
       report.summary.attachmentsSkipped += 1;
@@ -1273,14 +1273,12 @@ export async function importSquarespaceXml({
     }
 
     const bodyHtml = extractBodyHtml(item);
-    const sourceUrl = metadata.sourceUrl || "/";
-
     const parsedUrlPath = (() => {
       try {
-        const url = new URL(sourceUrl);
+        const url = new URL(importedUrl);
         return url.pathname || "/";
       } catch {
-        return String(sourceUrl || "/");
+        return importedUrl;
       }
     })();
 
@@ -1313,7 +1311,7 @@ export async function importSquarespaceXml({
       options?.createCssFiles !== false
         ? await writeGlobalStylesFile({
             contentRoot,
-            baseName: metadata.slug || title,
+            baseName: parsedUrlPath || title,
             cssBlocks: mapped.globalStyles,
           })
         : "";
@@ -1327,13 +1325,11 @@ export async function importSquarespaceXml({
       title,
       description: metadata.excerpt || "",
       image: metadata.featuredImageUrl || "",
-      canonicalUrl: "",
       noIndex: false,
     };
 
     if (postType === "page") {
-      const slugBase =
-        sanitizeId(metadata.slug || parsedUrlPath || title) || "page";
+      const slugBase = sanitizeId(parsedUrlPath || title) || "page";
       const existingPath = resolve(pagesDir, `${slugBase}.json`);
       let pageId = slugBase;
       let pageContent = content;
@@ -1355,10 +1351,7 @@ export async function importSquarespaceXml({
         type: "page",
         id: pageId,
         title,
-        url:
-          String(metadata.sourceUrl || "").trim() ||
-          parsedUrlPath ||
-          `/${pageId}`,
+        url: parsedUrlPath || `/${pageId}`,
         seo,
         metadata,
         content: pageContent,
@@ -1386,7 +1379,7 @@ export async function importSquarespaceXml({
     await ensureCollectionConfig(contentRoot, collectionId);
     const collectionDir = resolve(contentRoot, "collections", collectionId);
     const itemBase =
-      sanitizeId(metadata.slug || title || `item-${Date.now()}`) || "item";
+      sanitizeId(parsedUrlPath || title || `item-${Date.now()}`) || "item";
     const existingItemPath = resolve(collectionDir, `${itemBase}.json`);
     let itemId = itemBase;
     let itemContent = content;
@@ -1407,6 +1400,7 @@ export async function importSquarespaceXml({
     const itemPayload = {
       id: itemId,
       title,
+      url: parsedUrlPath || `/${collectionId}/${itemId}`,
       excerpt: metadata.excerpt || "",
       tags: metadata.tags || [],
       seo,
