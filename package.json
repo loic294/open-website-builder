@@ -28,7 +28,7 @@
     "test:server": "node --test ./server/**/*.test.js",
     "check:urls": "node ./server/data/check-canonical-urls.js",
     "preview": "vite preview",
-    "publish": "npm run build:pub && node ./server/publish/publish-cli.js",
+    "publish": "npm run build:pub && node ./server/publish/publish-cli.js"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",
