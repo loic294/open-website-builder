@@ -963,6 +963,93 @@ class EditorMenu extends LitElement {
         : this.renderCollectionGroup(item),
     );
   }
+
+  buildPagesTree(pages) {
+    const root = { page: null, children: new Map() };
+
+    for (const page of pages) {
+      const rawPath = String(page?.url || page?.id || "").trim();
+      const pathname = new URL(rawPath || "/", "http://editor.local").pathname;
+      const segments = pathname.split("/").filter(Boolean);
+      let node = root;
+
+      for (const segment of segments) {
+        if (!node.children.has(segment)) {
+          node.children.set(segment, {
+            segment: decodeURIComponent(segment),
+            page: null,
+            children: new Map(),
+          });
+        }
+        node = node.children.get(segment);
+      }
+
+      node.page = page;
+    }
+
+    return root;
+  }
+
+  pageTreeNodeHasActiveSelection(node) {
+    if (node.page && this.isSelectionActive(node.page)) {
+      return true;
+    }
+
+    return Array.from(node.children.values()).some((child) =>
+      this.pageTreeNodeHasActiveSelection(child),
+    );
+  }
+
+  renderPageTreeNode(node) {
+    const children = Array.from(node.children.values());
+    if (children.length === 0 && node.page) {
+      return this.renderSelectableItem(node.page);
+    }
+
+    const isParentPageActive = node.page && this.isSelectionActive(node.page);
+
+    return html`
+      <li>
+        <details ?open=${this.pageTreeNodeHasActiveSelection(node)}>
+          <summary
+            class=${isParentPageActive ? "menu-active" : ""}
+            @click=${node.page
+              ? () => this.navigateToSelection(node.page)
+              : null}
+          >
+            ${node.page
+              ? html`
+                  <span class="flex min-w-0 flex-col items-start">
+                    <span class="w-full truncate">${node.page.title}</span>
+                    <span class="w-full truncate text-[9px] opacity-60">
+                      ${node.page.url || node.page.id}
+                    </span>
+                  </span>
+                `
+              : node.segment}
+          </summary>
+          <ul>
+            ${children.map((child) => this.renderPageTreeNode(child))}
+          </ul>
+        </details>
+      </li>
+    `;
+  }
+
+  renderPagesItems(items) {
+    if (items.length === 0) {
+      return html`<li class="menu-disabled"><a>No pages yet</a></li>`;
+    }
+
+    const root = this.buildPagesTree(items);
+    return html`
+      ${root.page ? this.renderSelectableItem(root.page) : html``}
+      ${Array.from(root.children.values()).map((node) =>
+        this.renderPageTreeNode(node),
+      )}
+    `;
+  }
+
   getStoredCollapsedState() {
     if (typeof window === "undefined") {
       return false;
@@ -1006,6 +1093,7 @@ class EditorMenu extends LitElement {
     const expanded = this.sections[sectionKey];
     const normalizedItems = items.length > 0 ? items : ["No items yet"];
     const isCollectionsSection = sectionKey === "collections";
+    const isPagesSection = sectionKey === "pages";
 
     return html`
       <section class="menu-group">
@@ -1043,15 +1131,21 @@ class EditorMenu extends LitElement {
           ? html`
               <div class="group-content-scroll">
                 <ul
-                  class="menu menu-paged menu-vertical bg-base-200 rounded-box w-full"
+                  class=${isPagesSection
+                    ? "menu bg-base-200 rounded-box w-full"
+                    : "menu menu-paged menu-vertical bg-base-200 rounded-box w-full"}
                 >
-                  ${isCollectionsSection
-                    ? this.renderCollectionsItems(normalizedItems)
-                    : normalizedItems.map((item) =>
-                        typeof item === "string"
-                          ? html`<li class="menu-disabled"><a>${item}</a></li>`
-                          : this.renderSelectableItem(item),
-                      )}
+                  ${isPagesSection
+                    ? this.renderPagesItems(items)
+                    : isCollectionsSection
+                      ? this.renderCollectionsItems(normalizedItems)
+                      : normalizedItems.map((item) =>
+                          typeof item === "string"
+                            ? html`<li class="menu-disabled">
+                                <a>${item}</a>
+                              </li>`
+                            : this.renderSelectableItem(item),
+                        )}
                 </ul>
               </div>
             `
@@ -1063,16 +1157,22 @@ class EditorMenu extends LitElement {
                       <span class="section-icon">${createElement(icon)}</span>
                       <span class="group-flyout-title">${title}</span>
                     </div>
-                    <ul class="menu menu-paged menu-vertical w-full">
-                      ${isCollectionsSection
-                        ? this.renderCollectionsItems(normalizedItems)
-                        : normalizedItems.map((item) =>
-                            typeof item === "string"
-                              ? html`<li class="menu-disabled">
-                                  <a>${item}</a>
-                                </li>`
-                              : this.renderSelectableItem(item),
-                          )}
+                    <ul
+                      class=${isPagesSection
+                        ? "menu bg-base-200 rounded-box w-full"
+                        : "menu menu-paged menu-vertical w-full"}
+                    >
+                      ${isPagesSection
+                        ? this.renderPagesItems(items)
+                        : isCollectionsSection
+                          ? this.renderCollectionsItems(normalizedItems)
+                          : normalizedItems.map((item) =>
+                              typeof item === "string"
+                                ? html`<li class="menu-disabled">
+                                    <a>${item}</a>
+                                  </li>`
+                                : this.renderSelectableItem(item),
+                            )}
                     </ul>
                   </div>
                 </div>
