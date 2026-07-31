@@ -17,6 +17,32 @@ function sendError(response, statusCode, message) {
   response.end(message);
 }
 
+export function createRemoteImagesMiddleware({ imageBaseUrl }) {
+  const baseUrl = new URL(imageBaseUrl);
+
+  return function remoteImagesMiddleware(request, response, next) {
+    const method = request.method || "GET";
+    if (method !== "GET" && method !== "HEAD") {
+      next();
+      return;
+    }
+
+    const requestUrl = new URL(request.url || "/", "http://localhost");
+    if (!requestUrl.pathname.startsWith("/images/")) {
+      next();
+      return;
+    }
+
+    const targetUrl = new URL(
+      `${requestUrl.pathname.slice("/images/".length)}${requestUrl.search}`,
+      baseUrl,
+    );
+    response.statusCode = 307;
+    response.setHeader("Location", targetUrl.href);
+    response.end();
+  };
+}
+
 export function createImagesMiddleware({ contentRoot, r2 = null }) {
   const imagesRoot = resolve(contentRoot, "images");
   const allowedPrefix = `${imagesRoot}${sep}`;

@@ -5,7 +5,7 @@ import { readFile, stat } from "node:fs/promises";
 import tailwindcss from "@tailwindcss/vite";
 import { createJsonDataResolvers } from "./server/data/json-data-resolvers.js";
 import { createDataApiMiddleware } from "./server/data/data-api-middleware.js";
-import { createImagesMiddleware } from "./server/data/images-middleware.js";
+import { createRemoteImagesMiddleware } from "./server/data/images-middleware.js";
 import { createFilesApiMiddleware } from "./server/files/files-api-middleware.js";
 import { createR2Client } from "./server/files/r2-client.js";
 import { createMetadataStore } from "./server/files/metadata-store.js";
@@ -166,7 +166,11 @@ export default defineConfig(({ mode }) => {
       {
         name: "data-api",
         configureServer(server) {
-          server.middlewares.use(createImagesMiddleware({ contentRoot, r2 }));
+          server.middlewares.use(
+            createRemoteImagesMiddleware({
+              imageBaseUrl: "https://loicbellemarealford.ca/images/",
+            }),
+          );
           server.middlewares.use(
             createFilesApiMiddleware({ r2, metadataStore, foldersStore }),
           );

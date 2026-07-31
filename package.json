@@ -7,6 +7,7 @@
     "build": "vite build",
     "build:pub": "vite build --config vite.pub.config.js",
     "test:publish": "node --test ./server/publish/*.test.js",
+    "test:server": "node --test ./server/**/*.test.js",
     "check:urls": "node ./server/data/check-canonical-urls.js",
     "preview": "vite preview",
     "publish": "npm run build:pub && node ./server/publish/publish-cli.js",
