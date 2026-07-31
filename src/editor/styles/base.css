@@ -4,6 +4,7 @@ body {
   font-family: system-ui, sans-serif;
   margin: 0;
   padding: 1rem;
+  overflow: hidden;
 }
 
 *,
@@ -16,7 +17,7 @@ main {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 editor-menu {

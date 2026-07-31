@@ -180,6 +180,10 @@
   grid-template-columns: 180px 1fr;
 }
 
+.identity-setting-row {
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+}
+
 .settings-label {
   font-size: 12px;
   color: var(--editor-text-color);
@@ -220,6 +224,10 @@
   }
 
   .field-row-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .identity-setting-row {
     grid-template-columns: 1fr;
   }
 }

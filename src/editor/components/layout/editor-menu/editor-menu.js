@@ -236,6 +236,10 @@ class EditorMenu extends LitElement {
   setMenuMode(nextMode) {
     this.menuMode = nextMode;
     this.persistMenuMode();
+
+    if (nextMode === "settings") {
+      window.dispatchEvent(new CustomEvent("owb-open-page-settings"));
+    }
   }
 
   async reloadGroupItems() {

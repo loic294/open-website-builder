@@ -57,6 +57,12 @@ export function createDataLayer(transport = createHttpTransport()) {
         pageConfig,
       });
     },
+    async updatePageIdentity(pageId, identity) {
+      return await transport.put(
+        `/pages/${encodeURIComponent(pageId)}/identity`,
+        { identity },
+      );
+    },
     async createPage(page) {
       return await transport.post("/pages", page);
     },
@@ -115,6 +121,12 @@ export function createDataLayer(transport = createHttpTransport()) {
         { config },
       );
     },
+    async updateCollectionIdentity(collectionId, identity) {
+      return await transport.put(
+        `/collections/${encodeURIComponent(collectionId)}/identity`,
+        { identity },
+      );
+    },
     async getCollectionItemContent(collectionId, itemId) {
       return await transport.get(
         `/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`,
@@ -140,6 +152,12 @@ export function createDataLayer(transport = createHttpTransport()) {
       return await transport.put(
         `/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`,
         item,
+      );
+    },
+    async updateCollectionItemIdentity(collectionId, itemId, identity) {
+      return await transport.put(
+        `/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}/identity`,
+        { identity },
       );
     },
 

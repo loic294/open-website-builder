@@ -61,6 +61,22 @@ export function createDataApiMiddleware(resolvers) {
         return;
       }
 
+      if (
+        method === "PUT" &&
+        parts.length === 3 &&
+        parts[0] === "pages" &&
+        parts[2] === "identity"
+      ) {
+        const pageId = decodePathPart(parts[1]);
+        const body = await parseJsonBody(request);
+        sendJson(
+          response,
+          200,
+          await resolvers.updatePageIdentity(pageId, body.identity),
+        );
+        return;
+      }
+
       if (method === "POST" && parts.length === 1 && parts[0] === "pages") {
         const body = await parseJsonBody(request);
         sendJson(response, 201, await resolvers.createPage(body));
@@ -185,6 +201,22 @@ export function createDataApiMiddleware(resolvers) {
       }
 
       if (
+        method === "PUT" &&
+        parts.length === 3 &&
+        parts[0] === "collections" &&
+        parts[2] === "identity"
+      ) {
+        const collectionId = decodePathPart(parts[1]);
+        const body = await parseJsonBody(request);
+        sendJson(
+          response,
+          200,
+          await resolvers.updateCollectionIdentity(collectionId, body.identity),
+        );
+        return;
+      }
+
+      if (
         method === "GET" &&
         parts.length === 4 &&
         parts[0] === "collections" &&
@@ -244,6 +276,28 @@ export function createDataApiMiddleware(resolvers) {
           response,
           200,
           await resolvers.updateCollectionItem(collectionId, itemId, body),
+        );
+        return;
+      }
+
+      if (
+        method === "PUT" &&
+        parts.length === 5 &&
+        parts[0] === "collections" &&
+        parts[2] === "items" &&
+        parts[4] === "identity"
+      ) {
+        const collectionId = decodePathPart(parts[1]);
+        const itemId = decodePathPart(parts[3]);
+        const body = await parseJsonBody(request);
+        sendJson(
+          response,
+          200,
+          await resolvers.updateCollectionItemIdentity(
+            collectionId,
+            itemId,
+            body.identity,
+          ),
         );
         return;
       }

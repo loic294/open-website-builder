@@ -1,4 +1,12 @@
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { basename, resolve } from "node:path";
 
 function toJsonString(value) {
@@ -19,6 +27,17 @@ async function listJsonFileNames(directoryPath) {
 
 async function ensureDir(dirPath) {
   await mkdir(dirPath, { recursive: true });
+}
+
+async function ensurePathDoesNotExist(filePath, message) {
+  try {
+    await stat(filePath);
+    throw new Error(message);
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
 }
 
 function toFileId(fileName) {
@@ -147,6 +166,27 @@ export function createJsonDataResolvers({ contentRoot }) {
     const filePath = await resolvePageFilePath(pageId);
     await writeFile(filePath, toJsonString(pageConfig));
     return { ok: true, id: pageId };
+  }
+
+  async function updatePageIdentity(pageId, identity) {
+    const currentPath = await resolvePageFilePath(pageId);
+    const currentConfig = await readJsonFile(currentPath);
+    const nextId = sanitizeId(identity?.id);
+    if (!nextId) {
+      throw new Error("Page id is required");
+    }
+
+    const nextPath = resolve(pagesDir, `${nextId}.json`);
+    if (nextPath !== currentPath) {
+      await ensurePathDoesNotExist(nextPath, `Page already exists: ${nextId}`);
+    }
+
+    await writeFile(nextPath, toJsonString({ ...currentConfig, id: nextId }));
+    if (nextPath !== currentPath) {
+      await rm(currentPath);
+    }
+
+    return { ok: true, id: nextId, fileName: `${nextId}.json` };
   }
 
   async function createPage(page) {
@@ -390,6 +430,35 @@ export function createJsonDataResolvers({ contentRoot }) {
     return { ok: true, id: normalizedCollectionId };
   }
 
+  async function updateCollectionIdentity(collectionId, identity) {
+    const currentId = sanitizeId(collectionId);
+    const nextId = sanitizeId(identity?.id);
+    if (!currentId || !nextId) {
+      throw new Error("Collection id is required");
+    }
+
+    const currentPath = resolve(collectionsDir, currentId);
+    const nextPath = resolve(collectionsDir, nextId);
+    const currentConfig = await readJsonFile(
+      resolve(currentPath, "_config.json"),
+    );
+
+    if (nextPath !== currentPath) {
+      await ensurePathDoesNotExist(
+        nextPath,
+        `Collection already exists: ${nextId}`,
+      );
+      await rename(currentPath, nextPath);
+    }
+
+    await writeFile(
+      resolve(nextPath, "_config.json"),
+      toJsonString({ ...currentConfig, id: nextId }),
+    );
+
+    return { ok: true, id: nextId };
+  }
+
   async function getCollectionItemContent(collectionId, itemId) {
     const normalizedCollectionId = sanitizeId(collectionId);
     const normalizedItemId = sanitizeId(itemId);
@@ -488,6 +557,35 @@ export function createJsonDataResolvers({ contentRoot }) {
     const itemPayload = { id: normalizedItemId, ...item };
     await writeFile(itemPath, toJsonString(itemPayload));
     return itemPayload;
+  }
+
+  async function updateCollectionItemIdentity(collectionId, itemId, identity) {
+    const normalizedCollectionId = sanitizeId(collectionId);
+    const currentItemId = sanitizeId(itemId);
+    const nextId = sanitizeId(identity?.id);
+    if (!normalizedCollectionId || !currentItemId || !nextId) {
+      throw new Error("Collection id and item id are required");
+    }
+
+    const collectionPath = resolve(collectionsDir, normalizedCollectionId);
+    const currentPath = resolve(collectionPath, `${currentItemId}.json`);
+    const nextPath = resolve(collectionPath, `${nextId}.json`);
+    const currentItem = await readJsonFile(currentPath);
+
+    if (nextPath !== currentPath) {
+      await ensurePathDoesNotExist(
+        nextPath,
+        `Collection item already exists: ${nextId}`,
+      );
+    }
+
+    const nextItem = { ...currentItem, id: nextId };
+    await writeFile(nextPath, toJsonString(nextItem));
+    if (nextPath !== currentPath) {
+      await rm(currentPath);
+    }
+
+    return { ...nextItem, fileName: `${nextId}.json` };
   }
 
   async function deleteCollectionItem(collectionId, itemId) {
@@ -694,6 +792,7 @@ export function createJsonDataResolvers({ contentRoot }) {
     listPages,
     getPageConfig,
     savePageConfig,
+    updatePageIdentity,
     createPage,
     deletePage,
     listCollections,
@@ -703,10 +802,12 @@ export function createJsonDataResolvers({ contentRoot }) {
     getGroupedCollectionsContent,
     getCollectionConfig,
     saveCollectionConfig,
+    updateCollectionIdentity,
     getCollectionItemContent,
     getCollectionItemsMetadata,
     addCollectionItem,
     updateCollectionItem,
+    updateCollectionItemIdentity,
     deleteCollectionItem,
     listSharedComponents,
     getComponentConfig,

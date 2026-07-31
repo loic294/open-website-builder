@@ -39,6 +39,7 @@ class WebsiteEditor extends LitElement {
     activeSize: { state: true },
     activeOrientation: { state: true },
     currentSelection: { state: true },
+    identityDraft: { state: true },
     sharedIdentityDraft: { state: true },
   };
 
@@ -58,6 +59,7 @@ class WebsiteEditor extends LitElement {
     this.activeSize = "desktop";
     this.activeOrientation = "vertical";
     this.currentSelection = { type: "page", pageId: "index" };
+    this.identityDraft = "index";
     this.collectionMetadataFieldOptions = [];
     this.sharedIdentityDraft = {
       id: "",
@@ -170,9 +172,13 @@ class WebsiteEditor extends LitElement {
     this.onRouteChanged = async () => {
       await this.loadSelectionFromRoute();
     };
+    this.onOpenPageSettings = () => {
+      this.activeView = "settings";
+    };
 
     window.addEventListener("popstate", this.onRouteChanged);
     window.addEventListener("editor-route-change", this.onRouteChanged);
+    window.addEventListener("owb-open-page-settings", this.onOpenPageSettings);
 
     if (!this.didLoadConfig) {
       this.didLoadConfig = true;
@@ -184,6 +190,10 @@ class WebsiteEditor extends LitElement {
     super.disconnectedCallback();
     window.removeEventListener("popstate", this.onRouteChanged);
     window.removeEventListener("editor-route-change", this.onRouteChanged);
+    window.removeEventListener(
+      "owb-open-page-settings",
+      this.onOpenPageSettings,
+    );
   }
 
   getRouteSelection() {
@@ -221,6 +231,14 @@ class WebsiteEditor extends LitElement {
   async loadSelectionFromRoute() {
     const selection = this.getRouteSelection();
     this.currentSelection = selection;
+    this.identityDraft =
+      selection.type === "collection-config"
+        ? selection.collectionId
+        : selection.type === "collection"
+          ? selection.itemId
+          : selection.type === "shared"
+            ? selection.componentId
+            : selection.pageId;
 
     try {
       if (selection.type === "collection-config") {
@@ -294,6 +312,9 @@ class WebsiteEditor extends LitElement {
       }
 
       this.pageConfig = await dataLayer.getPageConfig(selection.pageId);
+      this.identityDraft = String(
+        this.pageConfig?.id || selection.pageId || "",
+      );
     } catch (error) {
       console.error(error);
       this.pageConfig = {
@@ -850,6 +871,81 @@ class WebsiteEditor extends LitElement {
     }
   }
 
+  async saveCurrentIdentity() {
+    const selection = this.currentSelection;
+    const requestedId = String(this.identityDraft || "").trim();
+    if (!selection || !requestedId) {
+      return;
+    }
+
+    try {
+      let result;
+      let nextSelection;
+
+      if (selection.type === "collection-config") {
+        result = await dataLayer.updateCollectionIdentity(
+          selection.collectionId,
+          { id: requestedId },
+        );
+        nextSelection = {
+          type: "collection-config",
+          collectionId: result.id,
+        };
+      } else if (selection.type === "collection") {
+        result = await dataLayer.updateCollectionItemIdentity(
+          selection.collectionId,
+          selection.itemId,
+          { id: requestedId },
+        );
+        nextSelection = {
+          type: "collection",
+          collectionId: selection.collectionId,
+          itemId: result.id,
+        };
+      } else if (selection.type === "page") {
+        result = await dataLayer.updatePageIdentity(selection.pageId, {
+          id: requestedId,
+        });
+        nextSelection = { type: "page", pageId: result.id };
+      } else {
+        return;
+      }
+
+      this.identityDraft = result.id;
+      this.pageConfig = { ...this.pageConfig, id: result.id };
+      this.notifyDataChanged();
+      this.navigateToSelection(nextSelection);
+    } catch (error) {
+      console.error(error);
+      window.alert(
+        error instanceof Error ? error.message : "Failed to update id",
+      );
+    }
+  }
+
+  renderIdentitySetting() {
+    return html`
+      <form
+        class="field-row identity-setting-row"
+        @submit=${(event) => {
+          event.preventDefault();
+          this.saveCurrentIdentity();
+        }}
+      >
+        <label class="settings-label">Id</label>
+        <input
+          type="text"
+          class="settings-input"
+          .value=${String(this.identityDraft || "")}
+          @input=${(event) => {
+            this.identityDraft = event.target.value;
+          }}
+        />
+        <button type="submit" class="settings-inline-button">Save</button>
+      </form>
+    `;
+  }
+
   updateSharedIdentityDraft(fieldName, value) {
     this.sharedIdentityDraft = {
       ...(this.sharedIdentityDraft || {}),
@@ -872,7 +968,7 @@ class WebsiteEditor extends LitElement {
         {
           id: String(this.sharedIdentityDraft?.id || "").trim(),
           title: String(this.sharedIdentityDraft?.title || "").trim(),
-          fileName: String(this.sharedIdentityDraft?.fileName || "").trim(),
+          fileName: `${String(this.sharedIdentityDraft?.id || "").trim()}.json`,
         },
       );
 
@@ -921,6 +1017,8 @@ class WebsiteEditor extends LitElement {
           <div class="settings-section-header">
             <h3>Page</h3>
           </div>
+
+          ${this.renderIdentitySetting()}
 
           <div class="field-row field-row-compact">
             <label class="settings-label">Title</label>
@@ -1000,6 +1098,13 @@ class WebsiteEditor extends LitElement {
 
     return html`
       <div class="collection-config-settings">
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <h3>Collection</h3>
+          </div>
+          ${this.renderIdentitySetting()}
+        </div>
+
         <div class="settings-section">
           <div class="settings-section-header">
             <h3>Fields</h3>
@@ -1124,6 +1229,8 @@ class WebsiteEditor extends LitElement {
             <h3>Collection item</h3>
           </div>
 
+          ${this.renderIdentitySetting()}
+
           <div class="field-row field-row-compact">
             <label class="settings-label">Title</label>
             <input
@@ -1231,7 +1338,13 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
             <h3>Shared component</h3>
           </div>
 
-          <div class="field-row field-row-compact">
+          <form
+            class="field-row identity-setting-row"
+            @submit=${(event) => {
+              event.preventDefault();
+              this.saveSharedIdentity();
+            }}
+          >
             <label class="settings-label">Id</label>
             <input
               type="text"
@@ -1240,7 +1353,8 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
               @input=${(event) =>
                 this.updateSharedIdentityDraft("id", event.target.value)}
             />
-          </div>
+            <button type="submit" class="settings-inline-button">Save</button>
+          </form>
 
           <div class="field-row field-row-compact">
             <label class="settings-label">Title</label>
@@ -1252,25 +1366,6 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
                 this.updateSharedIdentityDraft("title", event.target.value)}
             />
           </div>
-
-          <div class="field-row field-row-compact">
-            <label class="settings-label">Filename</label>
-            <input
-              type="text"
-              class="settings-input"
-              .value=${String(this.sharedIdentityDraft?.fileName || "")}
-              @input=${(event) =>
-                this.updateSharedIdentityDraft("fileName", event.target.value)}
-            />
-          </div>
-
-          <button
-            type="button"
-            class="settings-inline-button"
-            @click=${() => this.saveSharedIdentity()}
-          >
-            Save shared settings
-          </button>
         </div>
 
         <div class="settings-section">
