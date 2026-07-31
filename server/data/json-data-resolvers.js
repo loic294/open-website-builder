@@ -546,9 +546,7 @@ export function createJsonDataResolvers({ contentRoot }) {
       ...item,
       seo: {
         title: String(item?.seo?.title || item?.title || itemId),
-        description: String(
-          item?.seo?.description || item?.excerpt || "",
-        ),
+        description: String(item?.seo?.description || item?.excerpt || ""),
         image: String(item?.seo?.image || ""),
         canonicalUrl: String(item?.seo?.canonicalUrl || ""),
         noIndex: Boolean(item?.seo?.noIndex),

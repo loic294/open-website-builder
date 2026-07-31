@@ -199,11 +199,7 @@ async function copyComponentStyles(appRoot, outputDir) {
   }
 }
 
-export async function publishSite({
-  contentRoot,
-  outputDir,
-  appRoot,
-}) {
+export async function publishSite({ contentRoot, outputDir, appRoot }) {
   const pagesDir = resolve(contentRoot, "pages");
   const sharedDir = resolve(contentRoot, "shared");
   const collectionsDir = resolve(contentRoot, "collections");

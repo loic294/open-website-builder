@@ -622,9 +622,7 @@ class WebsiteEditor extends LitElement {
     const fields = this.pageConfig?.fields || {};
     return Object.entries(fields).map(([name, config]) => ({
       name,
-      type: ["array", "object"].includes(config?.type)
-        ? config.type
-        : "string",
+      type: ["array", "object"].includes(config?.type) ? config.type : "string",
       required: Boolean(config?.required),
     }));
   }
