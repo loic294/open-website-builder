@@ -1,7 +1,7 @@
 import { LitElement, html, isServer, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
-import { getImageUrlForSize } from "../../utils/image-size.js";
+import { getImageSize, getImageUrlForSize } from "../../utils/image-size.js";
 import { createElement, X, ChevronLeft, ChevronRight } from "lucide";
 
 export const defaultGalleryConfig = {
@@ -121,6 +121,10 @@ export class OwbGallery extends LitElement {
     const cols = Math.max(1, Number.parseInt(settings.galleryColumns, 10) || 3);
     const format = String(settings.galleryFormat || "1 / 1");
     const gap = String(settings.galleryGap || "8px");
+    const thumbnailImageSize = getImageSize(
+      settings.galleryImageSize,
+      "thumb",
+    );
     const activeImage =
       this.lightboxIndex >= 0 ? images[this.lightboxIndex] : "";
     const activeHiresImage = getImageUrlForSize(activeImage, "hires");
@@ -154,7 +158,7 @@ export class OwbGallery extends LitElement {
                       @click=${() => this.openLightbox(index)}
                     >
                       <img
-                        src=${getImageUrlForSize(url, "thumb")}
+                        src=${getImageUrlForSize(url, thumbnailImageSize)}
                         alt=""
                         loading="lazy"
                       />

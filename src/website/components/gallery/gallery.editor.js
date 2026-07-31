@@ -3,6 +3,10 @@ import { EditorComponent } from "../../../editor/components/layout/editor-compon
 import { FileManager } from "../../../editor/components/layout/file-manager/file-manager.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbGallery, defaultGalleryConfig } from "./gallery.js";
+import {
+  getImageSize,
+  IMAGE_SIZE_OPTIONS,
+} from "../../utils/image-size.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 export { defaultGalleryConfig };
@@ -74,12 +78,22 @@ installEditorPlugin(OwbGallery, {
         galleryColumns: 3,
         galleryFormat: "1 / 1",
         galleryGap: "8px",
+        galleryImageSize: "thumb",
       },
       tabs: [{ id: "general", label: "General" }],
       content: () => {
         const editor = EditorComponent.instance;
         return html`
           <settings-section title="Photos">
+            <editor-select
+              label="Thumbnail image size"
+              .value=${getImageSize(editor.galleryImageSize, "thumb")}
+              .options=${IMAGE_SIZE_OPTIONS}
+              @change=${(event) =>
+                editor.updateSettingsState({
+                  galleryImageSize: getImageSize(event.detail.value, "thumb"),
+                })}
+            ></editor-select>
             <button
               type="button"
               class="owb-browse-btn"
