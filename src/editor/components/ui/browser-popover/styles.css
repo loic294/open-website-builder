@@ -1,0 +1,20 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  color: var(--color-base-content);
+}
+
+.modal {
+  pointer-events: auto;
+}
+
+.modal-box {
+  max-width: min(28rem, calc(100vw - 2rem));
+  border-color: var(--color-base-300);
+}
+
+.modal-backdrop {
+  cursor: default;
+}

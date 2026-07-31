@@ -21,6 +21,7 @@ import {
   createElement,
 } from "lucide";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
+import { browserPopover } from "../../../editor/components/ui/browser-popover/browser-popover.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbText, defaultTextConfig } from "./text.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
@@ -152,7 +153,7 @@ function getCurrentFontSize(element) {
   return editor.getAttributes("textStyle")?.fontSize || "";
 }
 
-function toggleLink(element) {
+async function toggleLink(element) {
   const editor = element._tipTapEditor;
   if (!editor) {
     return;
@@ -164,7 +165,12 @@ function toggleLink(element) {
   }
 
   const previousUrl = editor.getAttributes("link").href || "https://";
-  const url = window.prompt("Enter URL", previousUrl);
+  const url = await browserPopover.prompt("Link URL", {
+    title: "Add link",
+    defaultValue: previousUrl,
+    inputType: "url",
+    confirmLabel: "Add link",
+  });
 
   if (!url) {
     return;

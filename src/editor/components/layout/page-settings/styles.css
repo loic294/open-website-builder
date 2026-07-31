@@ -139,6 +139,26 @@
   grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.75fr);
 }
 
+.metadata-add-popover {
+  width: min(20rem, calc(100vw - 2rem));
+  margin-top: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.metadata-add-card {
+  gap: 0.75rem;
+  padding: 1rem;
+  border-color: var(--color-base-300);
+  box-shadow: 0 0.75rem 2rem color-mix(in oklab, var(--color-base-content) 18%, transparent);
+}
+
+.metadata-add-card .fieldset {
+  min-width: 0;
+}
+
 .settings-empty {
   padding: 1rem;
 }

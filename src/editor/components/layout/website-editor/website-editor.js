@@ -13,6 +13,7 @@ import "../../ui/radio-button/radio-button.js";
 import { renderNode } from "../../../core/render-node.js";
 import { dataLayer } from "../../../data/data-layer.js";
 import { FileManager } from "../file-manager/file-manager.js";
+import { browserPopover } from "../../ui/browser-popover/browser-popover.js";
 
 import "../../../../website/components/site-section/site-section.js";
 import "../../../../website/components/text/text.js";
@@ -533,7 +534,10 @@ class WebsiteEditor extends LitElement {
             ? `shared component "${selection.componentId || ""}"`
             : `page "${selection.pageId || ""}"`;
 
-    const confirmed = window.confirm(`Delete ${label}? This cannot be undone.`);
+    const confirmed = await browserPopover.confirm(
+      `Delete ${label}? This cannot be undone.`,
+      { title: "Delete permanently", confirmLabel: "Delete" },
+    );
     if (!confirmed) {
       return;
     }
@@ -724,21 +728,17 @@ class WebsiteEditor extends LitElement {
     } catch (error) {
       console.error(error);
       this.pageConfig = previousConfig;
-      window.alert(
+      await browserPopover.alert(
         error instanceof Error ? error.message : "Failed to save metadata",
+        { title: "Metadata save failed" },
       );
     }
   }
 
-  async addGeneralMetadataField() {
-    const requestedPath = window.prompt("Metadata field name:");
-    if (!requestedPath) {
-      return;
-    }
+  async addGeneralMetadataField(requestedPath) {
     const path = this.normalizeMetadataPath(requestedPath);
     if (!path) {
-      window.alert("Enter a valid metadata field name.");
-      return;
+      throw new Error("Enter a valid metadata field name.");
     }
 
     if (
@@ -748,21 +748,24 @@ class WebsiteEditor extends LitElement {
         path,
       )
     ) {
-      window.alert(`Field is configured as collection metadata: ${path}`);
-      return;
+      throw new Error(`Field is configured as collection metadata: ${path}`);
     }
 
     const metadata = structuredClone(this.pageConfig?.metadata || {});
     if (this.getValueByPath(metadata, path) !== undefined) {
-      window.alert(`Metadata field already exists: ${path}`);
-      return;
+      throw new Error(`Metadata field already exists: ${path}`);
     }
     this.setValueByPath(metadata, path, "");
     await this.persistCurrentMetadata(metadata);
   }
 
   async removeGeneralMetadataField(path) {
-    if (!window.confirm(`Remove metadata field "${path}"?`)) {
+    if (
+      !(await browserPopover.confirm(`Remove metadata field "${path}"?`, {
+        title: "Remove metadata field",
+        confirmLabel: "Remove",
+      }))
+    ) {
       return;
     }
     const metadata = structuredClone(this.pageConfig?.metadata || {});
@@ -782,18 +785,13 @@ class WebsiteEditor extends LitElement {
     );
   }
 
-  async addCollectionMetadataField() {
-    const requestedName = window.prompt("Collection metadata field name:");
-    if (!requestedName) {
-      return;
-    }
+  async addCollectionMetadataField(requestedName) {
     const name = this.normalizeMetadataPath(requestedName);
     const metadataFields = { ...(this.pageConfig?.metadataFields || {}) };
     if (!name || metadataFields[name]) {
-      window.alert(
+      throw new Error(
         name ? `Metadata field already exists: ${name}` : "Invalid field name.",
       );
-      return;
     }
     await this.applyCollectionConfigUpdate({
       metadataFields: {
@@ -801,6 +799,63 @@ class WebsiteEditor extends LitElement {
         [name]: { type: "string" },
       },
     });
+  }
+
+  renderAddFieldPopover({ id, label, onAdd }) {
+    const anchorName = `--${id}-anchor`;
+
+    return html`
+      <button
+        type="button"
+        class="btn btn-sm"
+        popovertarget=${id}
+        style=${`anchor-name:${anchorName}`}
+      >
+        Add field
+      </button>
+      <div
+        id=${id}
+        class="dropdown dropdown-end metadata-add-popover"
+        popover
+        style=${`position-anchor:${anchorName}`}
+      >
+        <form
+          class="card card-border card-sm bg-base-100 metadata-add-card"
+          @submit=${async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const input = form.elements.namedItem("fieldName");
+            input.setCustomValidity("");
+
+            try {
+              await onAdd(input.value);
+              form.reset();
+              form.closest("[popover]")?.hidePopover();
+            } catch (error) {
+              input.setCustomValidity(
+                error instanceof Error ? error.message : "Unable to add field",
+              );
+              input.reportValidity();
+            }
+          }}
+        >
+          <label class="fieldset">
+            <span class="fieldset-legend">${label}</span>
+            <input
+              type="text"
+              name="fieldName"
+              class="input input-sm w-full"
+              placeholder="fieldName or group.fieldName"
+              required
+              autofocus
+            />
+          </label>
+          <div class="card-actions justify-end">
+            <button type="submit" class="btn btn-sm">Add</button>
+          </div>
+        </form>
+      </div>
+    `;
   }
 
   async updateCollectionMetadataFieldName(previousName, nextName) {
@@ -839,7 +894,12 @@ class WebsiteEditor extends LitElement {
   }
 
   async removeCollectionMetadataField(fieldName) {
-    if (!window.confirm(`Remove collection metadata field "${fieldName}"?`)) {
+    if (
+      !(await browserPopover.confirm(
+        `Remove collection metadata field "${fieldName}"?`,
+        { title: "Remove collection field", confirmLabel: "Remove" },
+      ))
+    ) {
       return;
     }
     const metadataFields = { ...(this.pageConfig?.metadataFields || {}) };
@@ -1282,13 +1342,11 @@ class WebsiteEditor extends LitElement {
       <div class="card card-border card-sm bg-base-100 settings-card">
         <div class="settings-section-header">
           <h3>${title}</h3>
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click=${() => this.addGeneralMetadataField()}
-          >
-            Add field
-          </button>
+          ${this.renderAddFieldPopover({
+            id: "add-general-metadata-field",
+            label: "Metadata field name",
+            onAdd: (name) => this.addGeneralMetadataField(name),
+          })}
         </div>
         ${fields.length === 0
           ? html`<p class="settings-empty">No metadata fields available.</p>`
@@ -1443,8 +1501,9 @@ class WebsiteEditor extends LitElement {
       this.navigateToSelection(nextSelection);
     } catch (error) {
       console.error(error);
-      window.alert(
+      await browserPopover.alert(
         error instanceof Error ? error.message : "Failed to update id",
+        { title: "ID update failed" },
       );
     }
   }
@@ -1620,13 +1679,11 @@ class WebsiteEditor extends LitElement {
         <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Metadata fields</h3>
-            <button
-              type="button"
-              class="btn btn-sm"
-              @click=${() => this.addCollectionMetadataField()}
-            >
-              Add field
-            </button>
+            ${this.renderAddFieldPopover({
+              id: "add-collection-metadata-field",
+              label: "Collection metadata field name",
+              onAdd: (name) => this.addCollectionMetadataField(name),
+            })}
           </div>
 
           ${metadataFields.length === 0

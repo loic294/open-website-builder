@@ -16,6 +16,7 @@ import {
   createElement,
 } from "lucide";
 import styles from "./styles.css?inline";
+import { browserPopover } from "../../ui/browser-popover/browser-popover.js";
 
 const API = {
   async listFolders() {
@@ -39,7 +40,9 @@ const API = {
     return r.json();
   },
   async deleteFolder(id) {
-    const r = await fetch(`/__data/files/folders/${encodeURIComponent(id)}`, { method: "DELETE" });
+    const r = await fetch(`/__data/files/folders/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
     return r.json();
   },
   async listImages(folderId = null) {
@@ -53,7 +56,10 @@ const API = {
     const form = new FormData();
     form.append("folderId", folderId || "root");
     form.append("file", file, file.name);
-    const r = await fetch("/__data/files/upload", { method: "POST", body: form });
+    const r = await fetch("/__data/files/upload", {
+      method: "POST",
+      body: form,
+    });
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   },
@@ -193,7 +199,9 @@ export class FileManager extends LitElement {
     await this._loadImages();
     // Pre-focus an already-selected image in the details panel
     if (this._pickerSelectedPaths.length) {
-      const match = this._images.find((img) => img.filePath === this._pickerSelectedPaths[0]);
+      const match = this._images.find(
+        (img) => img.filePath === this._pickerSelectedPaths[0],
+      );
       if (match) this._focusedImage = match;
     }
   }
@@ -233,7 +241,11 @@ export class FileManager extends LitElement {
     // Re-sync focused image from fresh data
     if (this._focusedImage) {
       this._focusedImage =
-        this._images.find((img) => img.basename === this._focusedImage.basename && img.folderId === this._focusedImage.folderId) || null;
+        this._images.find(
+          (img) =>
+            img.basename === this._focusedImage.basename &&
+            img.folderId === this._focusedImage.folderId,
+        ) || null;
     }
   }
 
@@ -247,13 +259,17 @@ export class FileManager extends LitElement {
   }
 
   _selectManagedImage(img, event) {
-    const idx = this._images.findIndex((item) => item.filePath === img.filePath);
+    const idx = this._images.findIndex(
+      (item) => item.filePath === img.filePath,
+    );
     this._focusedImage = img;
 
     if (event?.shiftKey && this._lastManagedClickedIdx !== null) {
       const from = Math.min(this._lastManagedClickedIdx, idx);
       const to = Math.max(this._lastManagedClickedIdx, idx);
-      this._managedSelectedPaths = this._images.slice(from, to + 1).map((item) => item.filePath);
+      this._managedSelectedPaths = this._images
+        .slice(from, to + 1)
+        .map((item) => item.filePath);
     } else if (event?.metaKey || event?.ctrlKey) {
       const alreadySelected = this._managedSelectedPaths.includes(img.filePath);
       this._managedSelectedPaths = alreadySelected
@@ -276,8 +292,12 @@ export class FileManager extends LitElement {
     } else if (event?.shiftKey && this._lastPickerClickedIdx !== null) {
       const from = Math.min(this._lastPickerClickedIdx, idx);
       const to = Math.max(this._lastPickerClickedIdx, idx);
-      const rangePaths = this._images.slice(from, to + 1).map((i) => i.filePath);
-      this._pickerSelectedPaths = [...new Set([...this._pickerSelectedPaths, ...rangePaths])];
+      const rangePaths = this._images
+        .slice(from, to + 1)
+        .map((i) => i.filePath);
+      this._pickerSelectedPaths = [
+        ...new Set([...this._pickerSelectedPaths, ...rangePaths]),
+      ];
     } else {
       this._pickerSelectedPaths = alreadySelected
         ? this._pickerSelectedPaths.filter((path) => path !== img.filePath)
@@ -294,7 +314,10 @@ export class FileManager extends LitElement {
   // ── Folder management ────────────────────────────────────────────────────────
 
   async _createFolder() {
-    const name = window.prompt("Folder name:");
+    const name = await browserPopover.prompt("Folder name", {
+      title: "Create folder",
+      confirmLabel: "Create",
+    });
     if (!name?.trim()) return;
     const folder = await API.createFolder(name.trim());
     this._folders = [...this._folders, folder];
@@ -340,9 +363,10 @@ export class FileManager extends LitElement {
       try {
         await API.uploadImage(folderId, file);
         uploaded++;
-        this._uploadProgress = uploaded < files.length
-          ? `Uploading ${uploaded} / ${files.length}…`
-          : null;
+        this._uploadProgress =
+          uploaded < files.length
+            ? `Uploading ${uploaded} / ${files.length}…`
+            : null;
       } catch (err) {
         console.error("Upload failed", err);
       }
@@ -372,9 +396,14 @@ export class FileManager extends LitElement {
       onConfirm: async () => {
         this._confirmAction = null;
         await API.deleteImage(img.folderId, img.basename);
-        if (this._focusedImage?.basename === img.basename) this._focusedImage = null;
-        this._pickerSelectedPaths = this._pickerSelectedPaths.filter((path) => path !== img.filePath);
-        this._managedSelectedPaths = this._managedSelectedPaths.filter((path) => path !== img.filePath);
+        if (this._focusedImage?.basename === img.basename)
+          this._focusedImage = null;
+        this._pickerSelectedPaths = this._pickerSelectedPaths.filter(
+          (path) => path !== img.filePath,
+        );
+        this._managedSelectedPaths = this._managedSelectedPaths.filter(
+          (path) => path !== img.filePath,
+        );
         await this._loadImages();
       },
     };
@@ -401,9 +430,14 @@ export class FileManager extends LitElement {
       country: field === "country" ? value : override.country,
     });
     this._images = this._images.map((item) =>
-      item.basename === img.basename && item.folderId === img.folderId ? updated : item,
+      item.basename === img.basename && item.folderId === img.folderId
+        ? updated
+        : item,
     );
-    if (this._focusedImage?.basename === img.basename && this._focusedImage?.folderId === img.folderId) {
+    if (
+      this._focusedImage?.basename === img.basename &&
+      this._focusedImage?.folderId === img.folderId
+    ) {
       this._focusedImage = updated;
     }
   }
@@ -411,7 +445,9 @@ export class FileManager extends LitElement {
   // ── Batch actions ─────────────────────────────────────────────────────────────
 
   _getManagedImages() {
-    return this._images.filter((img) => this._managedSelectedPaths.includes(img.filePath));
+    return this._images.filter((img) =>
+      this._managedSelectedPaths.includes(img.filePath),
+    );
   }
 
   _batchDelete() {
@@ -428,11 +464,14 @@ export class FileManager extends LitElement {
         for (const img of imgs) {
           await API.deleteImage(img.folderId, img.basename).catch(() => {});
           done++;
-          this._batchProgress = done < imgs.length ? `Deleting ${done} / ${imgs.length}…` : null;
+          this._batchProgress =
+            done < imgs.length ? `Deleting ${done} / ${imgs.length}…` : null;
         }
         this._batchProgress = null;
         const deletedPaths = new Set(imgs.map((img) => img.filePath));
-        this._pickerSelectedPaths = this._pickerSelectedPaths.filter((path) => !deletedPaths.has(path));
+        this._pickerSelectedPaths = this._pickerSelectedPaths.filter(
+          (path) => !deletedPaths.has(path),
+        );
         this._managedSelectedPaths = [];
         this._focusedImage = null;
         await this._loadImages();
@@ -443,13 +482,18 @@ export class FileManager extends LitElement {
   async _batchMove(targetFolderId) {
     this._movePopoverOpen = false;
     const managedImages = this._getManagedImages();
-    const imgs = managedImages.map(({ folderId, basename }) => ({ folderId, basename }));
+    const imgs = managedImages.map(({ folderId, basename }) => ({
+      folderId,
+      basename,
+    }));
     if (!imgs.length) return;
     this._batchProgress = `Moving ${imgs.length} image${imgs.length !== 1 ? "s" : ""}…`;
     await API.moveImages(imgs, targetFolderId).catch(console.error);
     this._batchProgress = null;
     const movedPaths = new Set(managedImages.map((img) => img.filePath));
-    this._pickerSelectedPaths = this._pickerSelectedPaths.filter((path) => !movedPaths.has(path));
+    this._pickerSelectedPaths = this._pickerSelectedPaths.filter(
+      (path) => !movedPaths.has(path),
+    );
     this._managedSelectedPaths = [];
     this._focusedImage = null;
     await this._loadImages();
@@ -464,7 +508,10 @@ export class FileManager extends LitElement {
       confirmLabel: "Remove Location",
       onConfirm: async () => {
         this._confirmAction = null;
-        const payload = imgs.map(({ folderId, basename }) => ({ folderId, basename }));
+        const payload = imgs.map(({ folderId, basename }) => ({
+          folderId,
+          basename,
+        }));
         this._batchProgress = `Stripping location from ${imgs.length} image${imgs.length !== 1 ? "s" : ""}…`;
         await API.stripLocation(payload).catch(console.error);
         this._batchProgress = null;
@@ -478,7 +525,11 @@ export class FileManager extends LitElement {
   _lightboxNav(delta) {
     if (!this._images.length) return;
     const idx = this._focusedImage
-      ? this._images.findIndex((i) => i.basename === this._focusedImage.basename && i.folderId === this._focusedImage.folderId)
+      ? this._images.findIndex(
+          (i) =>
+            i.basename === this._focusedImage.basename &&
+            i.folderId === this._focusedImage.folderId,
+        )
       : -1;
     const next = (idx + delta + this._images.length) % this._images.length;
     this._focusedImage = this._images[next];
@@ -486,9 +537,11 @@ export class FileManager extends LitElement {
   }
 
   _scrollFocusedThumb() {
-    this.renderRoot
-      ?.querySelector(".lightbox-thumb.focused")
-      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    this.renderRoot?.querySelector(".lightbox-thumb.focused")?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -497,12 +550,16 @@ export class FileManager extends LitElement {
     if (!this._open) return html``;
 
     return html`
-      <div class="overlay" @click=${(e) => { if (e.target === e.currentTarget) this._closeModal(); }}>
+      <div
+        class="overlay"
+        @click=${(e) => {
+          if (e.target === e.currentTarget) this._closeModal();
+        }}
+      >
         <div class="modal" @click=${(e) => e.stopPropagation()}>
           ${this._renderHeader()}
           <div class="modal-body">
-            ${this._renderFoldersPanel()}
-            ${this._renderImagesPanel()}
+            ${this._renderFoldersPanel()} ${this._renderImagesPanel()}
             ${this._renderDetailsPanel()}
           </div>
           ${this._renderFooter()}
@@ -519,7 +576,9 @@ export class FileManager extends LitElement {
       <div class="modal-header">
         <h2 class="modal-title">File Manager</h2>
         <div class="header-actions">
-          ${progress ? html`<span class="upload-progress">${progress}</span>` : ""}
+          ${progress
+            ? html`<span class="upload-progress">${progress}</span>`
+            : ""}
           ${selCount > 0
             ? html`
                 <div class="batch-actions">
@@ -545,7 +604,10 @@ export class FileManager extends LitElement {
                     </button>
                     ${this._movePopoverOpen
                       ? html`
-                          <div class="move-popover" @click=${(e) => e.stopPropagation()}>
+                          <div
+                            class="move-popover"
+                            @click=${(e) => e.stopPropagation()}
+                          >
                             ${this._folders.length
                               ? this._folders.map(
                                   (f) => html`
@@ -558,7 +620,9 @@ export class FileManager extends LitElement {
                                     </button>
                                   `,
                                 )
-                              : html`<div class="move-popover-empty">No folders</div>`}
+                              : html`<div class="move-popover-empty">
+                                  No folders
+                                </div>`}
                           </div>
                         `
                       : ""}
@@ -578,7 +642,8 @@ export class FileManager extends LitElement {
           <button
             class="btn btn-primary"
             type="button"
-            @click=${() => this.renderRoot.querySelector("#upload-input")?.click()}
+            @click=${() =>
+              this.renderRoot.querySelector("#upload-input")?.click()}
           >
             ${createElement(Upload)} Upload
           </button>
@@ -623,8 +688,11 @@ export class FileManager extends LitElement {
                 autofocus
                 @click=${(e) => e.stopPropagation()}
                 @keydown=${(e) => {
-                  if (e.key === "Enter") this._commitRenameFolder(f, e.target.value);
-                  if (e.key === "Escape") { this._renamingFolderId = null; }
+                  if (e.key === "Enter")
+                    this._commitRenameFolder(f, e.target.value);
+                  if (e.key === "Escape") {
+                    this._renamingFolderId = null;
+                  }
                 }}
                 @blur=${(e) => this._commitRenameFolder(f, e.target.value)}
               />`
@@ -641,7 +709,10 @@ export class FileManager extends LitElement {
             class="folder-edit-btn"
             type="button"
             title="Delete folder"
-            @click=${(e) => { e.stopPropagation(); this._askDeleteFolder(f); }}
+            @click=${(e) => {
+              e.stopPropagation();
+              this._askDeleteFolder(f);
+            }}
           >
             ${createElement(Trash2)}
           </button>
@@ -651,14 +722,14 @@ export class FileManager extends LitElement {
 
     return html`
       <aside class="folders-panel">
-        <div class="folders-list">
-          ${allItem}
-          ${folderItems}
-        </div>
+        <div class="folders-list">${allItem} ${folderItems}</div>
         <div class="folders-footer">
-          <button class="add-folder-btn" type="button" @click=${() => this._createFolder()}>
-            ${createElement(FolderPlus)}
-            Add new folder
+          <button
+            class="add-folder-btn"
+            type="button"
+            @click=${() => this._createFolder()}
+          >
+            ${createElement(FolderPlus)} Add new folder
           </button>
         </div>
       </aside>
@@ -672,14 +743,18 @@ export class FileManager extends LitElement {
       <div class="images-toolbar">
         <span class="images-count">
           ${_images.length} image${_images.length !== 1 ? "s" : ""}
-          ${_managedSelectedPaths.length ? ` · ${_managedSelectedPaths.length} selected` : ""}
+          ${_managedSelectedPaths.length
+            ? ` · ${_managedSelectedPaths.length} selected`
+            : ""}
         </span>
         <div class="view-toggle">
           <button
             class="view-btn ${_viewMode === "grid" ? "active" : ""}"
             type="button"
             title="Grid view"
-            @click=${() => { this._viewMode = "grid"; }}
+            @click=${() => {
+              this._viewMode = "grid";
+            }}
           >
             ${createElement(Grid2x2)}
           </button>
@@ -687,7 +762,11 @@ export class FileManager extends LitElement {
             class="view-btn ${_viewMode === "lightbox" ? "active" : ""}"
             type="button"
             title="Lightbox view"
-            @click=${() => { this._viewMode = "lightbox"; if (!_focusedImage && _images.length) this._focusedImage = _images[0]; }}
+            @click=${() => {
+              this._viewMode = "lightbox";
+              if (!_focusedImage && _images.length)
+                this._focusedImage = _images[0];
+            }}
           >
             ${createElement(LayoutTemplate)}
           </button>
@@ -695,27 +774,37 @@ export class FileManager extends LitElement {
       </div>
     `;
 
-    const body = _viewMode === "grid"
-      ? this._renderGridView()
-      : this._renderLightboxView();
+    const body =
+      _viewMode === "grid"
+        ? this._renderGridView()
+        : this._renderLightboxView();
 
     return html`
-      <section class="images-panel" @click=${() => { this._movePopoverOpen = false; }}>
-        ${toolbar}
-        ${body}
+      <section
+        class="images-panel"
+        @click=${() => {
+          this._movePopoverOpen = false;
+        }}
+      >
+        ${toolbar} ${body}
       </section>
     `;
   }
 
   _renderGridView() {
-    const { _images, _pickerSelectedPaths, _managedSelectedPaths, _focusedImage } = this;
+    const {
+      _images,
+      _pickerSelectedPaths,
+      _managedSelectedPaths,
+      _focusedImage,
+    } = this;
 
     if (!_images.length) {
       return html`
         <div class="images-grid-scroll">
           <div class="empty-state">
             ${createElement(Image)}
-            <span>No images yet.<br>Upload some files to get started.</span>
+            <span>No images yet.<br />Upload some files to get started.</span>
           </div>
         </div>
       `;
@@ -732,7 +821,9 @@ export class FileManager extends LitElement {
               _focusedImage?.folderId === img.folderId;
             return html`
               <div
-                class="image-tile ${picked ? "picked" : ""} ${managed ? "managed-selected" : ""} ${focused ? "focused" : ""}"
+                class="image-tile ${picked ? "picked" : ""} ${managed
+                  ? "managed-selected"
+                  : ""} ${focused ? "focused" : ""}"
                 @click=${(e) => this._selectManagedImage(img, e)}
               >
                 <img
@@ -743,7 +834,9 @@ export class FileManager extends LitElement {
                 <div class="image-tile-overlay">
                   <div
                     class="image-tile-checkbox"
-                    title=${picked ? "Remove from image selection" : "Add to image selection"}
+                    title=${picked
+                      ? "Remove from image selection"
+                      : "Add to image selection"}
                     @click=${(e) => {
                       e.stopPropagation();
                       this._togglePickerSelection(img, e);
@@ -757,7 +850,9 @@ export class FileManager extends LitElement {
                       e.stopPropagation();
                       this._focusedImage = img;
                       this._viewMode = "lightbox";
-                      this.updateComplete.then(() => this._scrollFocusedThumb());
+                      this.updateComplete.then(() =>
+                        this._scrollFocusedThumb(),
+                      );
                     }}
                   >
                     ${createElement(ZoomIn)}
@@ -772,7 +867,12 @@ export class FileManager extends LitElement {
   }
 
   _renderLightboxView() {
-    const { _images, _focusedImage, _pickerSelectedPaths, _managedSelectedPaths } = this;
+    const {
+      _images,
+      _focusedImage,
+      _pickerSelectedPaths,
+      _managedSelectedPaths,
+    } = this;
 
     if (!_images.length) {
       return html`
@@ -796,28 +896,49 @@ export class FileManager extends LitElement {
             src=${mainImg.smallPath || mainImg.filePath}
             alt=${mainImg.originalFilename || mainImg.basename}
           />
-          <button class="lightbox-nav prev" type="button" @click=${() => this._lightboxNav(-1)}>
+          <button
+            class="lightbox-nav prev"
+            type="button"
+            @click=${() => this._lightboxNav(-1)}
+          >
             ${createElement(ChevronLeft)}
           </button>
-          <button class="lightbox-nav next" type="button" @click=${() => this._lightboxNav(1)}>
+          <button
+            class="lightbox-nav next"
+            type="button"
+            @click=${() => this._lightboxNav(1)}
+          >
             ${createElement(ChevronRight)}
           </button>
         </div>
         <div class="lightbox-thumbs">
           ${_images.map((img) => {
-            const focused = _focusedImage?.basename === img.basename && _focusedImage?.folderId === img.folderId;
+            const focused =
+              _focusedImage?.basename === img.basename &&
+              _focusedImage?.folderId === img.folderId;
             const picked = _pickerSelectedPaths.includes(img.filePath);
             const managed = _managedSelectedPaths.includes(img.filePath);
             return html`
               <div
-                class="lightbox-thumb ${focused ? "focused" : ""} ${picked ? "picked" : ""} ${managed ? "managed-selected" : ""}"
+                class="lightbox-thumb ${focused ? "focused" : ""} ${picked
+                  ? "picked"
+                  : ""} ${managed ? "managed-selected" : ""}"
                 @click=${(e) => this._selectManagedImage(img, e)}
               >
-                <img src=${img.thumbPath || img.filePath} alt=${img.basename} loading="lazy" />
+                <img
+                  src=${img.thumbPath || img.filePath}
+                  alt=${img.basename}
+                  loading="lazy"
+                />
                 <div
                   class="lightbox-thumb-check"
-                  title=${picked ? "Remove from image selection" : "Add to image selection"}
-                  @click=${(e) => { e.stopPropagation(); this._togglePickerSelection(img, e); }}
+                  title=${picked
+                    ? "Remove from image selection"
+                    : "Add to image selection"}
+                  @click=${(e) => {
+                    e.stopPropagation();
+                    this._togglePickerSelection(img, e);
+                  }}
                 ></div>
               </div>
             `;
@@ -851,10 +972,13 @@ export class FileManager extends LitElement {
                           .value=${img.basename}
                           autofocus
                           @keydown=${(e) => {
-                            if (e.key === "Enter") this._commitRenameFile(img, e.target.value);
-                            if (e.key === "Escape") this._renamingFilename = null;
+                            if (e.key === "Enter")
+                              this._commitRenameFile(img, e.target.value);
+                            if (e.key === "Escape")
+                              this._renamingFilename = null;
                           }}
-                          @blur=${(e) => this._commitRenameFile(img, e.target.value)}
+                          @blur=${(e) =>
+                            this._commitRenameFile(img, e.target.value)}
                         />
                       </div>`
                     : html`<div class="detail-filename-row">
@@ -864,7 +988,9 @@ export class FileManager extends LitElement {
                           type="button"
                           title="Rename"
                           @click=${(e) => this._startRenameFile(img, e)}
-                        >${createElement(Pencil)}</button>
+                        >
+                          ${createElement(Pencil)}
+                        </button>
                       </div>`}
                 </div>
 
@@ -881,7 +1007,9 @@ export class FileManager extends LitElement {
                 <div class="detail-row">
                   <div class="detail-label">Resolution</div>
                   <div class="detail-value">
-                    ${img.width && img.height ? `${img.width} × ${img.height}` : "—"}
+                    ${img.width && img.height
+                      ? `${img.width} × ${img.height}`
+                      : "—"}
                   </div>
                 </div>
 
@@ -915,11 +1043,19 @@ export class FileManager extends LitElement {
                 <div class="detail-metadata-grid">
                   <div>
                     <div class="detail-label">Focal length</div>
-                    <div class="detail-value">${img.lens?.focalLengthMm != null ? `${img.lens.focalLengthMm} mm` : "—"}</div>
+                    <div class="detail-value">
+                      ${img.lens?.focalLengthMm != null
+                        ? `${img.lens.focalLengthMm} mm`
+                        : "—"}
+                    </div>
                   </div>
                   <div>
                     <div class="detail-label">Aperture</div>
-                    <div class="detail-value">${img.lens?.aperture != null ? `f/${img.lens.aperture}` : "—"}</div>
+                    <div class="detail-value">
+                      ${img.lens?.aperture != null
+                        ? `f/${img.lens.aperture}`
+                        : "—"}
+                    </div>
                   </div>
                   <div>
                     <div class="detail-label">ISO</div>
@@ -944,10 +1080,10 @@ export class FileManager extends LitElement {
                     ${!img.originalLocation
                       ? "No location in original"
                       : img.generatedLocationStripped === true
-                      ? "Location stripped"
-                      : img.generatedLocationStripped === false
-                        ? "Location retained"
-                        : "Unknown"}
+                        ? "Location stripped"
+                        : img.generatedLocationStripped === false
+                          ? "Location retained"
+                          : "Unknown"}
                   </div>
                 </div>
 
@@ -956,21 +1092,32 @@ export class FileManager extends LitElement {
                     <span class="detail-label">City</span>
                     <input
                       .value=${placeOverride.city ?? detectedPlace.city ?? ""}
-                      @blur=${(e) => this._savePlaceOverride(img, "city", e.target.value)}
+                      @blur=${(e) =>
+                        this._savePlaceOverride(img, "city", e.target.value)}
                     />
                   </label>
                   <label>
                     <span class="detail-label">State / Province</span>
                     <input
-                      .value=${placeOverride.stateProvince ?? detectedPlace.stateProvince ?? ""}
-                      @blur=${(e) => this._savePlaceOverride(img, "stateProvince", e.target.value)}
+                      .value=${placeOverride.stateProvince ??
+                      detectedPlace.stateProvince ??
+                      ""}
+                      @blur=${(e) =>
+                        this._savePlaceOverride(
+                          img,
+                          "stateProvince",
+                          e.target.value,
+                        )}
                     />
                   </label>
                   <label>
                     <span class="detail-label">Country</span>
                     <input
-                      .value=${placeOverride.country ?? detectedPlace.country ?? ""}
-                      @blur=${(e) => this._savePlaceOverride(img, "country", e.target.value)}
+                      .value=${placeOverride.country ??
+                      detectedPlace.country ??
+                      ""}
+                      @blur=${(e) =>
+                        this._savePlaceOverride(img, "country", e.target.value)}
                     />
                   </label>
                 </div>
@@ -994,10 +1141,10 @@ export class FileManager extends LitElement {
                 </button>
               `
             : html`
-                <div class="details-preview-empty">
-                  ${createElement(Image)}
-                </div>
-                <p style="font-size:12px;color:var(--editor-muted-text-color,#888);text-align:center;margin:0">
+                <div class="details-preview-empty">${createElement(Image)}</div>
+                <p
+                  style="font-size:12px;color:var(--editor-muted-text-color,#888);text-align:center;margin:0"
+                >
                   Select an image to see its details.
                 </p>
               `}
@@ -1008,19 +1155,28 @@ export class FileManager extends LitElement {
 
   _renderFooter() {
     const count = this._pickerSelectedPaths.length;
-    const label = this._mode === "single"
-      ? "Select Image"
-      : count > 0
-        ? `Select ${count} Image${count !== 1 ? "s" : ""}`
-        : "Select Images";
+    const label =
+      this._mode === "single"
+        ? "Select Image"
+        : count > 0
+          ? `Select ${count} Image${count !== 1 ? "s" : ""}`
+          : "Select Images";
 
     return html`
       <div class="modal-footer">
         <div class="footer-left">
-          ${count > 0 ? html`<span>${count} image${count !== 1 ? "s" : ""} selected</span>` : ""}
+          ${count > 0
+            ? html`<span
+                >${count} image${count !== 1 ? "s" : ""} selected</span
+              >`
+            : ""}
         </div>
         <div class="footer-right">
-          <button class="btn btn-ghost" type="button" @click=${() => this._closeModal()}>
+          <button
+            class="btn btn-ghost"
+            type="button"
+            @click=${() => this._closeModal()}
+          >
             Cancel
           </button>
           <button
@@ -1044,10 +1200,21 @@ export class FileManager extends LitElement {
           <h3>${title || "Are you sure?"}</h3>
           <p>${message}</p>
           <div class="confirm-actions">
-            <button class="btn btn-ghost" type="button" @click=${() => { this._confirmAction = null; }}>
+            <button
+              class="btn btn-ghost"
+              type="button"
+              @click=${() => {
+                this._confirmAction = null;
+              }}
+            >
               Cancel
             </button>
-            <button class="btn btn-primary" style="background:var(--editor-text-danger,#d73c3c);border-color:var(--editor-text-danger,#d73c3c)" type="button" @click=${onConfirm}>
+            <button
+              class="btn btn-primary"
+              style="background:var(--editor-text-danger,#d73c3c);border-color:var(--editor-text-danger,#d73c3c)"
+              type="button"
+              @click=${onConfirm}
+            >
               ${confirmLabel || "Confirm"}
             </button>
           </div>

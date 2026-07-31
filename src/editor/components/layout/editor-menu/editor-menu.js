@@ -18,6 +18,7 @@ import {
 } from "lucide";
 import { dataLayer } from "../../../data/data-layer.js";
 import { FileManager } from "../file-manager/file-manager.js";
+import { browserPopover } from "../../ui/browser-popover/browser-popover.js";
 import "../page-settings/page-settings.js";
 import styles from "./styles.css?inline";
 import daisyUI from "../../../styles/daisyui.css?inline";
@@ -693,8 +694,9 @@ class EditorMenu extends LitElement {
       });
     } catch (error) {
       console.error(error);
-      window.alert(
+      await browserPopover.alert(
         error instanceof Error ? error.message : "Failed to create page",
+        { title: "Page creation failed" },
       );
     }
   }
@@ -720,8 +722,9 @@ class EditorMenu extends LitElement {
       });
     } catch (error) {
       console.error(error);
-      window.alert(
+      await browserPopover.alert(
         error instanceof Error ? error.message : "Failed to create collection",
+        { title: "Collection creation failed" },
       );
     }
   }
@@ -758,10 +761,11 @@ class EditorMenu extends LitElement {
       });
     } catch (error) {
       console.error(error);
-      window.alert(
+      await browserPopover.alert(
         error instanceof Error
           ? error.message
           : "Failed to create collection item",
+        { title: "Item creation failed" },
       );
     }
   }
@@ -788,10 +792,11 @@ class EditorMenu extends LitElement {
       });
     } catch (error) {
       console.error(error);
-      window.alert(
+      await browserPopover.alert(
         error instanceof Error
           ? error.message
           : "Failed to create shared component",
+        { title: "Component creation failed" },
       );
     }
   }
