@@ -12,6 +12,7 @@ import "../../ui/button/button.js";
 import "../../ui/radio-button/radio-button.js";
 import { renderNode } from "../../../core/render-node.js";
 import { dataLayer } from "../../../data/data-layer.js";
+import { FileManager } from "../file-manager/file-manager.js";
 
 import "../../../../website/components/site-section/site-section.js";
 import "../../../../website/components/text/text.js";
@@ -76,13 +77,23 @@ class WebsiteEditor extends LitElement {
           return acc;
         }
 
-        const valueType = fieldConfig?.type === "array" ? "array" : "string";
+        const valueType = ["array", "object"].includes(fieldConfig?.type)
+          ? fieldConfig.type
+          : "string";
         const isRequired = Boolean(fieldConfig?.required);
 
         if (valueType === "array") {
           acc[normalizedName] = {
             type: "array",
             items: { type: "string" },
+            ...(isRequired ? { required: true } : {}),
+          };
+          return acc;
+        }
+
+        if (valueType === "object") {
+          acc[normalizedName] = {
+            type: "object",
             ...(isRequired ? { required: true } : {}),
           };
           return acc;
@@ -146,7 +157,6 @@ class WebsiteEditor extends LitElement {
   viewOptions = [
     { label: "Editor", value: "editor" },
     { label: "Preview", value: "preview" },
-    { label: "Settings", value: "settings" },
   ];
 
   sizeOptions = [
@@ -172,13 +182,9 @@ class WebsiteEditor extends LitElement {
     this.onRouteChanged = async () => {
       await this.loadSelectionFromRoute();
     };
-    this.onOpenPageSettings = () => {
-      this.activeView = "settings";
-    };
 
     window.addEventListener("popstate", this.onRouteChanged);
     window.addEventListener("editor-route-change", this.onRouteChanged);
-    window.addEventListener("owb-open-page-settings", this.onOpenPageSettings);
 
     if (!this.didLoadConfig) {
       this.didLoadConfig = true;
@@ -190,10 +196,12 @@ class WebsiteEditor extends LitElement {
     super.disconnectedCallback();
     window.removeEventListener("popstate", this.onRouteChanged);
     window.removeEventListener("editor-route-change", this.onRouteChanged);
-    window.removeEventListener(
-      "owb-open-page-settings",
-      this.onOpenPageSettings,
-    );
+  }
+
+  updated(changedProperties) {
+    if (changedProperties.has("pageConfig")) {
+      window.dispatchEvent(new CustomEvent("owb-page-settings-changed"));
+    }
   }
 
   getRouteSelection() {
@@ -614,7 +622,9 @@ class WebsiteEditor extends LitElement {
     const fields = this.pageConfig?.fields || {};
     return Object.entries(fields).map(([name, config]) => ({
       name,
-      type: config?.type === "array" ? "array" : "string",
+      type: ["array", "object"].includes(config?.type)
+        ? config.type
+        : "string",
       required: Boolean(config?.required),
     }));
   }
@@ -674,6 +684,11 @@ class WebsiteEditor extends LitElement {
         type: "array",
         items: { type: "string" },
       };
+    } else if (type === "object") {
+      fields[fieldName] = {
+        type: "object",
+        ...(fields[fieldName]?.required ? { required: true } : {}),
+      };
     } else {
       const required = Boolean(fields[fieldName]?.required);
       fields[fieldName] = {
@@ -729,10 +744,12 @@ class WebsiteEditor extends LitElement {
         ? this.pageConfig.metadata
         : {};
 
-    return this.flattenObjectFields(metadata).map((entry) => ({
-      ...entry,
-      value: this.getValueByPath(metadata, entry.path),
-    }));
+    return this.flattenObjectFields(metadata)
+      .filter((entry) => !entry.path.startsWith("seo."))
+      .map((entry) => ({
+        ...entry,
+        value: this.getValueByPath(metadata, entry.path),
+      }));
   }
 
   async updateCollectionItemBaseField(fieldName, value) {
@@ -804,10 +821,163 @@ class WebsiteEditor extends LitElement {
         ? this.pageConfig.metadata
         : {};
 
-    return this.flattenObjectFields(metadata).map((entry) => ({
-      ...entry,
-      value: this.getValueByPath(metadata, entry.path),
-    }));
+    return this.flattenObjectFields(metadata)
+      .filter((entry) => !entry.path.startsWith("seo."))
+      .map((entry) => ({
+        ...entry,
+        value: this.getValueByPath(metadata, entry.path),
+      }));
+  }
+
+  getSeoConfig() {
+    const legacySeo =
+      this.pageConfig?.metadata?.seo &&
+      typeof this.pageConfig.metadata.seo === "object"
+        ? this.pageConfig.metadata.seo
+        : {};
+    const seo =
+      this.pageConfig?.seo && typeof this.pageConfig.seo === "object"
+        ? this.pageConfig.seo
+        : {};
+
+    return {
+      title: String(seo.title ?? legacySeo.title ?? ""),
+      description: String(seo.description ?? legacySeo.description ?? ""),
+      image: String(
+        seo.image ?? this.pageConfig?.metadata?.featuredImageUrl ?? "",
+      ),
+      canonicalUrl: String(seo.canonicalUrl ?? ""),
+      noIndex: Boolean(seo.noIndex),
+    };
+  }
+
+  async updateSeoField(fieldName, value) {
+    const selectionType = this.currentSelection?.type;
+    if (selectionType !== "page" && selectionType !== "collection") {
+      return;
+    }
+
+    const metadata =
+      this.pageConfig?.metadata && typeof this.pageConfig.metadata === "object"
+        ? { ...this.pageConfig.metadata }
+        : {};
+    delete metadata.seo;
+
+    const nextConfig = {
+      ...this.pageConfig,
+      metadata,
+      seo: {
+        ...this.getSeoConfig(),
+        [fieldName]: value,
+      },
+    };
+    this.pageConfig = nextConfig;
+
+    try {
+      if (selectionType === "collection") {
+        await dataLayer.updateCollectionItem(
+          this.currentSelection.collectionId,
+          this.currentSelection.itemId,
+          nextConfig,
+        );
+      } else {
+        await dataLayer.savePageConfig(
+          this.currentSelection?.pageId || "index",
+          nextConfig,
+        );
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  renderSeoSettings() {
+    const seo = this.getSeoConfig();
+
+    return html`
+      <div class="card card-border card-sm bg-base-100 settings-card">
+        <div class="settings-section-header">
+          <h3>SEO</h3>
+        </div>
+
+        <div class="field-row field-row-compact">
+          <label class="settings-label">Search title</label>
+          <input
+            type="text"
+            class="input input-sm w-full"
+            .value=${seo.title}
+            placeholder=${String(this.pageConfig?.title || "")}
+            @change=${(event) =>
+              this.updateSeoField("title", event.target.value)}
+          />
+        </div>
+
+        <div class="field-row field-row-compact">
+          <label class="settings-label">Description</label>
+          <textarea
+            class="textarea textarea-sm w-full"
+            rows="3"
+            maxlength="320"
+            .value=${seo.description}
+            @change=${(event) =>
+              this.updateSeoField("description", event.target.value)}
+          ></textarea>
+        </div>
+
+        <div class="field-row field-row-compact">
+          <label class="settings-label">Social image</label>
+          <div class="image-picker-row">
+            <input
+              type="text"
+              class="input input-sm w-full"
+              .value=${seo.image}
+              placeholder="/images/example.jpg"
+              @change=${(event) =>
+                this.updateSeoField("image", event.target.value)}
+            />
+            <button
+              type="button"
+              class="btn btn-sm"
+              @click=${() =>
+                FileManager.open({
+                  mode: "single",
+                  selected: seo.image ? [seo.image] : [],
+                  onSelect: ([path]) =>
+                    this.updateSeoField("image", path || ""),
+                })}
+            >
+              Select
+            </button>
+          </div>
+          ${seo.image
+            ? html`<img class="seo-image-preview" src=${seo.image} alt="" />`
+            : html``}
+        </div>
+
+        <div class="field-row field-row-compact">
+          <label class="settings-label">Canonical URL</label>
+          <input
+            type="url"
+            class="input input-sm w-full"
+            .value=${seo.canonicalUrl}
+            placeholder=${String(this.pageConfig?.url || "")}
+            @change=${(event) =>
+              this.updateSeoField("canonicalUrl", event.target.value)}
+          />
+        </div>
+
+        <label class="settings-checkbox-label">
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm"
+            .checked=${seo.noIndex}
+            @change=${(event) =>
+              this.updateSeoField("noIndex", event.target.checked)}
+          />
+          Hide this page from search engines
+        </label>
+      </div>
+    `;
   }
 
   async updatePageBaseField(fieldName, value) {
@@ -935,13 +1105,13 @@ class WebsiteEditor extends LitElement {
         <label class="settings-label">Id</label>
         <input
           type="text"
-          class="settings-input"
+          class="input input-sm w-full"
           .value=${String(this.identityDraft || "")}
           @input=${(event) => {
             this.identityDraft = event.target.value;
           }}
         />
-        <button type="submit" class="settings-inline-button">Save</button>
+        <button type="submit" class="btn btn-sm">Save</button>
       </form>
     `;
   }
@@ -1012,8 +1182,8 @@ class WebsiteEditor extends LitElement {
     const metadataFields = this.getPageMetadataFields();
 
     return html`
-      <div class="collection-config-settings">
-        <div class="settings-section">
+      <div class="settings-stack">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Page</h3>
           </div>
@@ -1024,7 +1194,7 @@ class WebsiteEditor extends LitElement {
             <label class="settings-label">Title</label>
             <input
               type="text"
-              class="settings-input"
+              class="input input-sm w-full"
               .value=${String(this.pageConfig?.title || "")}
               @change=${(event) =>
                 this.updatePageBaseField("title", event.target.value)}
@@ -1035,7 +1205,7 @@ class WebsiteEditor extends LitElement {
             <label class="settings-label">URL</label>
             <input
               type="text"
-              class="settings-input"
+              class="input input-sm w-full"
               .value=${String(this.pageConfig?.url || "")}
               @change=${(event) =>
                 this.updatePageBaseField("url", event.target.value)}
@@ -1043,7 +1213,9 @@ class WebsiteEditor extends LitElement {
           </div>
         </div>
 
-        <div class="settings-section">
+        ${this.renderSeoSettings()}
+
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Metadata fields</h3>
           </div>
@@ -1055,7 +1227,7 @@ class WebsiteEditor extends LitElement {
                     <label class="settings-label">${field.path}</label>
                     <input
                       type="text"
-                      class="settings-input"
+                      class="input input-sm w-full"
                       .value=${Array.isArray(field.value)
                         ? field.value.join(", ")
                         : String(field.value ?? "")}
@@ -1071,13 +1243,13 @@ class WebsiteEditor extends LitElement {
               )}`}
         </div>
 
-        <div class="settings-section">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Danger zone</h3>
           </div>
           <button
             type="button"
-            class="settings-danger-button"
+            class="btn btn-error btn-sm"
             @click=${() => this.deleteCurrentSelection()}
           >
             Delete page
@@ -1097,20 +1269,20 @@ class WebsiteEditor extends LitElement {
     const metadataFieldOptions = this.collectionMetadataFieldOptions;
 
     return html`
-      <div class="collection-config-settings">
-        <div class="settings-section">
+      <div class="settings-stack">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Collection</h3>
           </div>
           ${this.renderIdentitySetting()}
         </div>
 
-        <div class="settings-section">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Fields</h3>
             <button
               type="button"
-              class="settings-inline-button"
+              class="btn btn-sm"
               @click=${() => this.addCollectionConfigField()}
             >
               Add field
@@ -1124,7 +1296,7 @@ class WebsiteEditor extends LitElement {
                   <div class="field-row">
                     <input
                       type="text"
-                      class="settings-input"
+                      class="input input-sm w-full"
                       .value=${field.name}
                       @change=${(event) =>
                         this.updateCollectionConfigFieldName(
@@ -1133,7 +1305,7 @@ class WebsiteEditor extends LitElement {
                         )}
                     />
                     <select
-                      class="settings-input"
+                      class="select select-sm w-full"
                       .value=${field.type}
                       @change=${(event) =>
                         this.updateCollectionConfigFieldType(
@@ -1143,10 +1315,12 @@ class WebsiteEditor extends LitElement {
                     >
                       <option value="string">Text</option>
                       <option value="array">Array of text</option>
+                      <option value="object">Object</option>
                     </select>
                     <label class="settings-checkbox-label">
                       <input
                         type="checkbox"
+                        class="checkbox checkbox-sm"
                         .checked=${field.required}
                         @change=${(event) =>
                           this.updateCollectionConfigFieldRequired(
@@ -1158,7 +1332,7 @@ class WebsiteEditor extends LitElement {
                     </label>
                     <button
                       type="button"
-                      class="settings-danger-button"
+                      class="btn btn-error btn-sm btn-outline"
                       @click=${() =>
                         this.removeCollectionConfigField(field.name)}
                     >
@@ -1169,7 +1343,7 @@ class WebsiteEditor extends LitElement {
               )}
         </div>
 
-        <div class="settings-section">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Metadata allowlist</h3>
           </div>
@@ -1185,6 +1359,7 @@ class WebsiteEditor extends LitElement {
                       <label class="metadata-toggle-row">
                         <input
                           type="checkbox"
+                          class="checkbox checkbox-sm"
                           .checked=${isEnabled}
                           @change=${(event) =>
                             this.toggleCollectionAllowlistField(
@@ -1200,13 +1375,13 @@ class WebsiteEditor extends LitElement {
               `}
         </div>
 
-        <div class="settings-section">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Danger zone</h3>
           </div>
           <button
             type="button"
-            class="settings-danger-button"
+            class="btn btn-error btn-sm"
             @click=${() => this.deleteCurrentSelection()}
           >
             Delete collection
@@ -1223,8 +1398,8 @@ class WebsiteEditor extends LitElement {
       : "";
 
     return html`
-      <div class="collection-config-settings">
-        <div class="settings-section">
+      <div class="settings-stack">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Collection item</h3>
           </div>
@@ -1235,7 +1410,7 @@ class WebsiteEditor extends LitElement {
             <label class="settings-label">Title</label>
             <input
               type="text"
-              class="settings-input"
+              class="input input-sm w-full"
               .value=${String(this.pageConfig?.title || "")}
               @change=${(event) =>
                 this.updateCollectionItemBaseField("title", event.target.value)}
@@ -1245,7 +1420,7 @@ class WebsiteEditor extends LitElement {
           <div class="field-row field-row-compact">
             <label class="settings-label">Excerpt</label>
             <textarea
-              class="settings-textarea"
+              class="textarea textarea-sm w-full"
               rows="3"
               @change=${(event) =>
                 this.updateCollectionItemBaseField(
@@ -1261,7 +1436,7 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
             <label class="settings-label">Tags</label>
             <input
               type="text"
-              class="settings-input"
+              class="input input-sm w-full"
               .value=${tagsValue}
               @change=${(event) =>
                 this.updateCollectionItemBaseField(
@@ -1278,7 +1453,7 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
             <label class="settings-label">URL</label>
             <input
               type="text"
-              class="settings-input"
+              class="input input-sm w-full"
               .value=${String(this.pageConfig?.url || "")}
               @change=${(event) =>
                 this.updateCollectionItemBaseField("url", event.target.value)}
@@ -1286,7 +1461,9 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
           </div>
         </div>
 
-        <div class="settings-section">
+        ${this.renderSeoSettings()}
+
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Metadata fields</h3>
           </div>
@@ -1298,7 +1475,7 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
                     <label class="settings-label">${field.path}</label>
                     <input
                       type="text"
-                      class="settings-input"
+                      class="input input-sm w-full"
                       .value=${Array.isArray(field.value)
                         ? field.value.join(", ")
                         : String(field.value ?? "")}
@@ -1314,13 +1491,13 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
               )}`}
         </div>
 
-        <div class="settings-section">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Danger zone</h3>
           </div>
           <button
             type="button"
-            class="settings-danger-button"
+            class="btn btn-error btn-sm"
             @click=${() => this.deleteCurrentSelection()}
           >
             Delete collection item
@@ -1332,8 +1509,8 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
 
   renderSharedSettings() {
     return html`
-      <div class="collection-config-settings">
-        <div class="settings-section">
+      <div class="settings-stack">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Shared component</h3>
           </div>
@@ -1348,19 +1525,19 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
             <label class="settings-label">Id</label>
             <input
               type="text"
-              class="settings-input"
+              class="input input-sm w-full"
               .value=${String(this.sharedIdentityDraft?.id || "")}
               @input=${(event) =>
                 this.updateSharedIdentityDraft("id", event.target.value)}
             />
-            <button type="submit" class="settings-inline-button">Save</button>
+            <button type="submit" class="btn btn-sm">Save</button>
           </form>
 
           <div class="field-row field-row-compact">
             <label class="settings-label">Title</label>
             <input
               type="text"
-              class="settings-input"
+              class="input input-sm w-full"
               .value=${String(this.sharedIdentityDraft?.title || "")}
               @input=${(event) =>
                 this.updateSharedIdentityDraft("title", event.target.value)}
@@ -1368,13 +1545,13 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
           </div>
         </div>
 
-        <div class="settings-section">
+        <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Danger zone</h3>
           </div>
           <button
             type="button"
-            class="settings-danger-button"
+            class="btn btn-error btn-sm"
             @click=${() => this.deleteCurrentSelection()}
           >
             Delete shared component
@@ -1382,6 +1559,22 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
         </div>
       </div>
     `;
+  }
+
+  renderCurrentSettings() {
+    if (this.currentSelection?.type === "collection-config") {
+      return this.renderCollectionConfigSettings();
+    }
+    if (this.currentSelection?.type === "collection") {
+      return this.renderCollectionItemSettings();
+    }
+    if (this.currentSelection?.type === "page") {
+      return this.renderPageSettings();
+    }
+    if (this.currentSelection?.type === "shared") {
+      return this.renderSharedSettings();
+    }
+    return html`<div class="settings-empty">No settings available.</div>`;
   }
 
   renderViewContent(content) {
@@ -1393,22 +1586,6 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
           class="website-preview-iframe"
         ></iframe>
       </div>`;
-    }
-
-    if (this.activeView === "settings") {
-      if (this.currentSelection?.type === "collection-config") {
-        return this.renderCollectionConfigSettings();
-      }
-      if (this.currentSelection?.type === "collection") {
-        return this.renderCollectionItemSettings();
-      }
-      if (this.currentSelection?.type === "page") {
-        return this.renderPageSettings();
-      }
-      if (this.currentSelection?.type === "shared") {
-        return this.renderSharedSettings();
-      }
-      return html`<div class="view-placeholder">Settings section</div>`;
     }
 
     return content.map((node) =>

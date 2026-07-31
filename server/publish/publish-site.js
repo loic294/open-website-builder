@@ -472,6 +472,9 @@ export async function publishSite({
       const pageTemplate = {
         id: itemId,
         title: itemConfig?.title || itemId,
+        url: `/${outputUrlPath}`,
+        seo: itemConfig?.seo,
+        metadata: itemConfig?.metadata,
         content: collectionTemplateContent,
       };
 

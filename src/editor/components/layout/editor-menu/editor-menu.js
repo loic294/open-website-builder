@@ -18,6 +18,7 @@ import {
 } from "lucide";
 import { dataLayer } from "../../../data/data-layer.js";
 import { FileManager } from "../file-manager/file-manager.js";
+import "../page-settings/page-settings.js";
 import styles from "./styles.css?inline";
 import daisyUI from "../../../styles/daisyui.css?inline";
 
@@ -182,7 +183,7 @@ class EditorMenu extends LitElement {
     collapsed: { type: Boolean, reflect: true },
     sections: { state: true },
     groupItems: { state: true },
-    menuMode: { state: true },
+    menuMode: { type: String, reflect: true, attribute: "menu-mode" },
     layersConfig: { state: true },
     layerSections: { state: true },
     activeLayerNodeId: { state: true },
@@ -236,10 +237,6 @@ class EditorMenu extends LitElement {
   setMenuMode(nextMode) {
     this.menuMode = nextMode;
     this.persistMenuMode();
-
-    if (nextMode === "settings") {
-      window.dispatchEvent(new CustomEvent("owb-open-page-settings"));
-    }
   }
 
   async reloadGroupItems() {
@@ -1225,7 +1222,17 @@ class EditorMenu extends LitElement {
         </div>
       `;
     } else if (this.menuMode === "settings") {
-      menuContent = html` <div class="menu-groups">Page Settings</div> `;
+      menuContent = html`
+        <div class="menu-groups settings-groups">
+          <div class="group-toggle static">
+            <span class="section-icon">${createElement(FileCog)}</span>
+            <span class="group-label">Page Settings</span>
+          </div>
+          <div class="settings-scroll">
+            <page-settings></page-settings>
+          </div>
+        </div>
+      `;
     }
 
     const isImporterRoute =

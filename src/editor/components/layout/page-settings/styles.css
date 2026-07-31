@@ -1,0 +1,104 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
+.settings-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.settings-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.settings-section-header h3 {
+  margin: 0;
+  color: var(--color-base-content);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  padding-block: 0.25rem;
+}
+
+.field-row:not(.field-row-compact):not(.identity-setting-row) {
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.field-row:not(.field-row-compact):not(.identity-setting-row):last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.identity-setting-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.identity-setting-row .settings-label {
+  grid-column: 1 / -1;
+}
+
+.settings-label,
+.settings-checkbox-label,
+.metadata-toggle-row {
+  color: var(--color-base-content);
+  font-size: 0.75rem;
+}
+
+.settings-checkbox-label,
+.metadata-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-empty,
+.settings-help {
+  margin: 0;
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  font-size: 0.75rem;
+}
+
+.metadata-toggle-list {
+  display: grid;
+  gap: 0.5rem;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.image-picker-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.seo-image-preview {
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  object-fit: cover;
+}
+
+.settings-empty {
+  padding: 1rem;
+}

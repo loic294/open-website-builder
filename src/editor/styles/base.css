@@ -28,6 +28,11 @@ editor-menu {
     flex-basis 0.22s ease;
 }
 
+editor-menu[menu-mode="settings"] {
+  width: min(420px, calc(100vw - 2rem));
+  flex-basis: min(420px, calc(100vw - 2rem));
+}
+
 editor-menu[collapsed] {
   width: 36px;
   flex-basis: 36px;

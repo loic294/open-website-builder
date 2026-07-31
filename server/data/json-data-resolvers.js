@@ -211,6 +211,13 @@ export function createJsonDataResolvers({ contentRoot }) {
       id: requestedId,
       title: page?.title || "Untitled",
       url: page?.url || `/${requestedId}`,
+      seo: {
+        title: String(page?.seo?.title || page?.title || "Untitled"),
+        description: String(page?.seo?.description || ""),
+        image: String(page?.seo?.image || ""),
+        canonicalUrl: String(page?.seo?.canonicalUrl || ""),
+        noIndex: Boolean(page?.seo?.noIndex),
+      },
       content:
         Array.isArray(page?.content) && page.content.length > 0
           ? page.content
@@ -283,6 +290,7 @@ export function createJsonDataResolvers({ contentRoot }) {
         title: { type: "string", required: true },
         content: { type: "array", required: true },
         metadata: { type: "object", required: false },
+        seo: { type: "object", required: false },
       },
       content: getDefaultCollectionTemplate(),
       collectionMetadataAllowlist: [],
@@ -536,6 +544,15 @@ export function createJsonDataResolvers({ contentRoot }) {
     const itemPayload = {
       id: itemId,
       ...item,
+      seo: {
+        title: String(item?.seo?.title || item?.title || itemId),
+        description: String(
+          item?.seo?.description || item?.excerpt || "",
+        ),
+        image: String(item?.seo?.image || ""),
+        canonicalUrl: String(item?.seo?.canonicalUrl || ""),
+        noIndex: Boolean(item?.seo?.noIndex),
+      },
       content:
         Array.isArray(item?.content) && item.content.length > 0
           ? item.content

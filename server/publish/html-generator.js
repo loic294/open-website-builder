@@ -26,11 +26,71 @@ async function renderNodes(nodes, context) {
   return rendered.join("\n");
 }
 
-function buildPageHtml({ title, bodyHtml, siteConfig = {} }) {
-  const safeTitle = `${String(title || "Website")}${String(siteConfig?.pageTitle || "")}`
+function escapeHtml(value) {
+  return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function resolveAbsoluteUrl(value, siteUrl) {
+  const rawValue = String(value || "").trim();
+  const baseUrl = String(siteUrl || "").trim();
+  if (!rawValue) return "";
+  if (!baseUrl) return rawValue;
+
+  try {
+    return new URL(rawValue, `${baseUrl.replace(/\/+$/, "")}/`).href;
+  } catch {
+    return rawValue;
+  }
+}
+
+function buildPageHtml({ pageConfig = {}, bodyHtml, siteConfig = {} }) {
+  const legacySeo =
+    pageConfig?.metadata?.seo && typeof pageConfig.metadata.seo === "object"
+      ? pageConfig.metadata.seo
+      : {};
+  const seo =
+    pageConfig?.seo && typeof pageConfig.seo === "object"
+      ? pageConfig.seo
+      : legacySeo;
+  const seoTitle = String(
+    seo?.title || pageConfig?.title || pageConfig?.id || "Website",
+  );
+  const safeTitle = escapeHtml(
+    `${seoTitle}${String(siteConfig?.pageTitle || "")}`,
+  );
+  const description = String(seo?.description || "").trim();
+  const canonicalUrl = resolveAbsoluteUrl(
+    seo?.canonicalUrl || pageConfig?.url,
+    siteConfig?.siteUrl,
+  );
+  const imageUrl = resolveAbsoluteUrl(seo?.image, siteConfig?.siteUrl);
+  const socialTags = [
+    `<meta property="og:title" content="${escapeHtml(seoTitle)}" />`,
+    description
+      ? `<meta property="og:description" content="${escapeHtml(description)}" />`
+      : "",
+    canonicalUrl
+      ? `<meta property="og:url" content="${escapeHtml(canonicalUrl)}" />`
+      : "",
+    imageUrl
+      ? `<meta property="og:image" content="${escapeHtml(imageUrl)}" />`
+      : "",
+    `<meta name="twitter:card" content="${imageUrl ? "summary_large_image" : "summary"}" />`,
+    `<meta name="twitter:title" content="${escapeHtml(seoTitle)}" />`,
+    description
+      ? `<meta name="twitter:description" content="${escapeHtml(description)}" />`
+      : "",
+    imageUrl
+      ? `<meta name="twitter:image" content="${escapeHtml(imageUrl)}" />`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n    ");
   const analyticsScript = String(siteConfig?.analyticsScript || "").trim();
 
   return `<!DOCTYPE html>
@@ -40,6 +100,10 @@ function buildPageHtml({ title, bodyHtml, siteConfig = {} }) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/x-icon" href="/images/favicon.png" />
     <title>${safeTitle}</title>
+    ${description ? `<meta name="description" content="${escapeHtml(description)}" />` : ""}
+    ${seo?.noIndex ? '<meta name="robots" content="noindex, nofollow" />' : ""}
+    ${canonicalUrl ? `<link rel="canonical" href="${escapeHtml(canonicalUrl)}" />` : ""}
+    ${socialTags}
     <link rel="stylesheet" href="https://use.typekit.net/fsb3crk.css" />
     <link rel="stylesheet" href="./theme.css" />
     <link rel="stylesheet" href="./base.css" />
@@ -81,7 +145,7 @@ export async function generatePageHtml({
 
   return {
     html: buildPageHtml({
-      title: pageConfig?.title || pageConfig?.id || "Website",
+      pageConfig,
       bodyHtml,
       siteConfig,
     }),

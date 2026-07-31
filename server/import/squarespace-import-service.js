@@ -133,10 +133,6 @@ function buildMetadata(item) {
     sourceUrl: toText(item?.link).trim(),
     sourceGuid: toText(item?.guid).trim(),
     sourcePostId: toText(item?.["wp:post_id"]).trim(),
-    seo: {
-      title: toText(item?.title).trim(),
-      description: excerpt,
-    },
     excerpt,
     slug: toText(item?.["wp:post_name"]).trim(),
     status: toText(item?.["wp:status"]).trim(),
@@ -750,6 +746,7 @@ async function ensureCollectionConfig(contentRoot, collectionId) {
       title: { type: "string", required: true },
       content: { type: "array", required: true },
       metadata: { type: "object", required: false },
+      seo: { type: "object", required: false },
       excerpt: { type: "string", required: false },
       tags: { type: "array", required: false },
     },
@@ -1168,12 +1165,15 @@ async function buildPageFromStaticHtml({
       id: slug,
       title,
       url: fullUrl,
+      seo: {
+        title,
+        description: seoDescription,
+        image: "",
+        canonicalUrl: "",
+        noIndex: false,
+      },
       metadata: {
         sourceUrl: fullUrl,
-        seo: {
-          title,
-          description: seoDescription,
-        },
         slug,
         status: "publish",
       },
@@ -1322,6 +1322,14 @@ export async function importSquarespaceXml({
       report.summary.globalCssFilesCreated += 1;
     }
 
+    const seo = {
+      title,
+      description: metadata.excerpt || "",
+      image: metadata.featuredImageUrl || "",
+      canonicalUrl: "",
+      noIndex: false,
+    };
+
     if (postType === "page") {
       const slugBase =
         sanitizeId(metadata.slug || parsedUrlPath || title) || "page";
@@ -1350,6 +1358,7 @@ export async function importSquarespaceXml({
           String(metadata.sourceUrl || "").trim() ||
           parsedUrlPath ||
           `/${pageId}`,
+        seo,
         metadata,
         content: pageContent,
       };
@@ -1399,6 +1408,7 @@ export async function importSquarespaceXml({
       title,
       excerpt: metadata.excerpt || "",
       tags: metadata.tags || [],
+      seo,
       metadata,
       content: itemContent,
     };

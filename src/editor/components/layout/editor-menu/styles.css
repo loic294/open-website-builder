@@ -15,6 +15,10 @@
   transition: width 0.22s ease;
 }
 
+:host([menu-mode="settings"]) .sidebar {
+  width: min(420px, calc(100vw - 2rem));
+}
+
 .sidebar.collapsed {
   width: 26px;
   padding-inline: 10px;
@@ -98,6 +102,17 @@
   overflow: visible;
 }
 
+.settings-groups {
+  gap: 0;
+  overflow: hidden;
+}
+
+.settings-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 4px 12px;
+}
+
 .menu-mode-toggle {
   display: flex;
   gap: 6px;
@@ -165,10 +180,6 @@
 
 .group-toggle.static {
   cursor: default;
-}
-
-.group-toggle:hover {
-  background: var(--editor-hover-surface);
 }
 
 .group-label {
