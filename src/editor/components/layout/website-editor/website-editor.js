@@ -29,6 +29,7 @@ import "../../../../website/components/collection-content/collection-content.js"
 
 import baseStyle from "../../../../website/styles/base.css?inline";
 import styles from "./website-editor-styles.css?inline";
+import daisyUI from "../../../styles/daisyui.css?inline";
 
 class WebsiteEditor extends LitElement {
   static properties = {
@@ -41,7 +42,12 @@ class WebsiteEditor extends LitElement {
     sharedIdentityDraft: { state: true },
   };
 
-  static styles = [unsafeCSS(baseStyle), unsafeCSS(styles), css``];
+  static styles = [
+    unsafeCSS(baseStyle),
+    unsafeCSS(styles),
+    unsafeCSS(daisyUI),
+    css``,
+  ];
 
   constructor() {
     super();
@@ -1324,7 +1330,7 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
       ? this.pageConfig.content
       : [];
 
-    return html`<div class="editor">
+    return html`<div class="editor" data-theme="mylight">
       <div class="editor-top-menu">
         <div class="left-menu">
           <div class="page-info">

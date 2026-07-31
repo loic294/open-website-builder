@@ -5,7 +5,7 @@
 .sidebar {
   width: 280px;
   height: 100vh;
-  max-height: 100vh;
+  max-height: calc(100vh - 1rem);
   display: flex;
   flex-direction: column;
   padding: 16px 12px;
@@ -141,10 +141,11 @@
 .menu-group {
   position: relative;
   overflow: hidden;
+  flex: 1 1 0%;
 }
 
 .group-content-scroll {
-  max-height: 34vh;
+  max-height: calc(100% - 3rem);
   overflow-y: auto;
 }
 

@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFile, stat } from "node:fs/promises";
+import tailwindcss from "@tailwindcss/vite";
 import { createJsonDataResolvers } from "./server/data/json-data-resolvers.js";
 import { createDataApiMiddleware } from "./server/data/data-api-middleware.js";
 import { createImagesMiddleware } from "./server/data/images-middleware.js";
@@ -120,132 +121,135 @@ export default defineConfig(({ mode }) => {
   const foldersStore = createFoldersStore({ contentRoot });
 
   return {
-  plugins: [
-    {
-      name: "component-styles",
-      configureServer(server) {
-        server.middlewares.use(async (request, response, next) => {
-          const match = (request.url || "").match(
-            /^\/owb-styles\/([a-z][a-z0-9-]*)\.css(?:\?.*)?$/,
-          );
-          if (!match) {
-            next();
-            return;
-          }
-          const componentName = match[1];
-          const filePath = resolve(
-            __dirname,
-            `src/website/components/${componentName}/styles.css`,
-          );
-          try {
-            let css = await readFile(filePath, "utf8");
-            if (componentName === "captcha") {
-              try {
-                const altchaCss = await readFile(
-                  resolve(
-                    __dirname,
-                    "node_modules/altcha/dist/external/altcha.css",
-                  ),
-                  "utf8",
-                );
-                css = `${css}\n/* altcha */\n${altchaCss}`;
-              } catch {}
+    plugins: [
+      tailwindcss(),
+      {
+        name: "component-styles",
+        configureServer(server) {
+          server.middlewares.use(async (request, response, next) => {
+            const match = (request.url || "").match(
+              /^\/owb-styles\/([a-z][a-z0-9-]*)\.css(?:\?.*)?$/,
+            );
+            if (!match) {
+              next();
+              return;
             }
-            response.statusCode = 200;
-            response.setHeader("Content-Type", "text/css; charset=utf-8");
-            response.end(css);
-          } catch {
-            response.statusCode = 404;
-            response.end("");
-          }
-        });
+            const componentName = match[1];
+            const filePath = resolve(
+              __dirname,
+              `src/website/components/${componentName}/styles.css`,
+            );
+            try {
+              let css = await readFile(filePath, "utf8");
+              if (componentName === "captcha") {
+                try {
+                  const altchaCss = await readFile(
+                    resolve(
+                      __dirname,
+                      "node_modules/altcha/dist/external/altcha.css",
+                    ),
+                    "utf8",
+                  );
+                  css = `${css}\n/* altcha */\n${altchaCss}`;
+                } catch {}
+              }
+              response.statusCode = 200;
+              response.setHeader("Content-Type", "text/css; charset=utf-8");
+              response.end(css);
+            } catch {
+              response.statusCode = 404;
+              response.end("");
+            }
+          });
+        },
       },
-    },
-    {
-      name: "data-api",
-      configureServer(server) {
-        server.middlewares.use(createImagesMiddleware({ contentRoot, r2 }));
-        server.middlewares.use(createFilesApiMiddleware({ r2, metadataStore, foldersStore }));
-        const jsonResolvers = createJsonDataResolvers({ contentRoot });
-        const resolvers = {
-          ...jsonResolvers,
-          publishSite: async () =>
-            await publishSite({
-              contentRoot,
-              outputDir: publishedOutputDir,
-              appRoot: __dirname,
-            }),
-          importSquarespaceXml: async ({ xmlContent, sourceName, options }) =>
-            await importSquarespaceXml({
-              xmlContent,
-              sourceName,
-              options,
-              contentRoot,
-            }),
-          importSquarespaceStaticSiteDir: async ({
-            staticSiteDir,
-            htmlContent,
-            fileName,
-            options,
-          }) =>
-            await importSquarespaceStaticSiteDir({
+      {
+        name: "data-api",
+        configureServer(server) {
+          server.middlewares.use(createImagesMiddleware({ contentRoot, r2 }));
+          server.middlewares.use(
+            createFilesApiMiddleware({ r2, metadataStore, foldersStore }),
+          );
+          const jsonResolvers = createJsonDataResolvers({ contentRoot });
+          const resolvers = {
+            ...jsonResolvers,
+            publishSite: async () =>
+              await publishSite({
+                contentRoot,
+                outputDir: publishedOutputDir,
+                appRoot: __dirname,
+              }),
+            importSquarespaceXml: async ({ xmlContent, sourceName, options }) =>
+              await importSquarespaceXml({
+                xmlContent,
+                sourceName,
+                options,
+                contentRoot,
+              }),
+            importSquarespaceStaticSiteDir: async ({
               staticSiteDir,
               htmlContent,
               fileName,
               options,
-              contentRoot,
-            }),
-        };
-        server.middlewares.use(createDataApiMiddleware(resolvers));
+            }) =>
+              await importSquarespaceStaticSiteDir({
+                staticSiteDir,
+                htmlContent,
+                fileName,
+                options,
+                contentRoot,
+              }),
+          };
+          server.middlewares.use(createDataApiMiddleware(resolvers));
 
-        server.middlewares.use(
-          createPublishedPreviewMiddleware({
-            publishedDir: publishedOutputDir,
-          }),
-        );
+          server.middlewares.use(
+            createPublishedPreviewMiddleware({
+              publishedDir: publishedOutputDir,
+            }),
+          );
+        },
+      },
+      {
+        name: "editor-route",
+        configureServer(server) {
+          server.middlewares.use((request, response, next) => {
+            if (request.url === "/editor") {
+              response.statusCode = 302;
+              response.setHeader("Location", "/editor/");
+              response.end();
+              return;
+            }
+            if (request.url === "/editor/importer") {
+              response.statusCode = 302;
+              response.setHeader("Location", "/editor/importer/");
+              response.end();
+              return;
+            }
+            next();
+          });
+        },
+      },
+    ],
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "index.html"),
+          editor: resolve(__dirname, "editor/index.html"),
+          importer: resolve(__dirname, "editor/importer/index.html"),
+        },
       },
     },
-    {
-      name: "editor-route",
-      configureServer(server) {
-        server.middlewares.use((request, response, next) => {
-          if (request.url === "/editor") {
-            response.statusCode = 302;
-            response.setHeader("Location", "/editor/");
-            response.end();
-            return;
-          }
-          if (request.url === "/editor/importer") {
-            response.statusCode = 302;
-            response.setHeader("Location", "/editor/importer/");
-            response.end();
-            return;
-          }
-          next();
-        });
+    server: {
+      port: 3003,
+      fs: {
+        allow: [__dirname],
+      },
+      watch: {
+        ignored: [
+          "../*", // Ignore changes outside the project root
+          "!./**", // Only watch inside the current directory
+        ],
       },
     },
-  ],
-  build: {
-    rollupOptions: {
-      input: {
-        index: resolve(__dirname, "index.html"),
-        editor: resolve(__dirname, "editor/index.html"),
-        importer: resolve(__dirname, "editor/importer/index.html"),
-      },
-    },
-  },
-  server: {
-    port: 3003,
-    fs: {
-      allow: [__dirname],
-    },
-    watch: {
-      ignored: [
-        "../*", // Ignore changes outside the project root
-        "!./**", // Only watch inside the current directory
-      ],
-    },
-  },
   };
 });

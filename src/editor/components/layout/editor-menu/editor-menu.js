@@ -11,11 +11,15 @@ import {
   Plus,
   Proportions,
   Upload,
+  Settings2,
+  Layers2,
+  FileCog,
   createElement,
 } from "lucide";
 import { dataLayer } from "../../../data/data-layer.js";
 import { FileManager } from "../file-manager/file-manager.js";
 import styles from "./styles.css?inline";
+import daisyUI from "../../../styles/daisyui.css?inline";
 
 const MENU_COLLAPSED_STORAGE_KEY = "editor-menu-collapsed";
 const MENU_MODE_STORAGE_KEY = "editor-menu-mode";
@@ -178,7 +182,6 @@ class EditorMenu extends LitElement {
     collapsed: { type: Boolean, reflect: true },
     sections: { state: true },
     groupItems: { state: true },
-    collectionSections: { state: true },
     menuMode: { state: true },
     layersConfig: { state: true },
     layerSections: { state: true },
@@ -187,7 +190,7 @@ class EditorMenu extends LitElement {
     isDragging: { state: true },
   };
 
-  static styles = unsafeCSS(styles);
+  static styles = [unsafeCSS(daisyUI), unsafeCSS(styles)];
 
   constructor() {
     super();
@@ -202,7 +205,6 @@ class EditorMenu extends LitElement {
       collections: [],
       shared: [],
     };
-    this.collectionSections = {};
     this.menuMode = this.getStoredMenuMode();
     this.layersConfig = null;
     this.layerSections = {};
@@ -216,11 +218,11 @@ class EditorMenu extends LitElement {
 
   getStoredMenuMode() {
     if (typeof window === "undefined") {
-      return "site-content";
+      return "pages";
     }
 
     const value = window.localStorage.getItem(MENU_MODE_STORAGE_KEY);
-    return value === "layers" ? "layers" : "site-content";
+    return value;
   }
 
   persistMenuMode() {
@@ -232,7 +234,7 @@ class EditorMenu extends LitElement {
   }
 
   setMenuMode(nextMode) {
-    this.menuMode = nextMode === "layers" ? "layers" : "site-content";
+    this.menuMode = nextMode;
     this.persistMenuMode();
   }
 
@@ -282,7 +284,7 @@ class EditorMenu extends LitElement {
             kind: "collection-config",
             collectionId,
             collectionTitle,
-            title: collection?.configItem?.title || "_config.json",
+            title: html`<span class="w-full flex gap-2 items-center"> </span>`,
           },
           items: items.map((item) => ({
             kind: "collection-item",
@@ -299,20 +301,6 @@ class EditorMenu extends LitElement {
         title: component?.title || component?.id || "Untitled",
       })),
     };
-
-    const knownCollectionIds = new Set(
-      this.groupItems.collections
-        .map((item) => String(item?.collectionId || "").trim())
-        .filter(Boolean),
-    );
-
-    const nextCollectionSections = {};
-    for (const collectionId of knownCollectionIds) {
-      nextCollectionSections[collectionId] =
-        this.collectionSections?.[collectionId] ?? true;
-    }
-
-    this.collectionSections = nextCollectionSections;
   }
 
   async connectedCallback() {
@@ -906,17 +894,23 @@ class EditorMenu extends LitElement {
             : selection.url || selection.id;
 
     return html`
-      <button
-        class="group-item-button ${isActive ? "is-active" : ""}"
-        type="button"
-        @click=${() => this.navigateToSelection(selection)}
-      >
-        <span class="group-item-bullet"></span>
-        <span class="group-item-copy">
-          <span class="group-item-title">${selection.title}</span>
-          <span class="group-item-subtitle">${subtitle}</span>
-        </span>
-      </button>
+      <li>
+        <a
+          class=${`${isActive ? "menu-active" : ""}`}
+          @click=${() => this.navigateToSelection(selection)}
+        >
+          <span class="flex min-w-0 flex-col items-start">
+            <span class="w-full truncate">${selection.title}</span>
+            ${selection.kind !== "collection-config"
+              ? html`
+                  <span class="w-full truncate text-[9px] opacity-60"
+                    >${subtitle}</span
+                  >
+                `
+              : html``}
+          </span>
+        </a>
+      </li>
     `;
   }
 
@@ -926,76 +920,48 @@ class EditorMenu extends LitElement {
       ? collectionGroup.items
       : [];
     const collectionId = String(collectionGroup?.collectionId || "").trim();
-    const isExpanded = this.collectionSections?.[collectionId] ?? true;
+    const hasActiveSelection =
+      this.isSelectionActive(collectionGroup.config) ||
+      collectionItems.some((item) => this.isSelectionActive(item));
 
     return html`
-      <div class="collection-folder-group">
-        <div class="collection-folder-title-row">
-          <button
-            class="collection-folder-toggle"
-            type="button"
-            aria-expanded=${String(isExpanded)}
-            @click=${() => this.toggleCollectionSection(collectionId)}
-          >
-            <span class="collection-folder-title">${collectionTitle}</span>
-            <span
-              class="collection-folder-chevron ${isExpanded
-                ? ""
-                : "is-collapsed"}"
+      <li>
+        <details ?open=${hasActiveSelection}>
+          <summary>${collectionTitle}</summary>
+          <div class="flex gap-2 mt-2 mb-4">
+            <button
+              class="btn btn-primary flex-1"
+              @click=${() => this.createCollectionItemFromMenu(collectionId)}
             >
-              ${createElement(ChevronDown)}
-            </span>
-          </button>
-          <button
-            class="group-create-button"
-            type="button"
-            title="New collection item"
-            @click=${() =>
-              this.createCollectionItemFromMenu(collectionGroup.collectionId)}
-          >
-            ${createElement(Plus)}
-          </button>
-        </div>
-        ${isExpanded
-          ? html`
-              <div class="collection-folder-items">
-                ${this.renderSelectableItem(collectionGroup.config)}
-                ${collectionItems.length > 0
-                  ? collectionItems.map((item) =>
-                      this.renderSelectableItem(item),
-                    )
-                  : html`
-                      <div class="group-item">
-                        <span class="group-item-bullet"></span>
-                        <span>No items yet</span>
-                      </div>
-                    `}
-              </div>
-            `
-          : html``}
-      </div>
+              ${createElement(Plus)} New item
+            </button>
+
+            <button
+              class="btn btn-outline flex-1"
+              @click=${() => this.navigateToSelection(collectionGroup.config)}
+            >
+              ${createElement(Settings2)} Settings
+            </button>
+          </div>
+          <ul>
+            ${collectionItems.map((item) => this.renderSelectableItem(item))}
+            ${collectionItems.length === 0
+              ? html`<li class="menu-disabled"><a>No items yet</a></li>`
+              : html``}
+          </ul>
+        </details>
+      </li>
     `;
   }
 
-  renderCollectionsItems(items, isFlyout = false) {
+  renderCollectionsItems(items) {
     const normalizedItems = items.length > 0 ? items : ["No collections yet"];
 
-    return html`
-      <div class="group-items ${isFlyout ? "is-flyout" : ""}">
-        ${normalizedItems.map((item) => {
-          if (typeof item === "string") {
-            return html`
-              <div class="group-item">
-                <span class="group-item-bullet"></span>
-                <span>${item}</span>
-              </div>
-            `;
-          }
-
-          return this.renderCollectionGroup(item);
-        })}
-      </div>
-    `;
+    return normalizedItems.map((item) =>
+      typeof item === "string"
+        ? html`<li class="menu-disabled"><a>${item}</a></li>`
+        : this.renderCollectionGroup(item),
+    );
   }
   getStoredCollapsedState() {
     if (typeof window === "undefined") {
@@ -1028,20 +994,6 @@ class EditorMenu extends LitElement {
     };
   }
 
-  toggleCollectionSection(collectionId) {
-    const normalizedCollectionId = String(collectionId || "").trim();
-    if (!normalizedCollectionId) {
-      return;
-    }
-
-    this.collectionSections = {
-      ...(this.collectionSections || {}),
-      [normalizedCollectionId]: !Boolean(
-        this.collectionSections?.[normalizedCollectionId],
-      ),
-    };
-  }
-
   handleGroupToggle(sectionKey) {
     if (this.collapsed) {
       return;
@@ -1057,64 +1009,50 @@ class EditorMenu extends LitElement {
 
     return html`
       <section class="menu-group">
-        <button
-          class="group-toggle"
-          type="button"
-          title=${title}
-          aria-expanded=${this.collapsed ? "false" : String(expanded)}
-          @click=${() => this.handleGroupToggle(sectionKey)}
-        >
-          <span class="section-icon">${createElement(icon)}</span>
-          <span class="group-label">${title}</span>
-          <span class="chevron ${expanded ? "" : "is-collapsed"}">
-            ${createElement(ChevronDown)}
-          </span>
-        </button>
+        <div class="flex items-center gap-2 py-2 justify-between">
+          <div>
+            <span class="section-icon">${createElement(icon)}</span>
+            <span class="group-label">${title}</span>
+          </div>
+          <button
+            class="btn btn-sm"
+            type="button"
+            @click=${() => {
+              if (sectionKey === "pages") {
+                this.createPageFromMenu();
+                return;
+              }
+              if (sectionKey === "collections") {
+                this.createCollectionFromMenu();
+                return;
+              }
+              this.createSharedComponentFromMenu();
+            }}
+          >
+            ${createElement(Plus)}
+            <span>
+              ${sectionKey === "pages"
+                ? "New page"
+                : sectionKey === "collections"
+                  ? "New collection"
+                  : "New component"}
+            </span>
+          </button>
+        </div>
         ${expanded && !this.collapsed
           ? html`
               <div class="group-content-scroll">
-                <div class="group-create-row">
-                  <button
-                    class="group-create-button"
-                    type="button"
-                    @click=${() => {
-                      if (sectionKey === "pages") {
-                        this.createPageFromMenu();
-                        return;
-                      }
-                      if (sectionKey === "collections") {
-                        this.createCollectionFromMenu();
-                        return;
-                      }
-                      this.createSharedComponentFromMenu();
-                    }}
-                  >
-                    ${createElement(Plus)}
-                    <span>
-                      ${sectionKey === "pages"
-                        ? "New page"
-                        : sectionKey === "collections"
-                          ? "New collection"
-                          : "New shared component"}
-                    </span>
-                  </button>
-                </div>
-                ${isCollectionsSection
-                  ? this.renderCollectionsItems(normalizedItems)
-                  : html`
-                      <div class="group-items">
-                        ${normalizedItems.map((item) =>
-                          typeof item === "string"
-                            ? html`
-                                <div class="group-item">
-                                  <span class="group-item-bullet"></span>
-                                  <span>${item}</span>
-                                </div>
-                              `
-                            : this.renderSelectableItem(item),
-                        )}
-                      </div>
-                    `}
+                <ul
+                  class="menu menu-paged menu-vertical bg-base-200 rounded-box w-full"
+                >
+                  ${isCollectionsSection
+                    ? this.renderCollectionsItems(normalizedItems)
+                    : normalizedItems.map((item) =>
+                        typeof item === "string"
+                          ? html`<li class="menu-disabled"><a>${item}</a></li>`
+                          : this.renderSelectableItem(item),
+                      )}
+                </ul>
               </div>
             `
           : this.collapsed
@@ -1125,22 +1063,17 @@ class EditorMenu extends LitElement {
                       <span class="section-icon">${createElement(icon)}</span>
                       <span class="group-flyout-title">${title}</span>
                     </div>
-                    ${isCollectionsSection
-                      ? this.renderCollectionsItems(normalizedItems, true)
-                      : html`
-                          <div class="group-items is-flyout">
-                            ${normalizedItems.map((item) =>
-                              typeof item === "string"
-                                ? html`
-                                    <div class="group-item">
-                                      <span class="group-item-bullet"></span>
-                                      <span>${item}</span>
-                                    </div>
-                                  `
-                                : this.renderSelectableItem(item),
-                            )}
-                          </div>
-                        `}
+                    <ul class="menu menu-paged menu-vertical w-full">
+                      ${isCollectionsSection
+                        ? this.renderCollectionsItems(normalizedItems)
+                        : normalizedItems.map((item) =>
+                            typeof item === "string"
+                              ? html`<li class="menu-disabled">
+                                  <a>${item}</a>
+                                </li>`
+                              : this.renderSelectableItem(item),
+                          )}
+                    </ul>
                   </div>
                 </div>
               `
@@ -1150,11 +1083,55 @@ class EditorMenu extends LitElement {
   }
 
   render() {
+    let menuContent = html``;
+
+    if (this.menuMode === "pages") {
+      menuContent = this.renderGroup(
+        "pages",
+        "Pages",
+        Files,
+        this.groupItems.pages,
+      );
+    } else if (this.menuMode === "collections") {
+      menuContent = this.renderGroup(
+        "collections",
+        "Collections",
+        Database,
+        this.groupItems.collections,
+      );
+    } else if (this.menuMode === "shared") {
+      menuContent = this.renderGroup(
+        "shared",
+        "Shared",
+        Blocks,
+        this.groupItems.shared,
+      );
+    } else if (this.menuMode === "layers") {
+      menuContent = html`
+        <div class="menu-groups layers-groups">
+          <section class="menu-group">
+            <div class="group-toggle static">
+              <span class="section-icon">${createElement(Files)}</span>
+              <span class="group-label">Layers</span>
+            </div>
+            <div class="group-content-scroll layers-scroll">
+              ${this.renderLayersTree()}
+            </div>
+          </section>
+        </div>
+      `;
+    } else if (this.menuMode === "settings") {
+      menuContent = html` <div class="menu-groups">Page Settings</div> `;
+    }
+
     const isImporterRoute =
       typeof window !== "undefined" &&
       window.location.pathname.startsWith("/editor/importer");
 
-    return html`<aside class="sidebar ${this.collapsed ? "collapsed" : ""}">
+    return html`<aside
+      class="sidebar bg-transparent ${this.collapsed ? "collapsed" : ""}"
+      data-theme="mylight"
+    >
       <div class="sidebar-header">
         <div class="brand">
           <div class="brand-icon">${createElement(Proportions)}</div>
@@ -1173,70 +1150,61 @@ class EditorMenu extends LitElement {
         </button>
       </div>
 
-      <div class="menu-mode-toggle">
-        <label>
-          <input
-            type="radio"
-            name="menu-mode"
-            .checked=${this.menuMode === "site-content"}
-            @change=${() => this.setMenuMode("site-content")}
-          />
-          <span>Site Content</span>
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="menu-mode"
-            .checked=${this.menuMode === "layers"}
-            @change=${() => this.setMenuMode("layers")}
-          />
-          <span>Layers</span>
-        </label>
+      <div class="main-menu">
+        <ul class="menu bg-base-200 rounded-box w-full mb-4">
+          <li>
+            <a
+              class=${this.menuMode === "pages" ? "menu-active" : ""}
+              @click=${() => this.setMenuMode("pages")}
+            >
+              ${createElement(Files)} Pages
+            </a>
+          </li>
+          <li>
+            <a
+              class=${this.menuMode === "collections" ? "menu-active" : ""}
+              @click=${() => this.setMenuMode("collections")}
+            >
+              ${createElement(Database)} Collections
+            </a>
+          </li>
+          <li>
+            <a
+              class=${this.menuMode === "shared" ? "menu-active" : ""}
+              @click=${() => this.setMenuMode("shared")}
+            >
+              ${createElement(Blocks)} Shared Components
+            </a>
+          </li>
+          <div class="divider my-px"></div>
+          <li>
+            <a
+              class=${this.menuMode === "layers" ? "menu-active" : ""}
+              @click=${() => this.setMenuMode("layers")}
+            >
+              ${createElement(Layers2)} Page Layers
+            </a>
+          </li>
+          <li>
+            <a
+              class=${this.menuMode === "settings" ? "menu-active" : ""}
+              @click=${() => this.setMenuMode("settings")}
+            >
+              ${createElement(FileCog)} Page Settings
+            </a>
+          </li>
+        </ul>
       </div>
 
-      ${this.menuMode === "site-content"
-        ? html`
-            <div class="menu-groups">
-              ${this.renderGroup(
-                "pages",
-                "Pages",
-                Files,
-                this.groupItems.pages,
-              )}
-              ${this.renderGroup(
-                "collections",
-                "Collections",
-                Database,
-                this.groupItems.collections,
-              )}
-              ${this.renderGroup(
-                "shared",
-                "Shared",
-                Blocks,
-                this.groupItems.shared,
-              )}
-            </div>
-          `
-        : html`
-            <div class="menu-groups layers-groups">
-              <section class="menu-group">
-                <div class="group-toggle static">
-                  <span class="section-icon">${createElement(Files)}</span>
-                  <span class="group-label">Layers</span>
-                </div>
-                <div class="group-content-scroll layers-scroll">
-                  ${this.renderLayersTree()}
-                </div>
-              </section>
-            </div>
-          `}
+      ${menuContent}
 
       <div class="sidebar-footer">
         <button
           class="settings-button"
           type="button"
           title="File Manager"
-          @click=${() => FileManager.open({ mode: "multi", onSelect: () => {} })}
+          @click=${() =>
+            FileManager.open({ mode: "multi", onSelect: () => {} })}
         >
           ${createElement(FolderOpen)}
           <span class="settings-label">File Manager</span>
