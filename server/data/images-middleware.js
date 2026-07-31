@@ -118,7 +118,10 @@ export function createImagesMiddleware({ contentRoot, r2 = null }) {
               response.statusCode = 200;
               response.setHeader("Content-Type", contentType);
               response.setHeader("Content-Length", String(buf.length));
-              if (method === "HEAD") { response.end(); return; }
+              if (method === "HEAD") {
+                response.end();
+                return;
+              }
               response.end(buf);
               return;
             }

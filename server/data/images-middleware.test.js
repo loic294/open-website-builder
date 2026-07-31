@@ -34,13 +34,9 @@ test("ignores non-image requests", () => {
   });
   let calledNext = false;
 
-  middleware(
-    { method: "GET", url: "/editor/" },
-    {},
-    () => {
-      calledNext = true;
-    },
-  );
+  middleware({ method: "GET", url: "/editor/" }, {}, () => {
+    calledNext = true;
+  });
 
   assert.equal(calledNext, true);
 });
