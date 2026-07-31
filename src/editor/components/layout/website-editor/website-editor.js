@@ -1285,7 +1285,13 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
 
   renderViewContent(content) {
     if (this.activeView === "preview") {
-      return html`<div class="view-placeholder">Preview section</div>`;
+      return html`<div class="view-placeholder">
+        <iframe
+          src="${this.pageConfig?.url || ""}"
+          frameborder="0"
+          class="website-preview-iframe"
+        ></iframe>
+      </div>`;
     }
 
     if (this.activeView === "settings") {
