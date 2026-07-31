@@ -26,11 +26,12 @@ async function renderNodes(nodes, context) {
   return rendered.join("\n");
 }
 
-function buildPageHtml({ title, bodyHtml }) {
-  const safeTitle = String(title || "Website")
+function buildPageHtml({ title, bodyHtml, siteConfig = {} }) {
+  const safeTitle = `${String(title || "Website")}${String(siteConfig?.pageTitle || "")}`
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+  const analyticsScript = String(siteConfig?.analyticsScript || "").trim();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -42,19 +43,20 @@ function buildPageHtml({ title, bodyHtml }) {
     <link rel="stylesheet" href="https://use.typekit.net/fsb3crk.css" />
     <link rel="stylesheet" href="./theme.css" />
     <link rel="stylesheet" href="./base.css" />
+    <script type="module" src="./published.js"></script>
   </head>
   <body>
     <div class="website">
       ${bodyHtml}
     </div>
-    <script type="module" src="./published.js"></script>
-    <script defer src="https://analytics.loicbellemarealford.ca/script.js" data-website-id="7653ba01-64a9-4d8c-8b9d-8d623c194126" data-domains="loicbellemarealford.ca" data-performance="true" data-do-not-track="true"></script>
+    ${analyticsScript}
   </body>
 </html>`;
 }
 
 export async function generatePageHtml({
   pageConfig,
+  siteConfig = {},
   loadSharedComponent,
   loadCollectionConfig,
   loadCollectionItemsMetadata,
@@ -81,6 +83,7 @@ export async function generatePageHtml({
     html: buildPageHtml({
       title: pageConfig?.title || pageConfig?.id || "Website",
       bodyHtml,
+      siteConfig,
     }),
     warnings,
   };

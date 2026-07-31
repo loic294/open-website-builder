@@ -203,11 +203,16 @@ export async function publishSite({
   contentRoot,
   outputDir,
   appRoot,
-  siteUrl,
 }) {
   const pagesDir = resolve(contentRoot, "pages");
   const sharedDir = resolve(contentRoot, "shared");
   const collectionsDir = resolve(contentRoot, "collections");
+  let siteConfig = {};
+  try {
+    siteConfig = await readJson(resolve(contentRoot, "config.json"));
+  } catch {
+    // Site-wide configuration is optional.
+  }
 
   const sharedCache = new Map();
   const collectionConfigCache = new Map();
@@ -381,6 +386,7 @@ export async function publishSite({
 
     const { html, warnings: pageWarnings } = await generatePageHtml({
       pageConfig,
+      siteConfig,
       loadSharedComponent,
       loadCollectionConfig,
       loadCollectionItemsMetadata,
@@ -473,6 +479,7 @@ export async function publishSite({
 
       const { html, warnings: pageWarnings } = await generatePageHtml({
         pageConfig: pageTemplate,
+        siteConfig,
         loadSharedComponent,
         loadCollectionConfig,
         loadCollectionItemsMetadata,
@@ -506,7 +513,7 @@ export async function publishSite({
   const sitemapResult = await writeSitemap({
     outputDir,
     published,
-    siteUrl,
+    siteUrl: siteConfig?.siteUrl,
   });
   if (sitemapResult?.fileName) {
     published.push(sitemapResult);

@@ -2,6 +2,10 @@ import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbSlider, defaultSliderConfig } from "./slider.js";
+import {
+  getImageSize,
+  IMAGE_SIZE_OPTIONS,
+} from "../../utils/image-size.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 export { defaultSliderConfig };
@@ -75,12 +79,22 @@ installEditorPlugin(OwbSlider, {
         sliderItemWidth: "80%",
         sliderHeight: "400px",
         sliderGap: "12px",
+        sliderImageSize: "original",
       },
       tabs: [{ id: "general", label: "General" }],
       content: () => {
         const editor = EditorComponent.instance;
         return html`
           <settings-section title="Photos">
+            <editor-select
+              label="Image size"
+              .value=${getImageSize(editor.sliderImageSize)}
+              .options=${IMAGE_SIZE_OPTIONS}
+              @change=${(event) =>
+                editor.updateSettingsState({
+                  sliderImageSize: getImageSize(event.detail.value),
+                })}
+            ></editor-select>
             <textarea
               class="slider-textarea"
               .value=${element.images.join("\n")}

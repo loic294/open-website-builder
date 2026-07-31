@@ -1,6 +1,10 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import {
+  getImageSize,
+  getImageUrlForSize,
+} from "../../utils/image-size.js";
 
 export const defaultSliderConfig = {
   type: "slider",
@@ -185,6 +189,7 @@ export class OwbSlider extends LitElement {
     const itemWidth = String(settings.sliderItemWidth || "80%");
     const height = String(settings.sliderHeight || "400px");
     const gap = String(settings.sliderGap || "12px");
+    const imageSize = getImageSize(settings.sliderImageSize);
     const count = images.length;
     const spacingCss = getSpacingStyleBlock(settings);
 
@@ -216,7 +221,11 @@ export class OwbSlider extends LitElement {
 
     const slideTemplate = (url) =>
       html`<div class=${slideClass}>
-        <img src="${url}" alt="" loading="lazy" />
+        <img
+          src=${getImageUrlForSize(url, imageSize)}
+          alt=""
+          loading="lazy"
+        />
       </div>`;
 
     return html`

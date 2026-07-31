@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { publishSite } from "./publish-site.js";
@@ -7,30 +6,14 @@ import { publishSite } from "./publish-site.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "../..");
 
-async function readSiteConfig(contentRoot) {
-  try {
-    const raw = await readFile(resolve(contentRoot, "config.json"), "utf8");
-    const trimmed = raw.trim();
-    if (!trimmed) {
-      return {};
-    }
-    const parsed = JSON.parse(trimmed);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
 async function main() {
   const contentRoot = resolve(projectRoot, "../my-personal-website");
   const outputDir = resolve(projectRoot, "dist-publish");
-  const siteConfig = await readSiteConfig(contentRoot);
 
   const result = await publishSite({
     contentRoot,
     outputDir,
     appRoot: projectRoot,
-    siteUrl: siteConfig?.siteUrl,
   });
 
   process.stdout.write(

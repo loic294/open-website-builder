@@ -1,6 +1,10 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import {
+  getImageSize,
+  getImageUrlForSize,
+} from "../../utils/image-size.js";
 
 export const defaultImageConfig = {
   type: "image",
@@ -175,6 +179,10 @@ export class OwbImage extends LitElement {
     const url = this.url ?? "";
     const settings = this.settings ?? {};
     const mode = getImageMode(settings?.imageSizeMode || "contained");
+    const imageUrl = getImageUrlForSize(
+      url,
+      getImageSize(settings?.imageSourceSize),
+    );
     const customCss = String(settings?.customCss || "").trim();
     const spacingCss = getSpacingStyleBlock(settings);
     const clickAction = String(settings?.imageClickAction || "none");
@@ -203,14 +211,14 @@ export class OwbImage extends LitElement {
           : nothing}
       >
         ${this.renderImageWithAction(
-          url,
+          imageUrl,
           mode,
           clickAction,
           linkUrl,
           linkTarget,
         )}
       </div>
-      ${this.lightboxOpen && url
+      ${this.lightboxOpen && imageUrl
         ? html`
             <div class="image-lightbox" @click=${() => this.closeLightbox()}>
               <button
@@ -224,7 +232,7 @@ export class OwbImage extends LitElement {
               >
                 x
               </button>
-              <img class="image-lightbox-image" src=${url} alt="" />
+              <img class="image-lightbox-image" src=${imageUrl} alt="" />
             </div>
           `
         : null}

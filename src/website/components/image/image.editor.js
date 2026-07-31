@@ -3,6 +3,10 @@ import { EditorComponent } from "../../../editor/components/layout/editor-compon
 import { FileManager } from "../../../editor/components/layout/file-manager/file-manager.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbImage, getImageMode } from "./image.js";
+import {
+  getImageSize,
+  IMAGE_SIZE_OPTIONS,
+} from "../../utils/image-size.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 // Apply editor block styles (hover ring, is-settings-open indicator, etc.)
@@ -47,6 +51,7 @@ const imageEditorPlugin = {
     EditorComponent.openFor(element, {
       defaultState: {
         imageSizeMode: "contained",
+        imageSourceSize: "original",
         imageClickAction: "none",
         imageLinkUrl: "",
         imageLinkTarget: "current",
@@ -83,6 +88,16 @@ const imageEditorPlugin = {
                     },
                   })}
               >Browse Files…</button>
+
+              <editor-select
+                label="Image size"
+                .value=${getImageSize(editor.imageSourceSize)}
+                .options=${IMAGE_SIZE_OPTIONS}
+                @change=${(event) =>
+                  editor.updateSettingsState({
+                    imageSourceSize: getImageSize(event.detail.value),
+                  })}
+              ></editor-select>
 
               <editor-radio-button
                 .options=${[
