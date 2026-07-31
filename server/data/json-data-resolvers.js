@@ -98,10 +98,15 @@ function getDefaultSectionContent(sectionId = "section-default") {
   ];
 }
 
-export function createJsonDataResolvers({ contentRoot }) {
-  const pagesDir = resolve(contentRoot, "pages");
-  const collectionsDir = resolve(contentRoot, "collections");
-  const sharedDir = resolve(contentRoot, "shared");
+export function createJsonDataResolvers({
+  contentRoot,
+  pagesRoot,
+  collectionsRoot,
+  sharedRoot,
+}) {
+  const pagesDir = pagesRoot || resolve(contentRoot, "pages");
+  const collectionsDir = collectionsRoot || resolve(contentRoot, "collections");
+  const sharedDir = sharedRoot || resolve(contentRoot, "shared");
 
   async function resolveSharedComponentFilePath(componentId) {
     const normalizedComponentId = sanitizeId(componentId);

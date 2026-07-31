@@ -169,7 +169,6 @@ open-website-builder/
 │   ├── import/         ← Squarespace import utilities
 │   └── publish/        ← static site publish pipeline
 ├── editor/             ← editor HTML entry points
-├── dist-publish/       ← generated published site (do not edit)
 ├── vite.config.js
 └── package.json
 ```

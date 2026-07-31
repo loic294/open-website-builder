@@ -7,6 +7,9 @@ const appRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 const siteConfig = await loadSiteConfig(process.env.OWB_SITE_CONFIG || "");
 const contentRoot = siteConfig.contentRoot;
+const pagesRoot = siteConfig.pagesRoot || resolve(contentRoot, "pages");
+const collectionsRoot =
+  siteConfig.collectionsRoot || resolve(contentRoot, "collections");
 
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
@@ -43,11 +46,8 @@ async function collectJsonRecords(directoryPath, prefix, skipConfig = false) {
   return records;
 }
 
-const records = await collectJsonRecords(
-  resolve(contentRoot, "pages"),
-  "pages",
-);
-const collectionsDir = resolve(contentRoot, "collections");
+const records = await collectJsonRecords(pagesRoot, "pages");
+const collectionsDir = collectionsRoot;
 for (const entry of await readdir(collectionsDir, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
   records.push(

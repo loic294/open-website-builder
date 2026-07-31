@@ -9,7 +9,8 @@
     "./vite.config.js": "./vite.config.js",
     "./site-config.js": "./src/site-config.js",
     "./plugins/owb-backend-plugin.js": "./src/plugins/owb-backend-plugin.js",
-    "./plugins/owb-image-plugin.js": "./src/plugins/owb-image-plugin.js"
+    "./plugins/owb-image-plugin.js": "./src/plugins/owb-image-plugin.js",
+    "./server/files/sync-from-r2.js": "./server/files/sync-from-r2.js"
   },
   "files": [
     "README.md",
@@ -28,8 +29,6 @@
     "check:urls": "node ./server/data/check-canonical-urls.js",
     "preview": "vite preview",
     "publish": "npm run build:pub && node ./server/publish/publish-cli.js",
-    "upload": "npx wrangler pages deploy ./dist-publish --project-name=loicbellemarealford --branch main",
-    "sync-files": "node ./server/files/sync-from-r2.js"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",

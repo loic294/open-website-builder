@@ -207,10 +207,17 @@ async function copyComponentStyles(appRoot, outputDir) {
   }
 }
 
-export async function publishSite({ contentRoot, outputDir, appRoot }) {
-  const pagesDir = resolve(contentRoot, "pages");
-  const sharedDir = resolve(contentRoot, "shared");
-  const collectionsDir = resolve(contentRoot, "collections");
+export async function publishSite({
+  contentRoot,
+  pagesRoot,
+  collectionsRoot,
+  sharedRoot,
+  outputDir,
+  appRoot,
+}) {
+  const pagesDir = pagesRoot || resolve(contentRoot, "pages");
+  const sharedDir = sharedRoot || resolve(contentRoot, "shared");
+  const collectionsDir = collectionsRoot || resolve(contentRoot, "collections");
   let siteConfig = {};
   try {
     siteConfig = await readJson(resolve(contentRoot, "config.json"));

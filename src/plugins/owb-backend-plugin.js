@@ -151,6 +151,9 @@ export function createOwbBackendPlugin({ appRoot, siteConfig, r2 }) {
 
       const jsonResolvers = createJsonDataResolvers({
         contentRoot: siteConfig.contentRoot,
+        pagesRoot: siteConfig.pagesRoot,
+        collectionsRoot: siteConfig.collectionsRoot,
+        sharedRoot: siteConfig.sharedRoot,
       });
 
       const resolvers = {
@@ -158,6 +161,9 @@ export function createOwbBackendPlugin({ appRoot, siteConfig, r2 }) {
         publishSite: async () =>
           await publishSite({
             contentRoot: siteConfig.contentRoot,
+            pagesRoot: siteConfig.pagesRoot,
+            collectionsRoot: siteConfig.collectionsRoot,
+            sharedRoot: siteConfig.sharedRoot,
             outputDir: siteConfig.publishedOutputDir,
             appRoot,
           }),
