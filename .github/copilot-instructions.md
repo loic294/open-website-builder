@@ -126,8 +126,9 @@ Before starting a new task in the above plan, update progress in the plan.
 
 - Frontend components must use the shared data layer module at `src/editor/data/data-layer.js` for all content operations.
 - The data layer API is database-agnostic and exposes only domain functions (pages, collections, shared components), never storage details.
-- Backend resolvers live in the Vite server layer and currently resolve against JSON files under `../my-personal-website`.
+- Backend resolvers are config-driven and receive `contentRoot` from the site-owned `owb.config.js`.
 - JSON-backed resolver implementation is in `server/data/json-data-resolvers.js`; HTTP route wiring is in `server/data/data-api-middleware.js`.
+- Site-specific backend and image behavior now lives behind exported plugins in `src/plugins/`.
 - Avoid direct `fetch` calls to ad-hoc endpoints from components; add/extend data-layer functions instead.
 
 ### Supported Data Functions

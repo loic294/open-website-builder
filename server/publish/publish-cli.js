@@ -2,17 +2,17 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { publishSite } from "./publish-site.js";
+import { loadSiteConfig } from "../../src/site-config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "../..");
 
 async function main() {
-  const contentRoot = resolve(projectRoot, "../my-personal-website");
-  const outputDir = resolve(projectRoot, "dist-publish");
+  const siteConfig = await loadSiteConfig(process.env.OWB_SITE_CONFIG || "");
 
   const result = await publishSite({
-    contentRoot,
-    outputDir,
+    contentRoot: siteConfig.contentRoot,
+    outputDir: siteConfig.publishedOutputDir,
     appRoot: projectRoot,
   });
 

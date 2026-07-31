@@ -21,14 +21,19 @@ import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createR2Client } from "./r2-client.js";
+import { loadSiteConfig } from "../../src/site-config.js";
 import { processImage } from "./image-processor.js";
-import { extractPhotoMetadata, reverseGeocodeLocation } from "./photo-metadata.js";
+import {
+  extractPhotoMetadata,
+  reverseGeocodeLocation,
+} from "./photo-metadata.js";
 import { buildImagePaths, createMetadataStore } from "./metadata-store.js";
 import { createFoldersStore } from "./folders-store.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "../..");
-const contentRoot = resolve(projectRoot, "../my-personal-website");
+const siteConfig = await loadSiteConfig(process.env.OWB_SITE_CONFIG || "");
+const contentRoot = siteConfig.contentRoot;
 
 // ── CLI flags ─────────────────────────────────────────────────────────────────
 
@@ -60,7 +65,14 @@ async function loadEnv() {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const VARIANT_SUFFIXES = ["_thumb.jpg", "_small.jpg", "_hires.jpg"];
-const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
+const IMAGE_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+  ".avif",
+]);
 
 function isVariant(key) {
   return VARIANT_SUFFIXES.some((s) => key.endsWith(s));
@@ -84,10 +96,22 @@ function warn(msg) {
 async function main() {
   await loadEnv();
 
-  const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_R2_BUCKET_NAME, CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY } = process.env;
+  const {
+    CLOUDFLARE_ACCOUNT_ID,
+    CLOUDFLARE_R2_BUCKET_NAME,
+    CLOUDFLARE_R2_ACCESS_KEY_ID,
+    CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+  } = process.env;
 
-  if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_R2_BUCKET_NAME || !CLOUDFLARE_R2_ACCESS_KEY_ID || !CLOUDFLARE_R2_SECRET_ACCESS_KEY) {
-    process.stderr.write("Missing R2 credentials. Set them in .env or as environment variables.\n");
+  if (
+    !CLOUDFLARE_ACCOUNT_ID ||
+    !CLOUDFLARE_R2_BUCKET_NAME ||
+    !CLOUDFLARE_R2_ACCESS_KEY_ID ||
+    !CLOUDFLARE_R2_SECRET_ACCESS_KEY
+  ) {
+    process.stderr.write(
+      "Missing R2 credentials. Set them in .env or as environment variables.\n",
+    );
     process.exit(1);
   }
 
@@ -131,11 +155,18 @@ async function main() {
 
     if (!isVariant(obj.key)) {
       if (!isImage(obj.key)) continue;
-      originals.push({ key: obj.key, folderId, basename: parts.slice(2).join("/"), size: obj.size });
+      originals.push({
+        key: obj.key,
+        folderId,
+        basename: parts.slice(2).join("/"),
+        size: obj.size,
+      });
     }
   }
 
-  log(`\n📁 Discovered ${discoveredFolderIds.size} folder(s), ${originals.length} original image(s).`);
+  log(
+    `\n📁 Discovered ${discoveredFolderIds.size} folder(s), ${originals.length} original image(s).`,
+  );
 
   // ── Step 2: merge folders into _folders.json ──────────────────────────────
 
@@ -192,7 +223,9 @@ async function main() {
         const sharp = (await import("sharp")).default;
         const sharpMeta = await sharp(buf).metadata();
         const photoMetadata = await extractPhotoMetadata(buf);
-        const detectedPlace = await reverseGeocodeLocation(photoMetadata.originalLocation);
+        const detectedPlace = await reverseGeocodeLocation(
+          photoMetadata.originalLocation,
+        );
         meta = {
           width: sharpMeta.width || 0,
           height: sharpMeta.height || 0,
@@ -220,7 +253,8 @@ async function main() {
       }
 
       // Preserve existing metadata fields (description, uploadedAt)
-      const existing = (await metadataStore.getMetadata(folderId, basename)) || {};
+      const existing =
+        (await metadataStore.getMetadata(folderId, basename)) || {};
       const metadata = {
         originalFilename: existing.originalFilename || basename,
         basename,
@@ -242,7 +276,7 @@ async function main() {
           override: existing.place?.override || null,
         },
         generatedLocationStripped: SKIP_THUMBNAILS
-          ? existing.generatedLocationStripped ?? null
+          ? (existing.generatedLocationStripped ?? null)
           : meta.generatedLocationStripped,
         description: existing.description || "",
         uploadedAt: existing.uploadedAt || new Date().toISOString(),
@@ -252,8 +286,12 @@ async function main() {
         await metadataStore.saveMetadata(folderId, basename, metadata);
       }
 
-      const thumbStatus = SKIP_THUMBNAILS ? " (thumbnails skipped)" : " + thumbnails";
-      log(`  ✓ ${label} — ${meta.width}×${meta.height} ${meta.format}${thumbStatus}`);
+      const thumbStatus = SKIP_THUMBNAILS
+        ? " (thumbnails skipped)"
+        : " + thumbnails";
+      log(
+        `  ✓ ${label} — ${meta.width}×${meta.height} ${meta.format}${thumbStatus}`,
+      );
       processed++;
     } catch (err) {
       warn(`${label} — ERROR: ${err?.message || err}`);

@@ -1,30 +1,33 @@
 # Open Website Builder
 
-A visual website editor built with [Lit](https://lit.dev/), TypeScript, and Vite. Content is stored as plain JSON files in a sibling directory on your machine.
+A visual website editor built with [Lit](https://lit.dev/) and Vite. The package exports the editor runtime, publish pipeline, and plugin factories; the website repo owns the site config and composes those exports.
 
 ## Setup
 
-### 1. Create a content directory
+### 1. Create a site config
 
-The editor reads and writes content from a directory called `my-personal-website` located **one level above** this repository:
+The website repo owns `owb.config.js`. That config sets `contentRoot`, `publishedOutputDir`, `imageBaseUrl`, and the plugin list used by the editor package.
 
 ```
-parent-folder/
-├── open-website-builder/   ← this repo
-└── my-personal-website/    ← your content directory
+my-personal-website/
+├── owb.config.js
+├── package.json
+├── pages/
+├── collections/
+└── shared/
 ```
 
-Create the content directory and the required subdirectories:
+Create the content directory and the required subdirectories in the website repo:
 
 ```bash
-mkdir -p ../my-personal-website/pages
-mkdir -p ../my-personal-website/collections
-mkdir -p ../my-personal-website/shared
+mkdir -p pages
+mkdir -p collections
+mkdir -p shared
 ```
 
 ### 2. Add a starter page
 
-Create `../my-personal-website/pages/home.json`:
+Create `pages/home.json`:
 
 ```json
 {
@@ -47,7 +50,7 @@ Create `../my-personal-website/pages/home.json`:
 
 Collections are subdirectories inside `collections/`. Each one requires a `_config.json` file.
 
-Create `../my-personal-website/collections/blog/_config.json`:
+Create `collections/blog/_config.json`:
 
 ```json
 {
@@ -72,7 +75,7 @@ Create `../my-personal-website/collections/blog/_config.json`:
 
 Collection items are individual JSON files inside the collection directory:
 
-`../my-personal-website/collections/blog/my-first-post.json`:
+`collections/blog/my-first-post.json`:
 
 ```json
 {
@@ -93,7 +96,7 @@ Collection items are individual JSON files inside the collection directory:
 
 Shared components are reusable blocks stored as JSON files in the `shared/` directory.
 
-Create `../my-personal-website/shared/header.json`:
+Create `shared/header.json`:
 
 ```json
 {
@@ -133,20 +136,26 @@ npm run dev
 
 Open [http://localhost:3003/editor](http://localhost:3003/editor) to start editing.
 
+To launch from the website repo directly, run its local `npm run dev`. That repo re-exports the package Vite config and points `OWB_SITE_CONFIG` at its own config file.
+
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start the development server (editor + preview) |
-| `npm run build` | Build the editor for production |
+| Command           | Description                                             |
+| ----------------- | ------------------------------------------------------- |
+| `npm run dev`     | Start the development server (editor + preview)         |
+| `npm run build`   | Build the editor for production                         |
 | `npm run publish` | Generate the static published site into `dist-publish/` |
 
 ## Publishing
 
-`dist-publish/` is generated output — never edit it directly.
+`my-personal-website/dist-publish/` is generated output — never edit it directly.
 
-- Update source files in `src/website/` or `server/publish/`.
+- Update source files in `src/website/`, `src/plugins/`, or `server/publish/`.
 - Run `npm run publish` to regenerate the published output.
+
+### Working From the Website Repo
+
+The website repo installs `open-website-builder` as a local file dependency and owns `owb.config.js`. Edit that config when changing content paths, the image base URL, or the plugin stack. The package reads the config path from `OWB_SITE_CONFIG`.
 
 ## Project Structure
 

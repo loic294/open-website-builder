@@ -1,9 +1,12 @@
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadSiteConfig } from "../../src/site-config.js";
 
 const appRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
-const contentRoot = resolve(appRoot, "../my-personal-website");
+
+const siteConfig = await loadSiteConfig(process.env.OWB_SITE_CONFIG || "");
+const contentRoot = siteConfig.contentRoot;
 
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));

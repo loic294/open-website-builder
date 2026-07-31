@@ -2,6 +2,23 @@
   "name": "open-website-builder",
   "version": "0.1.0",
   "type": "module",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./vite.config.js": "./vite.config.js",
+    "./site-config.js": "./src/site-config.js",
+    "./plugins/owb-backend-plugin.js": "./src/plugins/owb-backend-plugin.js",
+    "./plugins/owb-image-plugin.js": "./src/plugins/owb-image-plugin.js"
+  },
+  "files": [
+    "README.md",
+    "package.json",
+    "vite.config.js",
+    "vite.pub.config.js",
+    "src/",
+    "server/"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
