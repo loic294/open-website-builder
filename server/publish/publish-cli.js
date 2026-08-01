@@ -12,6 +12,11 @@ async function main() {
 
   const result = await publishSite({
     contentRoot: siteConfig.contentRoot,
+    pagesRoot: siteConfig.pagesRoot,
+    collectionsRoot: siteConfig.collectionsRoot,
+    sharedRoot: siteConfig.sharedRoot,
+    imagesRoot: siteConfig.imagesRoot,
+    publicRoot: siteConfig.publicRoot,
     outputDir: siteConfig.publishedOutputDir,
     appRoot: projectRoot,
   });

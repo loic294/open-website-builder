@@ -122,8 +122,14 @@ async function main() {
     secretAccessKey: CLOUDFLARE_R2_SECRET_ACCESS_KEY,
   });
 
-  const metadataStore = createMetadataStore({ contentRoot });
-  const foldersStore = createFoldersStore({ contentRoot });
+  const metadataStore = createMetadataStore({
+    contentRoot,
+    imagesRoot: siteConfig.imagesRoot,
+  });
+  const foldersStore = createFoldersStore({
+    contentRoot,
+    imagesRoot: siteConfig.imagesRoot,
+  });
 
   log(`\n🔍 Listing objects in R2 bucket "${CLOUDFLARE_R2_BUCKET_NAME}"…`);
 

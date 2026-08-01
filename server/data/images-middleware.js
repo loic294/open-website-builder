@@ -43,9 +43,9 @@ export function createRemoteImagesMiddleware({ imageBaseUrl }) {
   };
 }
 
-export function createImagesMiddleware({ contentRoot, r2 = null }) {
-  const imagesRoot = resolve(contentRoot, "images");
-  const allowedPrefix = `${imagesRoot}${sep}`;
+export function createImagesMiddleware({ contentRoot, imagesRoot, r2 = null }) {
+  const resolvedImagesRoot = imagesRoot || resolve(contentRoot, "images");
+  const allowedPrefix = `${resolvedImagesRoot}${sep}`;
 
   return async function imagesMiddleware(request, response, next) {
     const method = request.method || "GET";
@@ -68,9 +68,9 @@ export function createImagesMiddleware({ contentRoot, r2 = null }) {
       return;
     }
 
-    const imageFilePath = resolve(imagesRoot, relativeImagePath);
+    const imageFilePath = resolve(resolvedImagesRoot, relativeImagePath);
     if (
-      imageFilePath !== imagesRoot &&
+      imageFilePath !== resolvedImagesRoot &&
       !imageFilePath.startsWith(allowedPrefix)
     ) {
       sendError(response, 403, "Forbidden");

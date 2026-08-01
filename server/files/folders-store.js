@@ -8,8 +8,8 @@ function slugify(name) {
     .replace(/^-|-$/g, "");
 }
 
-export function createFoldersStore({ contentRoot }) {
-  const foldersFile = resolve(contentRoot, "images/_folders.json");
+export function createFoldersStore({ contentRoot, imagesRoot }) {
+  const foldersFile = resolve(imagesRoot || contentRoot, "_folders.json");
 
   async function read() {
     try {

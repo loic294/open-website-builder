@@ -133,9 +133,11 @@ function createComponentStylesMiddleware({ appRoot }) {
 export function createOwbBackendPlugin({ appRoot, siteConfig, r2 }) {
   const metadataStore = createMetadataStore({
     contentRoot: siteConfig.contentRoot,
+    imagesRoot: siteConfig.imagesRoot,
   });
   const foldersStore = createFoldersStore({
     contentRoot: siteConfig.contentRoot,
+    imagesRoot: siteConfig.imagesRoot,
   });
 
   return {
@@ -154,6 +156,7 @@ export function createOwbBackendPlugin({ appRoot, siteConfig, r2 }) {
         pagesRoot: siteConfig.pagesRoot,
         collectionsRoot: siteConfig.collectionsRoot,
         sharedRoot: siteConfig.sharedRoot,
+        imagesRoot: siteConfig.imagesRoot,
       });
 
       const resolvers = {
@@ -164,6 +167,8 @@ export function createOwbBackendPlugin({ appRoot, siteConfig, r2 }) {
             pagesRoot: siteConfig.pagesRoot,
             collectionsRoot: siteConfig.collectionsRoot,
             sharedRoot: siteConfig.sharedRoot,
+            imagesRoot: siteConfig.imagesRoot,
+            publicRoot: siteConfig.publicRoot,
             outputDir: siteConfig.publishedOutputDir,
             appRoot,
           }),

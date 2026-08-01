@@ -26,9 +26,15 @@ async function readJsonBody(request) {
   return new Promise((resolve, reject) => {
     let body = "";
     request.setEncoding("utf8");
-    request.on("data", (chunk) => { body += chunk; });
+    request.on("data", (chunk) => {
+      body += chunk;
+    });
     request.on("end", () => {
-      try { resolve(body ? JSON.parse(body) : {}); } catch (e) { reject(e); }
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (e) {
+        reject(e);
+      }
     });
     request.on("error", reject);
   });
@@ -41,7 +47,9 @@ async function parseMultipart(request) {
     const fields = {};
     let file = null;
 
-    busboy.on("field", (name, value) => { fields[name] = value; });
+    busboy.on("field", (name, value) => {
+      fields[name] = value;
+    });
 
     busboy.on("file", (fieldname, stream, info) => {
       const chunks = [];
@@ -95,7 +103,10 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
 
       if (method === "POST" && parts[0] === "folders" && parts.length === 1) {
         const { name } = await readJsonBody(request);
-        if (!name?.trim()) { sendError(response, 400, "name is required"); return; }
+        if (!name?.trim()) {
+          sendError(response, 400, "name is required");
+          return;
+        }
         sendJson(response, 201, await foldersStore.createFolder(name.trim()));
         return;
       }
@@ -103,8 +114,15 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       if (method === "PATCH" && parts[0] === "folders" && parts.length === 2) {
         const id = decodeURIComponent(parts[1]);
         const { name } = await readJsonBody(request);
-        if (!name?.trim()) { sendError(response, 400, "name is required"); return; }
-        sendJson(response, 200, await foldersStore.renameFolder(id, name.trim()));
+        if (!name?.trim()) {
+          sendError(response, 400, "name is required");
+          return;
+        }
+        sendJson(
+          response,
+          200,
+          await foldersStore.renameFolder(id, name.trim()),
+        );
         return;
       }
 
@@ -129,7 +147,10 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       // -----------------------------------------------------------------------
       if (method === "POST" && parts[0] === "upload" && parts.length === 1) {
         const { fields, file } = await parseMultipart(request);
-        if (!file) { sendError(response, 400, "No file uploaded"); return; }
+        if (!file) {
+          sendError(response, 400, "No file uploaded");
+          return;
+        }
         if (!SUPPORTED_IMAGE_TYPES.has(file.mimeType)) {
           sendError(response, 400, `Unsupported type: ${file.mimeType}`);
           return;
@@ -139,7 +160,10 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
         const folderName = folder?.name || folderId;
         const safeBasename = sanitizeBasename(file.filename);
 
-        const { meta, versions } = await processImage(file.buffer, file.filename);
+        const { meta, versions } = await processImage(
+          file.buffer,
+          file.filename,
+        );
         const paths = buildImagePaths(folderId, safeBasename);
 
         await Promise.all([
@@ -179,10 +203,22 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       // -----------------------------------------------------------------------
       // Rename image
       // -----------------------------------------------------------------------
-      if (method === "PATCH" && parts[0] === "images" && parts[1] === "rename") {
-        const { folderId, oldBasename, newBasename: rawNew } = await readJsonBody(request);
+      if (
+        method === "PATCH" &&
+        parts[0] === "images" &&
+        parts[1] === "rename"
+      ) {
+        const {
+          folderId,
+          oldBasename,
+          newBasename: rawNew,
+        } = await readJsonBody(request);
         if (!folderId || !oldBasename || !rawNew) {
-          sendError(response, 400, "folderId, oldBasename and newBasename are required");
+          sendError(
+            response,
+            400,
+            "folderId, oldBasename and newBasename are required",
+          );
           return;
         }
         const newBasename = sanitizeBasename(rawNew);
@@ -238,13 +274,25 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       // -----------------------------------------------------------------------
       // Update description
       // -----------------------------------------------------------------------
-      if (method === "PATCH" && parts[0] === "images" && parts[1] === "description") {
-        const { folderId, basename: bname, description } = await readJsonBody(request);
+      if (
+        method === "PATCH" &&
+        parts[0] === "images" &&
+        parts[1] === "description"
+      ) {
+        const {
+          folderId,
+          basename: bname,
+          description,
+        } = await readJsonBody(request);
         if (!folderId || !bname) {
           sendError(response, 400, "folderId and basename are required");
           return;
         }
-        await metadataStore.updateDescription(folderId, bname, description ?? "");
+        await metadataStore.updateDescription(
+          folderId,
+          bname,
+          description ?? "",
+        );
         sendJson(response, 200, { ok: true });
         return;
       }
@@ -253,12 +301,19 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       // Override the human-readable photo location
       // -----------------------------------------------------------------------
       if (method === "PATCH" && parts[0] === "images" && parts[1] === "place") {
-        const { folderId, basename: bname, city, stateProvince, country } = await readJsonBody(request);
+        const {
+          folderId,
+          basename: bname,
+          city,
+          stateProvince,
+          country,
+        } = await readJsonBody(request);
         if (!folderId || !bname) {
           sendError(response, 400, "folderId and basename are required");
           return;
         }
-        const clean = (value) => typeof value === "string" && value.trim() ? value.trim() : null;
+        const clean = (value) =>
+          typeof value === "string" && value.trim() ? value.trim() : null;
         const override = {
           city: clean(city),
           stateProvince: clean(stateProvince),
@@ -278,7 +333,12 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       // -----------------------------------------------------------------------
       if (method === "POST" && parts[0] === "reprocess" && parts.length === 1) {
         const { folderId } = await readJsonBody(request);
-        const results = await reprocessFolder(folderId, r2, metadataStore, foldersStore);
+        const results = await reprocessFolder(
+          folderId,
+          r2,
+          metadataStore,
+          foldersStore,
+        );
         sendJson(response, 200, { reprocessed: results.length, results });
         return;
       }
@@ -289,7 +349,11 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       if (method === "POST" && parts[0] === "images" && parts[1] === "move") {
         const { images, targetFolderId } = await readJsonBody(request);
         if (!Array.isArray(images) || !targetFolderId) {
-          sendError(response, 400, "images array and targetFolderId are required");
+          sendError(
+            response,
+            400,
+            "images array and targetFolderId are required",
+          );
           return;
         }
         const targetFolder = await foldersStore.getFolder(targetFolderId);
@@ -302,7 +366,11 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
               const getResp = await r2.getObject(oldPaths[version].key);
               if (getResp.ok) {
                 const buf = Buffer.from(await getResp.arrayBuffer());
-                await r2.putObject(newPaths[version].key, buf, getResp.headers.get("content-type") || "image/jpeg");
+                await r2.putObject(
+                  newPaths[version].key,
+                  buf,
+                  getResp.headers.get("content-type") || "image/jpeg",
+                );
               }
             }
             await r2.deleteObjects(Object.values(oldPaths).map((e) => e.key));
@@ -321,7 +389,11 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
             }
             results.push({ basename: bname, ok: true });
           } catch (err) {
-            results.push({ basename: bname, ok: false, error: String(err?.message) });
+            results.push({
+              basename: bname,
+              ok: false,
+              error: String(err?.message),
+            });
           }
         }
         sendJson(response, 200, { results });
@@ -331,15 +403,29 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
       // -----------------------------------------------------------------------
       // Strip location metadata — regenerates derived versions only, original untouched
       // -----------------------------------------------------------------------
-      if (method === "POST" && parts[0] === "images" && parts[1] === "strip-location") {
+      if (
+        method === "POST" &&
+        parts[0] === "images" &&
+        parts[1] === "strip-location"
+      ) {
         const { images } = await readJsonBody(request);
-        if (!Array.isArray(images)) { sendError(response, 400, "images array is required"); return; }
+        if (!Array.isArray(images)) {
+          sendError(response, 400, "images array is required");
+          return;
+        }
         const results = [];
         for (const { folderId, basename: bname } of images) {
           try {
             const paths = buildImagePaths(folderId, bname);
             const getResp = await r2.getObject(paths.original.key);
-            if (!getResp.ok) { results.push({ basename: bname, ok: false, error: "Not found in R2" }); continue; }
+            if (!getResp.ok) {
+              results.push({
+                basename: bname,
+                ok: false,
+                error: "Not found in R2",
+              });
+              continue;
+            }
             const buf = Buffer.from(await getResp.arrayBuffer());
             const { versions } = await processImage(buf, bname, {
               stripLocation: true,
@@ -359,7 +445,11 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
             }
             results.push({ basename: bname, ok: true });
           } catch (err) {
-            results.push({ basename: bname, ok: false, error: String(err?.message) });
+            results.push({
+              basename: bname,
+              ok: false,
+              error: String(err?.message),
+            });
           }
         }
         sendJson(response, 200, { results });
@@ -374,7 +464,12 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
   };
 }
 
-async function deleteFolderAndContents(folderId, r2, metadataStore, foldersStore) {
+async function deleteFolderAndContents(
+  folderId,
+  r2,
+  metadataStore,
+  foldersStore,
+) {
   const images = await metadataStore.listMetadata(folderId);
   const keysToDelete = [];
   for (const img of images) {
@@ -392,7 +487,10 @@ async function reprocessFolder(folderId, r2, metadataStore, foldersStore) {
   const { contents } = await r2.listAllObjects(prefix);
   // Only process original files (no suffix like _thumb, _small, _hires)
   const originals = contents.filter(
-    (c) => !/_thumb\.jpg$/.test(c.key) && !/_small\.jpg$/.test(c.key) && !/_hires\.jpg$/.test(c.key),
+    (c) =>
+      !/_thumb\.jpg$/.test(c.key) &&
+      !/_small\.jpg$/.test(c.key) &&
+      !/_hires\.jpg$/.test(c.key),
   );
 
   const results = [];

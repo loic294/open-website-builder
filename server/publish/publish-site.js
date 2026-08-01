@@ -212,6 +212,8 @@ export async function publishSite({
   pagesRoot,
   collectionsRoot,
   sharedRoot,
+  imagesRoot,
+  publicRoot,
   outputDir,
   appRoot,
 }) {
@@ -365,11 +367,14 @@ export async function publishSite({
   }
 
   await copyDirectoryRecursive(
-    resolve(contentRoot, "images"),
+    imagesRoot || resolve(contentRoot, "images"),
     resolve(outputDir, "images"),
   );
 
-  await copyDirectoryRecursive(resolve(contentRoot, "public"), outputDir);
+  await copyDirectoryRecursive(
+    publicRoot || resolve(contentRoot, "public"),
+    outputDir,
+  );
 
   const published = [];
   const warnings = [];

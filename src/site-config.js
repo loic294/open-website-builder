@@ -15,6 +15,8 @@ export function getDefaultSiteConfig() {
     pagesRoot: process.env.OWB_PAGES_ROOT,
     collectionsRoot: process.env.OWB_COLLECTIONS_ROOT,
     sharedRoot: process.env.OWB_SHARED_ROOT,
+    imagesRoot: process.env.OWB_IMAGES_ROOT,
+    publicRoot: process.env.OWB_PUBLIC_ROOT,
     publishedOutputDir: process.env.OWB_PUBLISHED_OUTPUT_DIR,
     imageBaseUrl: process.env.OWB_IMAGE_BASE_URL || "",
   };
@@ -30,6 +32,8 @@ export function resolveSiteConfig(overrides = {}) {
     pagesRoot: overrides.pagesRoot || defaults.pagesRoot,
     collectionsRoot: overrides.collectionsRoot || defaults.collectionsRoot,
     sharedRoot: overrides.sharedRoot || defaults.sharedRoot,
+    imagesRoot: overrides.imagesRoot || defaults.imagesRoot,
+    publicRoot: overrides.publicRoot || defaults.publicRoot,
     publishedOutputDir:
       overrides.publishedOutputDir || defaults.publishedOutputDir,
     imageBaseUrl: overrides.imageBaseUrl || defaults.imageBaseUrl,

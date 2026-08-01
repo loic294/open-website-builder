@@ -15,8 +15,8 @@ export function buildImagePaths(folderId, basename) {
   };
 }
 
-export function createMetadataStore({ contentRoot }) {
-  const metaRoot = resolve(contentRoot, "images/_metadata");
+export function createMetadataStore({ contentRoot, imagesRoot }) {
+  const metaRoot = resolve(imagesRoot || contentRoot, "_metadata");
 
   function metaFilePath(folderId, basename) {
     return resolve(metaRoot, folderId, `${basename}.json`);
