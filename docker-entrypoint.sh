@@ -27,6 +27,8 @@ if [ ! -d /opt/open-website-builder/node_modules ]; then
   exit 1
 fi
 
+git config --system --replace-all safe.directory "$project_root"
+
 mkdir -p "$project_modules" "$runtime_home" "$runtime_cache"
 chown "$host_uid:$host_gid" "$project_modules" "$runtime_home" "$runtime_cache"
 
@@ -40,6 +42,9 @@ if [ -d /run/host-ssh ]; then
   find "$runtime_home/.ssh" -type f -exec chmod 0600 {} +
   chown -R "$host_uid:$host_gid" "$runtime_home/.ssh"
 fi
+
+rm -rf /root/.ssh
+ln -s "$runtime_home/.ssh" /root/.ssh
 
 dependency_source="$project_root/package.json"
 install_command="npm install --package-lock=false"

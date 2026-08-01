@@ -38,7 +38,10 @@ step after Publish run inside the container. The Compose file mounts the host's
 `${HOME}/.ssh` directory read-only at `/run/host-ssh`. At startup, the
 entrypoint copies regular files into the container user's ephemeral
 `/home/node/.ssh`, removes links and special files, and applies OpenSSH's strict
-ownership and permissions. The host SSH directory is never modified.
+ownership and permissions. Root exec shells use the same copied directory.
+Compose also forwards `${SSH_AUTH_SOCK}`, allowing both users to authenticate
+with identities already loaded in the host SSH agent. The host SSH directory is
+never modified.
 
 Before starting the container:
 
@@ -49,6 +52,8 @@ Before starting the container:
 3. Ensure `known_hosts` contains GitHub's verified host key. Obtain the
    fingerprint from GitHub's published documentation and verify it before
    adding it. Host-key verification is not disabled by this setup.
+4. Ensure `SSH_AUTH_SOCK` is set and `ssh-add -L` lists the identity authorized
+   for the repository.
 
 Do not put private keys, tokens, or credentials in the Dockerfile, Compose
 environment, or image build context.
@@ -94,9 +99,10 @@ The mounted project must provide `package.json`, `vite.config.js`, and
 
 For the filesystem backend, mount the repository root so `/workspace` includes
 its `.git` directory. Git commands use the mounted repository and the copied
-SSH credentials. OWB trusts only this configured repository path for its Git
-subprocesses; it does not configure `safe.directory=*` or mutate host Git
-configuration.
+SSH credentials. The entrypoint configures only `/workspace` as a system-level
+Git `safe.directory`, so Git also works from a root `docker compose exec` shell
+when bind-mount ownership differs. It does not configure `safe.directory=*` or
+mutate host Git configuration.
 
 For the SQLite backend, set `sqliteDbPath` to a path inside the website project,
 such as `data/site.sqlite`. The bind mount persists the database, journals,

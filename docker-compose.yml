@@ -10,10 +10,12 @@ services:
       - project_node_modules:/workspace/node_modules
       # The entrypoint copies these read-only files into an ephemeral ~/.ssh.
       - ${HOME}/.ssh:/run/host-ssh:ro
+      - ${SSH_AUTH_SOCK}:/run/host-ssh-agent
     environment:
       OWB_SITE_CONFIG: ./owb.config.js
       HOST_UID: ${HOST_UID:-1000}
       HOST_GID: ${HOST_GID:-1000}
+      SSH_AUTH_SOCK: /run/host-ssh-agent
     healthcheck:
       test:
         - CMD
