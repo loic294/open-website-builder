@@ -1,29 +1,6 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 
-/**
- * Builds the R2 keys and URL paths for all versions of an image.
- * URL path convention: /images/{folderId}/{basename}{suffix}.jpg
- */
-export function buildImagePaths(folderId, basename) {
-  const prefix = `images/${folderId}/${basename}`;
-  return {
-    original: { key: `${prefix}`, path: `/images/${folderId}/${basename}` },
-    thumb: {
-      key: `${prefix}_thumb.jpg`,
-      path: `/images/${folderId}/${basename}_thumb.jpg`,
-    },
-    small: {
-      key: `${prefix}_small.jpg`,
-      path: `/images/${folderId}/${basename}_small.jpg`,
-    },
-    hires: {
-      key: `${prefix}_hires.jpg`,
-      path: `/images/${folderId}/${basename}_hires.jpg`,
-    },
-  };
-}
-
 export function createMetadataStore({ contentRoot, imagesRoot }) {
   const metaRoot = resolve(imagesRoot || contentRoot, "_metadata");
 

@@ -2,6 +2,7 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { publishSite } from "./publish-site.js";
+import { createFilesystemPublishProvider } from "./publish-provider.js";
 import { loadSiteConfig } from "../../src/site-config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -9,14 +10,17 @@ const projectRoot = resolve(__dirname, "../..");
 
 async function main() {
   const siteConfig = await loadSiteConfig(process.env.OWB_SITE_CONFIG || "");
-
-  const result = await publishSite({
+  const publishProvider = createFilesystemPublishProvider({
     contentRoot: siteConfig.contentRoot,
     pagesRoot: siteConfig.pagesRoot,
     collectionsRoot: siteConfig.collectionsRoot,
     sharedRoot: siteConfig.sharedRoot,
     imagesRoot: siteConfig.imagesRoot,
     publicRoot: siteConfig.publicRoot,
+  });
+
+  const result = await publishSite({
+    publishProvider,
     outputDir: siteConfig.publishedOutputDir,
     appRoot: projectRoot,
   });

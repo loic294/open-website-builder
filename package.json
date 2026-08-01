@@ -10,6 +10,10 @@
     "./site-config.js": "./src/site-config.js",
     "./plugins/owb-backend-plugin.js": "./src/plugins/owb-backend-plugin.js",
     "./plugins/owb-image-plugin.js": "./src/plugins/owb-image-plugin.js",
+    "./providers/filesystem-backend-providers.js": "./server/providers/filesystem-backend-providers.js",
+    "./providers/in-memory-backend-providers.js": "./server/providers/in-memory-backend-providers.js",
+    "./data/data-api-provider.js": "./server/data/data-api-provider.js",
+    "./publish/publish-provider.js": "./server/publish/publish-provider.js",
     "./server/files/sync-from-r2.js": "./server/files/sync-from-r2.js"
   },
   "files": [

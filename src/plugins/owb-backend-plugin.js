@@ -1,17 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createJsonDataResolvers } from "../../server/data/json-data-resolvers.js";
-import { createDataApiMiddleware } from "../../server/data/data-api-middleware.js";
 import { createRemoteImagesMiddleware } from "../../server/data/images-middleware.js";
-import { createFilesApiMiddleware } from "../../server/files/files-api-middleware.js";
-import { createMetadataStore } from "../../server/files/metadata-store.js";
-import { createFoldersStore } from "../../server/files/folders-store.js";
-import { publishSite } from "../../server/publish/publish-site.js";
-import {
-  importSquarespaceXml,
-  importSquarespaceStaticSiteDir,
-} from "../../server/import/squarespace-import-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -130,15 +120,24 @@ function createComponentStylesMiddleware({ appRoot }) {
   };
 }
 
-export function createOwbBackendPlugin({ appRoot, siteConfig, r2 }) {
-  const metadataStore = createMetadataStore({
-    contentRoot: siteConfig.contentRoot,
-    imagesRoot: siteConfig.imagesRoot,
-  });
-  const foldersStore = createFoldersStore({
-    contentRoot: siteConfig.contentRoot,
-    imagesRoot: siteConfig.imagesRoot,
-  });
+export function createOwbBackendPlugin({
+  appRoot,
+  siteConfig,
+  backendProviders,
+}) {
+  if (!backendProviders || typeof backendProviders !== "object") {
+    throw new Error(
+      "createOwbBackendPlugin requires backendProviders. Core no longer assumes filesystem storage.",
+    );
+  }
+
+  if (typeof backendProviders.createDataApiMiddleware !== "function") {
+    throw new Error("backendProviders.createDataApiMiddleware is required.");
+  }
+
+  if (typeof backendProviders.createFilesApiMiddleware !== "function") {
+    throw new Error("backendProviders.createFilesApiMiddleware is required.");
+  }
 
   return {
     name: "owb-backend",
@@ -147,54 +146,8 @@ export function createOwbBackendPlugin({ appRoot, siteConfig, r2 }) {
       server.middlewares.use(
         createRemoteImagesMiddleware({ imageBaseUrl: siteConfig.imageBaseUrl }),
       );
-      server.middlewares.use(
-        createFilesApiMiddleware({ r2, metadataStore, foldersStore }),
-      );
-
-      const jsonResolvers = createJsonDataResolvers({
-        contentRoot: siteConfig.contentRoot,
-        pagesRoot: siteConfig.pagesRoot,
-        collectionsRoot: siteConfig.collectionsRoot,
-        sharedRoot: siteConfig.sharedRoot,
-        imagesRoot: siteConfig.imagesRoot,
-      });
-
-      const resolvers = {
-        ...jsonResolvers,
-        publishSite: async () =>
-          await publishSite({
-            contentRoot: siteConfig.contentRoot,
-            pagesRoot: siteConfig.pagesRoot,
-            collectionsRoot: siteConfig.collectionsRoot,
-            sharedRoot: siteConfig.sharedRoot,
-            imagesRoot: siteConfig.imagesRoot,
-            publicRoot: siteConfig.publicRoot,
-            outputDir: siteConfig.publishedOutputDir,
-            appRoot,
-          }),
-        importSquarespaceXml: async ({ xmlContent, sourceName, options }) =>
-          await importSquarespaceXml({
-            xmlContent,
-            sourceName,
-            options,
-            contentRoot: siteConfig.contentRoot,
-          }),
-        importSquarespaceStaticSiteDir: async ({
-          staticSiteDir,
-          htmlContent,
-          fileName,
-          options,
-        }) =>
-          await importSquarespaceStaticSiteDir({
-            staticSiteDir,
-            htmlContent,
-            fileName,
-            options,
-            contentRoot: siteConfig.contentRoot,
-          }),
-      };
-
-      server.middlewares.use(createDataApiMiddleware(resolvers));
+      server.middlewares.use(backendProviders.createFilesApiMiddleware());
+      server.middlewares.use(backendProviders.createDataApiMiddleware());
       server.middlewares.use(
         createPublishedPreviewMiddleware({
           publishedDir: siteConfig.publishedOutputDir,

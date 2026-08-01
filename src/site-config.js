@@ -4,10 +4,6 @@ import { fileURLToPath } from "node:url";
 
 const packageRoot = dirname(fileURLToPath(new URL("..", import.meta.url)));
 
-function resolveFromPackageRoot(relativePath) {
-  return resolve(packageRoot, relativePath);
-}
-
 export function getDefaultSiteConfig() {
   return {
     packageRoot,

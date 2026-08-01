@@ -1,7 +1,7 @@
 import Busboy from "busboy";
 import { extname, basename } from "node:path";
 import { processImage } from "./image-processor.js";
-import { buildImagePaths } from "./metadata-store.js";
+import { buildDefaultImagePaths } from "./image-paths.js";
 
 const SUPPORTED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -80,7 +80,12 @@ function sanitizeBasename(filename) {
   return `${name || "image"}${ext.toLowerCase()}`;
 }
 
-export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
+export function createFilesApiMiddleware({
+  objectStore,
+  metadataStore,
+  foldersStore,
+  imagePathStrategy = buildDefaultImagePaths,
+}) {
   return async function filesApiMiddleware(request, response, next) {
     if (!request.url?.startsWith("/__data/files")) {
       next();
@@ -128,7 +133,13 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
 
       if (method === "DELETE" && parts[0] === "folders" && parts.length === 2) {
         const id = decodeURIComponent(parts[1]);
-        await deleteFolderAndContents(id, r2, metadataStore, foldersStore);
+        await deleteFolderAndContents(
+          id,
+          objectStore,
+          metadataStore,
+          foldersStore,
+          imagePathStrategy,
+        );
         sendJson(response, 200, { ok: true });
         return;
       }
@@ -164,13 +175,13 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
           file.buffer,
           file.filename,
         );
-        const paths = buildImagePaths(folderId, safeBasename);
+        const paths = imagePathStrategy(folderId, safeBasename);
 
         await Promise.all([
-          r2.putObject(paths.original.key, file.buffer, file.mimeType),
-          r2.putObject(paths.thumb.key, versions.thumb, "image/jpeg"),
-          r2.putObject(paths.small.key, versions.small, "image/jpeg"),
-          r2.putObject(paths.hires.key, versions.hires, "image/jpeg"),
+          objectStore.putObject(paths.original.key, file.buffer, file.mimeType),
+          objectStore.putObject(paths.thumb.key, versions.thumb, "image/jpeg"),
+          objectStore.putObject(paths.small.key, versions.small, "image/jpeg"),
+          objectStore.putObject(paths.hires.key, versions.hires, "image/jpeg"),
         ]);
 
         const metadata = {
@@ -222,20 +233,22 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
           return;
         }
         const newBasename = sanitizeBasename(rawNew);
-        const oldPaths = buildImagePaths(folderId, oldBasename);
-        const newPaths = buildImagePaths(folderId, newBasename);
+        const oldPaths = imagePathStrategy(folderId, oldBasename);
+        const newPaths = imagePathStrategy(folderId, newBasename);
 
         // Copy then delete each version
         for (const [version, oldEntry] of Object.entries(oldPaths)) {
           const newEntry = newPaths[version];
-          const getResp = await r2.getObject(oldEntry.key);
+          const getResp = await objectStore.getObject(oldEntry.key);
           if (getResp.ok) {
             const buf = Buffer.from(await getResp.arrayBuffer());
             const ct = getResp.headers.get("content-type") || "image/jpeg";
-            await r2.putObject(newEntry.key, buf, ct);
+            await objectStore.putObject(newEntry.key, buf, ct);
           }
         }
-        await r2.deleteObjects(Object.values(oldPaths).map((e) => e.key));
+        await objectStore.deleteObjects(
+          Object.values(oldPaths).map((e) => e.key),
+        );
 
         const existing = await metadataStore.getMetadata(folderId, oldBasename);
         if (existing) {
@@ -264,8 +277,8 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
           sendError(response, 400, "folderId and basename are required");
           return;
         }
-        const paths = buildImagePaths(folderId, bname);
-        await r2.deleteObjects(Object.values(paths).map((e) => e.key));
+        const paths = imagePathStrategy(folderId, bname);
+        await objectStore.deleteObjects(Object.values(paths).map((e) => e.key));
         await metadataStore.deleteMetadata(folderId, bname);
         sendJson(response, 200, { ok: true });
         return;
@@ -335,9 +348,10 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
         const { folderId } = await readJsonBody(request);
         const results = await reprocessFolder(
           folderId,
-          r2,
+          objectStore,
           metadataStore,
           foldersStore,
+          imagePathStrategy,
         );
         sendJson(response, 200, { reprocessed: results.length, results });
         return;
@@ -360,20 +374,24 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
         const results = [];
         for (const { folderId, basename: bname } of images) {
           try {
-            const oldPaths = buildImagePaths(folderId, bname);
-            const newPaths = buildImagePaths(targetFolderId, bname);
+            const oldPaths = imagePathStrategy(folderId, bname);
+            const newPaths = imagePathStrategy(targetFolderId, bname);
             for (const version of ["original", "thumb", "small", "hires"]) {
-              const getResp = await r2.getObject(oldPaths[version].key);
+              const getResp = await objectStore.getObject(
+                oldPaths[version].key,
+              );
               if (getResp.ok) {
                 const buf = Buffer.from(await getResp.arrayBuffer());
-                await r2.putObject(
+                await objectStore.putObject(
                   newPaths[version].key,
                   buf,
                   getResp.headers.get("content-type") || "image/jpeg",
                 );
               }
             }
-            await r2.deleteObjects(Object.values(oldPaths).map((e) => e.key));
+            await objectStore.deleteObjects(
+              Object.values(oldPaths).map((e) => e.key),
+            );
             const existing = await metadataStore.getMetadata(folderId, bname);
             if (existing) {
               await metadataStore.saveMetadata(targetFolderId, bname, {
@@ -416,8 +434,8 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
         const results = [];
         for (const { folderId, basename: bname } of images) {
           try {
-            const paths = buildImagePaths(folderId, bname);
-            const getResp = await r2.getObject(paths.original.key);
+            const paths = imagePathStrategy(folderId, bname);
+            const getResp = await objectStore.getObject(paths.original.key);
             if (!getResp.ok) {
               results.push({
                 basename: bname,
@@ -432,9 +450,21 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
               resolvePlace: false,
             });
             await Promise.all([
-              r2.putObject(paths.thumb.key, versions.thumb, "image/jpeg"),
-              r2.putObject(paths.small.key, versions.small, "image/jpeg"),
-              r2.putObject(paths.hires.key, versions.hires, "image/jpeg"),
+              objectStore.putObject(
+                paths.thumb.key,
+                versions.thumb,
+                "image/jpeg",
+              ),
+              objectStore.putObject(
+                paths.small.key,
+                versions.small,
+                "image/jpeg",
+              ),
+              objectStore.putObject(
+                paths.hires.key,
+                versions.hires,
+                "image/jpeg",
+              ),
             ]);
             const existing = await metadataStore.getMetadata(folderId, bname);
             if (existing) {
@@ -466,25 +496,32 @@ export function createFilesApiMiddleware({ r2, metadataStore, foldersStore }) {
 
 async function deleteFolderAndContents(
   folderId,
-  r2,
+  objectStore,
   metadataStore,
   foldersStore,
+  imagePathStrategy,
 ) {
   const images = await metadataStore.listMetadata(folderId);
   const keysToDelete = [];
   for (const img of images) {
-    const paths = buildImagePaths(img.folderId, img.basename);
+    const paths = imagePathStrategy(img.folderId, img.basename);
     keysToDelete.push(...Object.values(paths).map((e) => e.key));
     await metadataStore.deleteMetadata(img.folderId, img.basename);
   }
-  if (keysToDelete.length) await r2.deleteObjects(keysToDelete);
+  if (keysToDelete.length) await objectStore.deleteObjects(keysToDelete);
   await foldersStore.deleteFolder(folderId);
 }
 
-async function reprocessFolder(folderId, r2, metadataStore, foldersStore) {
+async function reprocessFolder(
+  folderId,
+  objectStore,
+  metadataStore,
+  foldersStore,
+  imagePathStrategy,
+) {
   const { processImage } = await import("./image-processor.js");
   const prefix = folderId ? `images/${folderId}/` : "images/";
-  const { contents } = await r2.listAllObjects(prefix);
+  const { contents } = await objectStore.listAllObjects(prefix);
   // Only process original files (no suffix like _thumb, _small, _hires)
   const originals = contents.filter(
     (c) =>
@@ -501,16 +538,16 @@ async function reprocessFolder(folderId, r2, metadataStore, foldersStore) {
       const folder = keyParts[1];
       const folderRecord = await foldersStore.getFolder(folder);
 
-      const getResp = await r2.getObject(obj.key);
+      const getResp = await objectStore.getObject(obj.key);
       if (!getResp.ok) continue;
       const buf = Buffer.from(await getResp.arrayBuffer());
       const { meta, versions } = await processImage(buf, bname);
-      const paths = buildImagePaths(folder, bname);
+      const paths = imagePathStrategy(folder, bname);
 
       await Promise.all([
-        r2.putObject(paths.thumb.key, versions.thumb, "image/jpeg"),
-        r2.putObject(paths.small.key, versions.small, "image/jpeg"),
-        r2.putObject(paths.hires.key, versions.hires, "image/jpeg"),
+        objectStore.putObject(paths.thumb.key, versions.thumb, "image/jpeg"),
+        objectStore.putObject(paths.small.key, versions.small, "image/jpeg"),
+        objectStore.putObject(paths.hires.key, versions.hires, "image/jpeg"),
       ]);
 
       const existing = (await metadataStore.getMetadata(folder, bname)) || {};

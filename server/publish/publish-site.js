@@ -1,19 +1,7 @@
-import {
-  mkdir,
-  readdir,
-  readFile,
-  rm,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { copyFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { generatePageHtml } from "./html-generator.js";
-
-async function readJson(filePath) {
-  const content = await readFile(filePath, "utf8");
-  return JSON.parse(content);
-}
 
 function toBaseName(fileName) {
   return fileName.replace(/\.json$/i, "");
@@ -134,36 +122,6 @@ function buildItemTemplateTokenValues(itemConfig = {}) {
   return tokenValues;
 }
 
-async function copyDirectoryRecursive(sourceDir, targetDir) {
-  let sourceStats;
-  try {
-    sourceStats = await stat(sourceDir);
-  } catch {
-    return;
-  }
-
-  if (!sourceStats.isDirectory()) {
-    return;
-  }
-
-  await mkdir(targetDir, { recursive: true });
-  const entries = await readdir(sourceDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const sourcePath = resolve(sourceDir, entry.name);
-    const targetPath = resolve(targetDir, entry.name);
-
-    if (entry.isDirectory()) {
-      await copyDirectoryRecursive(sourcePath, targetPath);
-      continue;
-    }
-
-    if (entry.isFile()) {
-      await copyFile(sourcePath, targetPath);
-    }
-  }
-}
-
 async function copyComponentStyles(appRoot, outputDir) {
   const componentsDir = resolve(appRoot, "src/website/components");
   const stylesDir = resolve(outputDir, "owb-styles");
@@ -214,18 +172,18 @@ export async function publishSite({
   sharedRoot,
   imagesRoot,
   publicRoot,
+  publishProvider,
   outputDir,
   appRoot,
 }) {
-  const pagesDir = pagesRoot || resolve(contentRoot, "pages");
-  const sharedDir = sharedRoot || resolve(contentRoot, "shared");
-  const collectionsDir = collectionsRoot || resolve(contentRoot, "collections");
-  let siteConfig = {};
-  try {
-    siteConfig = await readJson(resolve(contentRoot, "config.json"));
-  } catch {
-    // Site-wide configuration is optional.
+  if (!publishProvider) {
+    throw new Error(
+      "publishSite requires publishProvider. Core no longer assumes filesystem-backed publish inputs.",
+    );
   }
+  const provider = publishProvider;
+
+  const siteConfig = await provider.getSiteConfig();
 
   const sharedCache = new Map();
   const collectionConfigCache = new Map();
@@ -241,9 +199,8 @@ export async function publishSite({
       return sharedCache.get(normalized);
     }
 
-    const filePath = resolve(sharedDir, `${normalized}.json`);
     try {
-      const config = await readJson(filePath);
+      const config = await provider.getSharedComponent(normalized);
       sharedCache.set(normalized, config);
       return config;
     } catch {
@@ -263,9 +220,7 @@ export async function publishSite({
     }
 
     try {
-      const config = await readJson(
-        resolve(collectionsDir, normalized, "_config.json"),
-      );
+      const config = await provider.getCollectionConfig(normalized);
       collectionConfigCache.set(normalized, config);
       return config;
     } catch {
@@ -284,56 +239,12 @@ export async function publishSite({
       return collectionMetadataCache.get(normalized);
     }
 
-    let itemEntries = [];
-    try {
-      itemEntries = await readdir(resolve(collectionsDir, normalized), {
-        withFileTypes: true,
-      });
-    } catch {
-      const emptyResult = { collectionId: normalized, items: [] };
-      collectionMetadataCache.set(normalized, emptyResult);
-      return emptyResult;
-    }
-
-    const jsonItemFiles = itemEntries
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-      .filter((entry) => entry.name !== "_config.json")
-      .map((entry) => entry.name)
-      .sort((a, b) => a.localeCompare(b));
-
-    const items = [];
-    for (const fileName of jsonItemFiles) {
-      try {
-        const item = await readJson(
-          resolve(collectionsDir, normalized, fileName),
-        );
-        const metadata = { ...(item && typeof item === "object" ? item : {}) };
-        delete metadata.content;
-        const fileBaseName = toBaseName(fileName);
-        const itemId = String(item?.id || fileBaseName);
-        items.push({
-          id: itemId,
-          fileBaseName,
-          title: item?.title || itemId,
-          metadata,
-        });
-      } catch {
-        // Ignore malformed items so one broken file does not stop publishing.
-      }
-    }
-
-    const result = {
-      collectionId: normalized,
-      items,
-    };
+    const result = await provider.listCollectionItemsMetadata(normalized);
     collectionMetadataCache.set(normalized, result);
     return result;
   }
 
-  const pageFiles = (await readdir(pagesDir, { withFileTypes: true }))
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b));
+  const pageIds = await provider.listPageIds();
 
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
@@ -366,23 +277,15 @@ export async function publishSite({
     }
   }
 
-  await copyDirectoryRecursive(
-    imagesRoot || resolve(contentRoot, "images"),
-    resolve(outputDir, "images"),
-  );
-
-  await copyDirectoryRecursive(
-    publicRoot || resolve(contentRoot, "public"),
-    outputDir,
-  );
+  await provider.copyImagesTo(outputDir);
+  await provider.copyPublicTo(outputDir);
 
   const published = [];
   const warnings = [];
 
-  for (const pageFileName of pageFiles) {
-    const pagePath = resolve(pagesDir, pageFileName);
-    const pageConfig = await readJson(pagePath);
-    const fileBaseName = toBaseName(pageFileName);
+  for (const pageId of pageIds) {
+    const pageConfig = await provider.getPageConfig(pageId);
+    const fileBaseName = toBaseName(`${pageId}.json`);
 
     const urlPath = requirePublishedUrlPath(
       pageConfig?.url,
@@ -430,12 +333,7 @@ export async function publishSite({
     }
   }
 
-  const collectionEntries = (
-    await readdir(collectionsDir, { withFileTypes: true })
-  )
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b));
+  const collectionEntries = await provider.listCollectionIds();
 
   for (const collectionId of collectionEntries) {
     const collectionConfig = await loadCollectionConfig(collectionId);
@@ -468,8 +366,9 @@ export async function publishSite({
 
       let itemConfig;
       try {
-        itemConfig = await readJson(
-          resolve(collectionsDir, collectionId, `${fileBaseName}.json`),
+        itemConfig = await provider.getCollectionItemConfig(
+          collectionId,
+          fileBaseName,
         );
       } catch {
         continue;

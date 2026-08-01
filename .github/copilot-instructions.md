@@ -131,6 +131,20 @@ Before starting a new task in the above plan, update progress in the plan.
 - Site-specific backend and image behavior now lives behind exported plugins in `src/plugins/`.
 - Avoid direct `fetch` calls to ad-hoc endpoints from components; add/extend data-layer functions instead.
 
+### Backend Provider Architecture (LLM Guidance)
+
+- Treat persistence as provider-owned. Core package code must not assume local files for content CRUD or publish inputs.
+- `createOwbBackendPlugin({ appRoot, siteConfig, backendProviders })` requires provider middleware factories:
+  - `backendProviders.createDataApiMiddleware()`
+  - `backendProviders.createFilesApiMiddleware()`
+- Publish flow is provider-driven. `publishSite(...)` must be called with an explicit `publishProvider`.
+- Filesystem behavior is only an adapter via:
+  - `createFilesystemBackendProviders(...)`
+  - `createFilesystemPublishProvider(...)`
+- Keep support for fileless backends. A reference implementation exists via `createInMemoryBackendProviders(...)`.
+- If adding new backend capabilities, update provider contracts first (`server/data/data-api-provider.js` and publish provider shape) before changing adapters.
+- Do not reintroduce direct filesystem assumptions in core paths (`src/plugins/owb-backend-plugin.js`, `server/publish/publish-site.js`).
+
 ### Supported Data Functions
 
 - Pages: `listPages`, `getPageConfig`, `savePageConfig`, `createPage`.

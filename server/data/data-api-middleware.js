@@ -27,6 +27,8 @@ function decodePathPart(value) {
 }
 
 export function createDataApiMiddleware(resolvers) {
+  const provider = resolvers;
+
   return async function dataApiMiddleware(request, response, next) {
     if (!request.url?.startsWith("/__data")) {
       next();
@@ -40,13 +42,13 @@ export function createDataApiMiddleware(resolvers) {
 
     try {
       if (method === "GET" && parts.length === 1 && parts[0] === "pages") {
-        sendJson(response, 200, await resolvers.listPages());
+        sendJson(response, 200, await provider.listPages());
         return;
       }
 
       if (method === "GET" && parts.length === 2 && parts[0] === "pages") {
         const pageId = decodePathPart(parts[1]);
-        sendJson(response, 200, await resolvers.getPageConfig(pageId));
+        sendJson(response, 200, await provider.getPageConfig(pageId));
         return;
       }
 
@@ -56,7 +58,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.savePageConfig(pageId, body.pageConfig),
+          await provider.savePageConfig(pageId, body.pageConfig),
         );
         return;
       }
@@ -72,25 +74,25 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.updatePageIdentity(pageId, body.identity),
+          await provider.updatePageIdentity(pageId, body.identity),
         );
         return;
       }
 
       if (method === "POST" && parts.length === 1 && parts[0] === "pages") {
         const body = await parseJsonBody(request);
-        sendJson(response, 201, await resolvers.createPage(body));
+        sendJson(response, 201, await provider.createPage(body));
         return;
       }
 
       if (method === "DELETE" && parts.length === 2 && parts[0] === "pages") {
         const pageId = decodePathPart(parts[1]);
-        sendJson(response, 200, await resolvers.deletePage(pageId));
+        sendJson(response, 200, await provider.deletePage(pageId));
         return;
       }
 
       if (method === "POST" && parts.length === 1 && parts[0] === "publish") {
-        sendJson(response, 200, await resolvers.publishSite());
+        sendJson(response, 200, await provider.publishSite());
         return;
       }
 
@@ -101,7 +103,7 @@ export function createDataApiMiddleware(resolvers) {
         parts[1] === "squarespace"
       ) {
         const body = await parseJsonBody(request);
-        sendJson(response, 200, await resolvers.importSquarespaceXml(body));
+        sendJson(response, 200, await provider.importSquarespaceXml(body));
         return;
       }
 
@@ -115,7 +117,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.importSquarespaceStaticSiteDir(body),
+          await provider.importSquarespaceStaticSiteDir(body),
         );
         return;
       }
@@ -125,7 +127,7 @@ export function createDataApiMiddleware(resolvers) {
         parts.length === 1 &&
         parts[0] === "collections"
       ) {
-        sendJson(response, 200, await resolvers.listCollections());
+        sendJson(response, 200, await provider.listCollections());
         return;
       }
 
@@ -135,7 +137,7 @@ export function createDataApiMiddleware(resolvers) {
         parts[0] === "collections"
       ) {
         const body = await parseJsonBody(request);
-        sendJson(response, 201, await resolvers.createCollection(body));
+        sendJson(response, 201, await provider.createCollection(body));
         return;
       }
 
@@ -145,7 +147,7 @@ export function createDataApiMiddleware(resolvers) {
         parts[0] === "collections"
       ) {
         const collectionId = decodePathPart(parts[1]);
-        sendJson(response, 200, await resolvers.deleteCollection(collectionId));
+        sendJson(response, 200, await provider.deleteCollection(collectionId));
         return;
       }
 
@@ -155,7 +157,7 @@ export function createDataApiMiddleware(resolvers) {
         parts[0] === "collections" &&
         parts[1] === "content"
       ) {
-        sendJson(response, 200, await resolvers.getAllCollectionsContent());
+        sendJson(response, 200, await provider.getAllCollectionsContent());
         return;
       }
 
@@ -165,7 +167,7 @@ export function createDataApiMiddleware(resolvers) {
         parts[0] === "collections" &&
         parts[1] === "grouped-content"
       ) {
-        sendJson(response, 200, await resolvers.getGroupedCollectionsContent());
+        sendJson(response, 200, await provider.getGroupedCollectionsContent());
         return;
       }
 
@@ -179,7 +181,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.getCollectionConfig(collectionId),
+          await provider.getCollectionConfig(collectionId),
         );
         return;
       }
@@ -195,7 +197,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.saveCollectionConfig(collectionId, body.config),
+          await provider.saveCollectionConfig(collectionId, body.config),
         );
         return;
       }
@@ -211,7 +213,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.updateCollectionIdentity(collectionId, body.identity),
+          await provider.updateCollectionIdentity(collectionId, body.identity),
         );
         return;
       }
@@ -227,7 +229,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.getCollectionItemContent(collectionId, itemId),
+          await provider.getCollectionItemContent(collectionId, itemId),
         );
         return;
       }
@@ -242,7 +244,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.getCollectionItemsMetadata(collectionId),
+          await provider.getCollectionItemsMetadata(collectionId),
         );
         return;
       }
@@ -258,7 +260,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           201,
-          await resolvers.addCollectionItem(collectionId, body),
+          await provider.addCollectionItem(collectionId, body),
         );
         return;
       }
@@ -275,7 +277,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.updateCollectionItem(collectionId, itemId, body),
+          await provider.updateCollectionItem(collectionId, itemId, body),
         );
         return;
       }
@@ -293,7 +295,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.updateCollectionItemIdentity(
+          await provider.updateCollectionItemIdentity(
             collectionId,
             itemId,
             body.identity,
@@ -313,7 +315,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.deleteCollectionItem(collectionId, itemId),
+          await provider.deleteCollectionItem(collectionId, itemId),
         );
         return;
       }
@@ -323,7 +325,7 @@ export function createDataApiMiddleware(resolvers) {
         parts.length === 1 &&
         parts[0] === "shared-components"
       ) {
-        sendJson(response, 200, await resolvers.listSharedComponents());
+        sendJson(response, 200, await provider.listSharedComponents());
         return;
       }
 
@@ -333,11 +335,7 @@ export function createDataApiMiddleware(resolvers) {
         parts[0] === "shared-components"
       ) {
         const componentId = decodePathPart(parts[1]);
-        sendJson(
-          response,
-          200,
-          await resolvers.getComponentConfig(componentId),
-        );
+        sendJson(response, 200, await provider.getComponentConfig(componentId));
         return;
       }
 
@@ -351,10 +349,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.saveComponentConfig(
-            componentId,
-            body.componentConfig,
-          ),
+          await provider.saveComponentConfig(componentId, body.componentConfig),
         );
         return;
       }
@@ -370,7 +365,7 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.updateComponentIdentity(componentId, body.identity),
+          await provider.updateComponentIdentity(componentId, body.identity),
         );
         return;
       }
@@ -381,7 +376,7 @@ export function createDataApiMiddleware(resolvers) {
         parts[0] === "shared-components"
       ) {
         const body = await parseJsonBody(request);
-        sendJson(response, 201, await resolvers.createComponentConfig(body));
+        sendJson(response, 201, await provider.createComponentConfig(body));
         return;
       }
 
@@ -394,14 +389,14 @@ export function createDataApiMiddleware(resolvers) {
         sendJson(
           response,
           200,
-          await resolvers.deleteComponentConfig(componentId),
+          await provider.deleteComponentConfig(componentId),
         );
         return;
       }
 
       if (method === "GET" && parts.length >= 1 && parts[0] === "images") {
         const imagePath = parts.slice(1).map(decodePathPart).join("/");
-        sendJson(response, 200, await resolvers.getImageUrls(imagePath));
+        sendJson(response, 200, await provider.getImageUrls(imagePath));
         return;
       }
 

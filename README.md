@@ -2,6 +2,85 @@
 
 A visual website editor built with [Lit](https://lit.dev/) and Vite. The package exports the editor runtime, publish pipeline, and plugin factories; the website repo owns the site config and composes those exports.
 
+## Backend Setup
+
+The backend is plugin-driven. Your site config must explicitly provide backend providers to the editor plugin and a publish provider to the publish script.
+
+### 1. Configure backend providers in `owb.config.js`
+
+For a filesystem-backed site, wire `createFilesystemBackendProviders(...)` into `createOwbBackendPlugin(...)`:
+
+```js
+import {
+  createFilesystemBackendProviders,
+  createOwbBackendPlugin,
+  createOwbImagePlugin,
+} from "open-website-builder";
+
+export function plugins({ appRoot, r2, siteConfig }) {
+  const backendProviders = createFilesystemBackendProviders({
+    appRoot,
+    siteConfig,
+    r2,
+  });
+
+  return [
+    createOwbBackendPlugin({
+      appRoot,
+      siteConfig,
+      backendProviders,
+    }),
+    createOwbImagePlugin({ imageBaseUrl: siteConfig.imageBaseUrl }),
+  ];
+}
+```
+
+### 2. Configure publish script with a publish provider
+
+Publish requires an explicit provider. For filesystem-backed content use `createFilesystemPublishProvider(...)`:
+
+```js
+import {
+  createFilesystemPublishProvider,
+  loadSiteConfig,
+  publishSite,
+} from "open-website-builder";
+
+const siteConfig = await loadSiteConfig("./owb.config.js");
+const publishProvider = createFilesystemPublishProvider({
+  contentRoot: siteConfig.contentRoot,
+  pagesRoot: siteConfig.pagesRoot,
+  collectionsRoot: siteConfig.collectionsRoot,
+  sharedRoot: siteConfig.sharedRoot,
+  imagesRoot: siteConfig.imagesRoot,
+  publicRoot: siteConfig.publicRoot,
+});
+
+await publishSite({
+  publishProvider,
+  outputDir: siteConfig.publishedOutputDir,
+  appRoot: process.cwd(),
+});
+```
+
+### 3. Backend options
+
+- Filesystem backend (production for file-based sites):
+  - `createFilesystemBackendProviders(...)`
+  - `createFilesystemPublishProvider(...)`
+- Fileless reference backend (development/prototyping):
+  - `createInMemoryBackendProviders(...)`
+
+### 4. Required provider capabilities for custom backends
+
+If you implement your own backend plugin (for example Postgres), provide:
+
+- Data API middleware factory used by editor CRUD routes.
+- Files API middleware factory used by image/folder routes.
+- Publish provider implementing content + asset reads for publish.
+
+If these provider functions are missing, `createOwbBackendPlugin(...)` and `publishSite(...)` will fail fast with explicit errors.
+
 ## Setup
 
 ### 1. Create a site config
