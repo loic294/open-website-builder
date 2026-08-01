@@ -39,9 +39,7 @@ step after Publish run inside the container. The Compose file mounts the host's
 entrypoint copies regular files into the container user's ephemeral
 `/home/node/.ssh`, removes links and special files, and applies OpenSSH's strict
 ownership and permissions. Root exec shells use the same copied directory.
-Compose also forwards `${SSH_AUTH_SOCK}`, allowing both users to authenticate
-with identities already loaded in the host SSH agent. The host SSH directory is
-never modified.
+The host SSH directory is never modified.
 
 Before starting the container:
 
@@ -52,8 +50,6 @@ Before starting the container:
 3. Ensure `known_hosts` contains GitHub's verified host key. Obtain the
    fingerprint from GitHub's published documentation and verify it before
    adding it. Host-key verification is not disabled by this setup.
-4. Ensure `SSH_AUTH_SOCK` is set and `ssh-add -L` lists the identity authorized
-   for the repository.
 
 Do not put private keys, tokens, or credentials in the Dockerfile, Compose
 environment, or image build context.
