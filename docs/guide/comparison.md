@@ -6,13 +6,13 @@ headless CMS products, but it makes different tradeoffs.
 
 ## At a glance
 
-| Approach | Visual editing | Content ownership | Hosting choice | Maintenance |
-| --- | --- | --- | --- | --- |
-| Open Website Builder | Built in | Files, SQLite, or custom backend | Any static host | You operate and update it |
-| Squarespace or Wix | Built in and polished | Vendor-managed with export options | Primarily vendor platform | Vendor-managed |
-| Static site generator | Usually developer-oriented | Source files or external data | Any static host | You operate the toolchain |
-| Headless CMS + frontend | CMS editing UI | CMS-managed through APIs | Usually flexible | You integrate two systems |
-| Hand-coded site | Depends on tools added | Fully controlled | Fully flexible | Entirely your responsibility |
+| Approach                | Visual editing             | Content ownership                  | Hosting choice            | Maintenance                  |
+| ----------------------- | -------------------------- | ---------------------------------- | ------------------------- | ---------------------------- |
+| Open Website Builder    | Built in                   | Files, SQLite, or custom backend   | Any static host           | You operate and update it    |
+| Squarespace or Wix      | Built in and polished      | Vendor-managed with export options | Primarily vendor platform | Vendor-managed               |
+| Static site generator   | Usually developer-oriented | Source files or external data      | Any static host           | You operate the toolchain    |
+| Headless CMS + frontend | CMS editing UI             | CMS-managed through APIs           | Usually flexible          | You integrate two systems    |
+| Hand-coded site         | Depends on tools added     | Fully controlled                   | Fully flexible            | Entirely your responsibility |
 
 ## Squarespace and Wix
 

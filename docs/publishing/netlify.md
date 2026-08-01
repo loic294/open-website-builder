@@ -7,11 +7,11 @@ its CDN.
 
 Import the Git repository and configure:
 
-| Setting | Value |
-| --- | --- |
-| Base directory | Website directory, or blank at repository root |
-| Build command | `npm run publish` |
-| Publish directory | `dist-publish` |
+| Setting           | Value                                          |
+| ----------------- | ---------------------------------------------- |
+| Base directory    | Website directory, or blank at repository root |
+| Build command     | `npm run publish`                              |
+| Publish directory | `dist-publish`                                 |
 
 Select Node.js 22.13 or newer and add custom backend credentials through
 Netlify's environment-variable settings.

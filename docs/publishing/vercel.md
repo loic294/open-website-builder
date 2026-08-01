@@ -6,12 +6,12 @@ Vercel can deploy OWB as a framework-independent static project.
 
 Import the Git repository, choose **Other** as the framework preset, and set:
 
-| Setting | Value |
-| --- | --- |
-| Root directory | Website directory, or repository root |
-| Build command | `npm run publish` |
-| Output directory | `dist-publish` |
-| Node.js version | A release compatible with Node.js 22.13+ |
+| Setting          | Value                                    |
+| ---------------- | ---------------------------------------- |
+| Root directory   | Website directory, or repository root    |
+| Build command    | `npm run publish`                        |
+| Output directory | `dist-publish`                           |
+| Node.js version  | A release compatible with Node.js 22.13+ |
 
 Add custom backend credentials in the project's environment-variable settings.
 Set `config.json.siteUrl` to the production Vercel domain or custom domain.

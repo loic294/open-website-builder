@@ -127,15 +127,15 @@ editor expects a non-2xx response to contain a useful `message`:
 
 ### Pages and publishing
 
-| Request | Body sent by the editor | Successful response |
-| --- | --- | --- |
-| `GET /__data/pages` | none | `[{ id, title, url }]` |
-| `GET /__data/pages/:id` | none | Complete page document |
-| `POST /__data/pages` | Initial page document | Created page document |
-| `PUT /__data/pages/:id` | `{ "pageConfig": <page> }` | `{ ok: true, id }` |
-| `PUT /__data/pages/:id/identity` | `{ "identity": { "id": "new-id" } }` | `{ ok: true, id, fileName? }` |
-| `DELETE /__data/pages/:id` | none | `{ ok: true, id }` |
-| `POST /__data/publish` | `{}` | Publish result containing `pages` |
+| Request                          | Body sent by the editor              | Successful response               |
+| -------------------------------- | ------------------------------------ | --------------------------------- |
+| `GET /__data/pages`              | none                                 | `[{ id, title, url }]`            |
+| `GET /__data/pages/:id`          | none                                 | Complete page document            |
+| `POST /__data/pages`             | Initial page document                | Created page document             |
+| `PUT /__data/pages/:id`          | `{ "pageConfig": <page> }`           | `{ ok: true, id }`                |
+| `PUT /__data/pages/:id/identity` | `{ "identity": { "id": "new-id" } }` | `{ ok: true, id, fileName? }`     |
+| `DELETE /__data/pages/:id`       | none                                 | `{ ok: true, id }`                |
+| `POST /__data/publish`           | `{}`                                 | Publish result containing `pages` |
 
 Page creation normally sends `id`, `title`, and `url`. Add defaults for `type`,
 `seo`, and `content`. A normal save sends the complete current document inside
@@ -144,22 +144,22 @@ document's `id` must change atomically.
 
 ### Collections and items
 
-| Request | Body sent by the editor | Successful response |
-| --- | --- | --- |
-| `GET /__data/collections` | none | `[{ id, title, requiredFields }]` |
-| `POST /__data/collections` | `{ id, title }` | Created collection config |
-| `DELETE /__data/collections/:id` | none | `{ ok: true, id }` |
-| `GET /__data/collections/content` | none | `[{ collectionId, title, items: [<item>] }]` |
-| `GET /__data/collections/grouped-content` | none | Groups with item summaries and `configItem` |
-| `GET /__data/collections/:id/config` | none | Complete collection config |
-| `PUT /__data/collections/:id/config` | `{ "config": <collection> }` | `{ ok: true, id }` |
-| `PUT /__data/collections/:id/identity` | `{ "identity": { "id": "new-id" } }` | `{ ok: true, id }` |
-| `GET /__data/collections/:id/items/:itemId` | none | Complete item document |
-| `GET /__data/collections/:id/items-metadata` | none | Metadata result shown below |
-| `POST /__data/collections/:id/items` | Initial item document | Created item document |
-| `PUT /__data/collections/:id/items/:itemId` | Complete item document | Updated item document |
-| `PUT /__data/collections/:id/items/:itemId/identity` | `{ "identity": { "id": "new-id" } }` | Updated item with its new `id` |
-| `DELETE /__data/collections/:id/items/:itemId` | none | `{ ok: true, id }` |
+| Request                                              | Body sent by the editor              | Successful response                          |
+| ---------------------------------------------------- | ------------------------------------ | -------------------------------------------- |
+| `GET /__data/collections`                            | none                                 | `[{ id, title, requiredFields }]`            |
+| `POST /__data/collections`                           | `{ id, title }`                      | Created collection config                    |
+| `DELETE /__data/collections/:id`                     | none                                 | `{ ok: true, id }`                           |
+| `GET /__data/collections/content`                    | none                                 | `[{ collectionId, title, items: [<item>] }]` |
+| `GET /__data/collections/grouped-content`            | none                                 | Groups with item summaries and `configItem`  |
+| `GET /__data/collections/:id/config`                 | none                                 | Complete collection config                   |
+| `PUT /__data/collections/:id/config`                 | `{ "config": <collection> }`         | `{ ok: true, id }`                           |
+| `PUT /__data/collections/:id/identity`               | `{ "identity": { "id": "new-id" } }` | `{ ok: true, id }`                           |
+| `GET /__data/collections/:id/items/:itemId`          | none                                 | Complete item document                       |
+| `GET /__data/collections/:id/items-metadata`         | none                                 | Metadata result shown below                  |
+| `POST /__data/collections/:id/items`                 | Initial item document                | Created item document                        |
+| `PUT /__data/collections/:id/items/:itemId`          | Complete item document               | Updated item document                        |
+| `PUT /__data/collections/:id/items/:itemId/identity` | `{ "identity": { "id": "new-id" } }` | Updated item with its new `id`               |
+| `DELETE /__data/collections/:id/items/:itemId`       | none                                 | `{ ok: true, id }`                           |
 
 Metadata listings omit the potentially large `content` tree:
 
@@ -188,15 +188,15 @@ it to `getCollectionItemConfig`; it does not need to be a real filename.
 
 ### Shared components
 
-| Request | Body sent by the editor | Successful response |
-| --- | --- | --- |
-| `GET /__data/shared-components` | none | `[{ id, title }]` |
-| `GET /__data/shared-components/:id` | none | Complete shared component |
-| `POST /__data/shared-components` | `{ id, title, content }` | Created component |
-| `PUT /__data/shared-components/:id` | `{ "componentConfig": <component> }` | `{ ok: true, id }` |
-| `PUT /__data/shared-components/:id/identity` | `{ "identity": { id, title? } }` | `{ ok: true, id, title, fileName? }` |
-| `DELETE /__data/shared-components/:id` | none | `{ ok: true, id }` |
-| `GET /__data/images/:encodedPath` | none | `{ "urls": ["/images/..."] }` |
+| Request                                      | Body sent by the editor              | Successful response                  |
+| -------------------------------------------- | ------------------------------------ | ------------------------------------ |
+| `GET /__data/shared-components`              | none                                 | `[{ id, title }]`                    |
+| `GET /__data/shared-components/:id`          | none                                 | Complete shared component            |
+| `POST /__data/shared-components`             | `{ id, title, content }`             | Created component                    |
+| `PUT /__data/shared-components/:id`          | `{ "componentConfig": <component> }` | `{ ok: true, id }`                   |
+| `PUT /__data/shared-components/:id/identity` | `{ "identity": { id, title? } }`     | `{ ok: true, id, title, fileName? }` |
+| `DELETE /__data/shared-components/:id`       | none                                 | `{ ok: true, id }`                   |
+| `GET /__data/images/:encodedPath`            | none                                 | `{ "urls": ["/images/..."] }`        |
 
 ## File and image contract
 
@@ -204,19 +204,19 @@ The simplest integration reuses OWB's file middleware with a custom object
 store, metadata store, and folder store. A separate asset service can instead
 implement or proxy these routes:
 
-| Request | Input | Response |
-| --- | --- | --- |
-| `GET /__data/files/folders` | none | `[{ id, name }]` |
-| `POST /__data/files/folders` | `{ name }` | Created `{ id, name }` |
-| `PATCH /__data/files/folders/:id` | `{ name }` | Updated folder |
-| `DELETE /__data/files/folders/:id` | none | `{ ok: true }` |
-| `GET /__data/files/images?folder=:id` | none | Image metadata array |
-| `POST /__data/files/upload` | Multipart fields `file` and `folderId` | Created image metadata |
-| `PATCH /__data/files/images/rename` | `{ folderId, oldBasename, newBasename }` | `{ ok: true, newBasename }` |
-| `DELETE /__data/files/images` | `{ folderId, basename }` | `{ ok: true }` |
-| `PATCH /__data/files/images/description` | `{ folderId, basename, description }` | `{ ok: true }` |
-| `PATCH /__data/files/images/place` | `{ folderId, basename, city, stateProvince, country }` | Updated metadata |
-| `POST /__data/files/images/move` | `{ images: [{ folderId, basename }], targetFolderId }` | Per-image results |
+| Request                                  | Input                                                  | Response                    |
+| ---------------------------------------- | ------------------------------------------------------ | --------------------------- |
+| `GET /__data/files/folders`              | none                                                   | `[{ id, name }]`            |
+| `POST /__data/files/folders`             | `{ name }`                                             | Created `{ id, name }`      |
+| `PATCH /__data/files/folders/:id`        | `{ name }`                                             | Updated folder              |
+| `DELETE /__data/files/folders/:id`       | none                                                   | `{ ok: true }`              |
+| `GET /__data/files/images?folder=:id`    | none                                                   | Image metadata array        |
+| `POST /__data/files/upload`              | Multipart fields `file` and `folderId`                 | Created image metadata      |
+| `PATCH /__data/files/images/rename`      | `{ folderId, oldBasename, newBasename }`               | `{ ok: true, newBasename }` |
+| `DELETE /__data/files/images`            | `{ folderId, basename }`                               | `{ ok: true }`              |
+| `PATCH /__data/files/images/description` | `{ folderId, basename, description }`                  | `{ ok: true }`              |
+| `PATCH /__data/files/images/place`       | `{ folderId, basename, city, stateProvince, country }` | Updated metadata            |
+| `POST /__data/files/images/move`         | `{ images: [{ folderId, basename }], targetFolderId }` | Per-image results           |
 
 An upload returns paths for the generated variants and extracted metadata:
 

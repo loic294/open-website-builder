@@ -34,12 +34,12 @@ Check several page URLs, images, `robots.txt`, and `sitemap.xml`. Never edit
 
 Most Git-integrated static hosts need the same values:
 
-| Setting | Value |
-| --- | --- |
-| Runtime | Node.js 22.13 or newer |
-| Install command | `npm ci` |
-| Build command | `npm run publish` |
-| Output directory | `dist-publish` |
+| Setting          | Value                  |
+| ---------------- | ---------------------- |
+| Runtime          | Node.js 22.13 or newer |
+| Install command  | `npm ci`               |
+| Build command    | `npm run publish`      |
+| Output directory | `dist-publish`         |
 
 If the website is inside a monorepo, set the provider's root or base directory
 to the website project. The build must be able to install
