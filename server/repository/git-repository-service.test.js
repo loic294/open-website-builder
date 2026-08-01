@@ -113,7 +113,7 @@ test("commit and push stages all files with a timestamped commit", async (t) => 
 
   const service = await createGitRepositoryService({ contentRoot: local });
   const status = await service.commitAndPush();
-  await git(other, "pull", "--ff-only");
+  await git(other, "pull");
   const log = await git(local, "log", "-1", "--pretty=%s");
 
   assert.match(log.stdout, /^Update website content \d{4}-\d{2}-\d{2}/);

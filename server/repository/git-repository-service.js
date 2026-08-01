@@ -191,7 +191,7 @@ export async function createGitRepositoryService({ contentRoot }) {
         }
 
         try {
-          await runGit(repositoryRoot, ["pull", "--ff-only"]);
+          await runGit(repositoryRoot, ["pull"]);
         } catch (error) {
           try {
             await restoreStash(stash);

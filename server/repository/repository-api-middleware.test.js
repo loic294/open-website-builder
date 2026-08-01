@@ -59,7 +59,7 @@ test("serializes git command output on failures", async () => {
     getService: async () => ({
       async pull() {
         throw new GitCommandError("Pull failed", {
-          command: "git pull --ff-only",
+          command: "git pull",
           stdout: "Updating files",
           stderr: "CONFLICT",
           exitCode: 1,
@@ -78,7 +78,7 @@ test("serializes git command output on failures", async () => {
   assert.equal(response.statusCode, 500);
   assert.deepEqual(JSON.parse(response.body), {
     message: "Pull failed",
-    command: "git pull --ff-only",
+    command: "git pull",
     stdout: "Updating files",
     stderr: "CONFLICT",
     exitCode: 1,
