@@ -123,18 +123,18 @@ For each layout type:
 
 - [ ] Replace `<owb-*-editor>` with:
       `html
-                <owb-section .node=... .pageConfig=...>
-                      <!-- light-DOM children -->
-                      ${childNodes.map(renderChild)}
-                      <owb-layout-editor-overlay
-                            slot="editor-overlay"
-                            variant="section"
-                            .node=...
-                            .pageConfig=...
-                            @page-config-updated=${onPageConfigUpdated}
-                      ></owb-layout-editor-overlay>
-                </owb-section>
-                `
+              <owb-section .node=... .pageConfig=...>
+                    <!-- light-DOM children -->
+                    ${childNodes.map(renderChild)}
+                    <owb-layout-editor-overlay
+                          slot="editor-overlay"
+                          variant="section"
+                          .node=...
+                          .pageConfig=...
+                          @page-config-updated=${onPageConfigUpdated}
+                    ></owb-layout-editor-overlay>
+              </owb-section>
+              `
 - [ ] Children for grid mode get `slot=""` + `style="grid-column:..."` +
       `data-grid-child-id` applied by the render function (overlay reads
       placements via DOM query / shared state, not via `renderNodeFn`).
