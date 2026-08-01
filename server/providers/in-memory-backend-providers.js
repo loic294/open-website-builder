@@ -605,13 +605,14 @@ export function createInMemoryBackendProviders({ appRoot, siteConfig }) {
       outputDir: siteConfig.publishedOutputDir,
       appRoot,
     });
-  const npmScriptService = createNpmScriptService({
-    projectRoot: siteConfig.contentRoot,
-    scriptName: siteConfig.uploadScript,
-  });
+  const npmScriptService = siteConfig.uploadScript
+    ? createNpmScriptService({
+        projectRoot: siteConfig.contentRoot,
+        scriptName: siteConfig.uploadScript,
+      })
+    : null;
   const deploymentService = createDeploymentService({
-    generate: generateSite,
-    upload: () => npmScriptService.run(),
+    upload: npmScriptService ? () => npmScriptService.run() : null,
   });
   const dataApiProvider = createDataApiProvider({
     listPages,

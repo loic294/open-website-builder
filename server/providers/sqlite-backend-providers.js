@@ -41,13 +41,14 @@ export function createSqliteBackendProviders({ appRoot, siteConfig, r2 }) {
       outputDir: siteConfig.publishedOutputDir,
       appRoot,
     });
-  const npmScriptService = createNpmScriptService({
-    projectRoot: siteConfig.contentRoot,
-    scriptName: siteConfig.uploadScript,
-  });
+  const npmScriptService = siteConfig.uploadScript
+    ? createNpmScriptService({
+        projectRoot: siteConfig.contentRoot,
+        scriptName: siteConfig.uploadScript,
+      })
+    : null;
   const deploymentService = createDeploymentService({
-    generate: generateSite,
-    upload: () => npmScriptService.run(),
+    upload: npmScriptService ? () => npmScriptService.run() : null,
   });
   const dataApiProvider = createDataApiProvider({
     ...dataResolvers,

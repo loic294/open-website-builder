@@ -8,33 +8,29 @@ function markPhase(error, phase) {
   return wrapped;
 }
 
-export function createDeploymentService({ generate, upload, afterUpload }) {
+export function createDeploymentService({ upload, repository }) {
   let operationQueue = Promise.resolve();
 
   async function deploy() {
-    let generation;
-    let uploadResult;
-    let repository = null;
+    let uploadResult = null;
+    let repositoryResult = null;
 
-    try {
-      generation = await generate();
-    } catch (error) {
-      throw markPhase(error, "generate");
-    }
-    try {
-      uploadResult = await upload();
-    } catch (error) {
-      throw markPhase(error, "upload");
-    }
-    if (afterUpload) {
+    if (upload) {
       try {
-        repository = await afterUpload();
+        uploadResult = await upload();
+      } catch (error) {
+        throw markPhase(error, "upload");
+      }
+    }
+    if (repository) {
+      try {
+        repositoryResult = await repository();
       } catch (error) {
         throw markPhase(error, "repository");
       }
     }
 
-    return { generation, upload: uploadResult, repository };
+    return { upload: uploadResult, repository: repositoryResult };
   }
 
   return {

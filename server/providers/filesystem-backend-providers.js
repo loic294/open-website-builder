@@ -58,14 +58,17 @@ export function createFilesystemBackendProviders({ appRoot, siteConfig, r2 }) {
     });
     return repositoryServicePromise;
   };
-  const npmScriptService = createNpmScriptService({
-    projectRoot: siteConfig.contentRoot,
-    scriptName: siteConfig.uploadScript,
-  });
+  const npmScriptService = siteConfig.uploadScript
+    ? createNpmScriptService({
+        projectRoot: siteConfig.contentRoot,
+        scriptName: siteConfig.uploadScript,
+      })
+    : null;
   const deploymentService = createDeploymentService({
-    generate: generateSite,
-    upload: () => npmScriptService.run(),
-    afterUpload: async () => (await getRepositoryService()).commitAndPush(),
+    upload: npmScriptService ? () => npmScriptService.run() : null,
+    repository: siteConfig.pushToGit
+      ? async () => (await getRepositoryService()).commitAndPush()
+      : null,
   });
 
   const dataApiProvider = createDataApiProvider({

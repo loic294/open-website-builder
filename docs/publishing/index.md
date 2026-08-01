@@ -32,25 +32,31 @@ Check several page URLs, images, `robots.txt`, and `sitemap.xml`. Never edit
 
 ## Publish from the editor
 
-**Save Changes** generates the static site locally. **Publish** generates it
-again, then runs the project's `upload` npm script from the project root. Set a
-different script name in `owb.config.js` when needed:
+**Save Changes** generates the static site locally. **Publish** runs the enabled
+deployment actions without generating the site again. By default, it runs the
+project's `upload` npm script from the project root and, with the filesystem
+backend, commits and pushes the repository.
+
+Configure either action independently in `owb.config.js`:
 
 ```js
 export const owbConfig = {
   // Other paths and settings...
-  uploadScript: "deploy",
+  uploadScript: false,
+  pushToGit: true,
 };
 ```
 
-The script must exist in the project's `package.json`. OWB runs
+Set `uploadScript` to an npm script name to enable uploads, or `false` to skip
+them. The script must exist in the project's `package.json`. OWB runs
 `npm run <uploadScript>` without a shell and shows its command output when it
-fails. Retrying Publish reruns generation and the upload script.
+fails.
 
-With the filesystem backend, a successful upload is followed by the same
-Commit & Push operation available in the repository panel. A Git failure marks
-Publish as failed even though the upload completed; retrying runs the complete
-workflow again. SQLite and in-memory backends do not perform this Git step.
+Set `pushToGit` to `true` to run the same Commit & Push operation available in
+the repository panel, or `false` to skip it. This action is available only with
+the filesystem backend. When both actions are enabled, upload runs before Git.
+A failure stops Publish and identifies the failed action. SQLite and in-memory
+backends ignore `pushToGit`.
 
 ## Build settings
 

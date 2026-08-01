@@ -66,6 +66,7 @@ export const owbConfig = {
   publicRoot: resolve(siteRoot, "public"),
   publishedOutputDir: resolve(siteRoot, "dist-publish"),
   uploadScript: "upload",
+  pushToGit: true,
   imageBaseUrl: "http://localhost:3000/images/",
 };
 
@@ -143,9 +144,10 @@ OWB uses the credentials already configured for Git. It does not store tokens,
 SSH keys, or remote credentials. Git command failures can be inspected from the
 repository panel.
 
-The editor's Publish button generates the site, runs the configured npm upload
-script, then invokes this same Commit & Push operation. The upload script
-defaults to `upload` and can be changed with `uploadScript` in `owb.config.js`.
+The editor's Publish button runs the configured npm upload script, then invokes
+this same Commit & Push operation. It does not regenerate the site. The upload
+script defaults to `upload`; set `uploadScript` to another script name or to
+`false` to disable it. Set `pushToGit` to `false` to disable Commit & Push.
 
 ## Collections
 
