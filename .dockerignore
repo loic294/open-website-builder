@@ -1,0 +1,16 @@
+.git
+.github
+.vscode
+.agents
+.DS_Store
+.env
+.env.*
+node_modules
+dist
+dist-pub
+dist-publish
+build
+coverage
+docs
+npm-debug.log*
+*.local

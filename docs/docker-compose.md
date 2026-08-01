@@ -1,137 +1,130 @@
 # Run with Docker Compose
 
-Docker Compose can run the Open Website Builder editor without installing
-Node.js directly on the host. Complete the shared project setup in
-[Getting started](/getting-started), then configure either the
-[filesystem backend](/backends/filesystem) or [SQLite backend](/backends/sqlite).
+The prebuilt Docker image contains Node.js 22, Git, OpenSSH, the OWB editor,
+and its Linux dependencies. GitHub Actions builds it from the included
+`Dockerfile` for amd64 and arm64, then publishes it to GitHub Container
+Registry. Your website remains outside the image and is mounted at `/workspace`,
+so editor changes and generated output persist on the host.
 
-Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or
-another Docker environment that includes Compose.
+## Project layout
 
-Keep the Compose file outside the website directory:
+The included `docker-compose.yml` defaults to the repository's sibling
+`my-personal-website` project:
 
 ```text
-my-project/
-├── docker-compose.yml
-└── site/
-  ├── package.json
-  ├── owb.config.js
-  ├── config.json
-  └── data/
+open-website-builder/
+├── open-website-builder/
+│   ├── Dockerfile
+│   └── docker-compose.yml
+└── my-personal-website/
+    ├── package.json
+    ├── package-lock.json
+    ├── owb.config.js
+    └── data/
 ```
 
-## Option 1: Filesystem backend
+Set `OWB_PROJECT_PATH` to use another website. Relative paths are resolved
+from the directory containing `docker-compose.yml`.
 
-Use this option when pages, collections, and shared components are JSON files
-under `site/data/`. Create `docker-compose.yml` beside the `site/` directory:
+## SSH access to GitHub
 
-```yaml
-services:
-  editor:
-    image: node:22-bookworm-slim
-    working_dir: /workspace
-    command: sh -c "apt-get update && apt-get install -y --no-install-recommends git openssh-client && rm -rf /var/lib/apt/lists/* && npm install && npm run dev -- --host 0.0.0.0"
-    ports:
-      - "3003:3003" # external:internal - change the one on the left
-    volumes:
-      - ./site:/workspace
-      - node_modules:/workspace/node_modules
-    environment:
-      OWB_SITE_CONFIG: ./owb.config.js
+The filesystem backend's repository status, Pull, Commit & Push, and the Git
+step after Publish run inside the container. The Compose file mounts the host's
+`${HOME}/.ssh` directory read-only at `/run/host-ssh`. At startup, the
+entrypoint copies regular files into the container user's ephemeral
+`/home/node/.ssh`, removes links and special files, and applies OpenSSH's strict
+ownership and permissions. The host SSH directory is never modified.
 
-volumes:
-  node_modules:
+Before starting the container:
+
+1. Configure the website repository with an SSH remote such as
+   `git@github.com:owner/repository.git`.
+2. Ensure `${HOME}/.ssh` contains the private key, its public key, and any SSH
+   config required for that remote.
+3. Ensure `known_hosts` contains GitHub's verified host key. Obtain the
+   fingerprint from GitHub's published documentation and verify it before
+   adding it. Host-key verification is not disabled by this setup.
+
+Do not put private keys, tokens, or credentials in the Dockerfile, Compose
+environment, or image build context.
+
+## Start the editor
+
+From the `open-website-builder` package directory, pull and start the image:
+
+```bash
+HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose up
 ```
 
-The project bind mount persists JSON content, images, configuration, and
-published output on the host. The named volume keeps Linux-compatible
-dependencies out of the host's `node_modules` directory.
-
-The filesystem command installs Git for repository status, Pull, and Commit &
-Push controls. The mounted `site` directory must include its `.git` directory.
-For private remotes, provide credentials through your normal Docker Git/SSH
-setup; do not place tokens or private keys in `docker-compose.yml`. OWB reports
-authentication failures and command output in the repository panel.
-
-The service uses the filesystem backend configured in `owb.config.js`; Compose
-does not select the backend. See the
-[filesystem example repository](https://github.com/loic294/owb-file-example)
-for a complete project.
-
-## Option 2: SQLite backend
-
-Use this option when content and image metadata are stored in a local SQLite
-database. Create `docker-compose.yml` beside the `site/` directory:
-
-```yaml
-services:
-  editor:
-    image: node:22-bookworm-slim
-    working_dir: /workspace
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
-    ports:
-      - "3003:3003" # external:internal - change the one on the left
-    volumes:
-      - ./site:/workspace
-      - node_modules:/workspace/node_modules
-    environment:
-      OWB_SITE_CONFIG: ./owb.config.js
-
-volumes:
-  node_modules:
-```
-
-Set `sqliteDbPath` in `site/owb.config.js` to a path inside the mounted project, such
-as `data/site.sqlite`. The project bind mount then persists the database and
-its journal files alongside images, configuration, and published output. Do
-not store the database inside the container-only `node_modules` volume.
-
-The Node.js 22 image includes the built-in SQLite support required by OWB. See
-the [SQLite example repository](https://github.com/loic294/owb-sqlite-example)
-for a complete project.
-
-## Start and stop the editor
-
-Start either configuration from the directory containing `docker-compose.yml`:
+On Docker Desktop for macOS, the default UID and GID usually also work:
 
 ```bash
 docker compose up
 ```
 
-The `--host 0.0.0.0` option in the service command makes Vite reachable through
-Docker's published port. Open `http://localhost:3003/editor`.
+Open `http://localhost:3003/editor/`. The first startup installs the mounted
+website's Linux dependencies into a named volume. Later startups reuse that
+volume unless `package-lock.json` (or `package.json` when no lockfile exists)
+changes. The image then links its baked OWB package into the website's
+`node_modules` before starting the website's normal `npm run dev` script.
 
-Changes made in the editor are written through the bind mount. Stop the
-foreground process with `Ctrl+C`, or stop and remove the container with:
+To mount a different website:
 
 ```bash
-docker compose down
+OWB_PROJECT_PATH=../owb-file-example \
+HOST_UID=$(id -u) HOST_GID=$(id -g) \
+docker compose up
 ```
 
-When dependencies change, recreate the dependency volume before starting:
+Set `OWB_IMAGE` to use a specific published tag or another registry:
+
+```bash
+OWB_IMAGE=ghcr.io/loic294/open-website-builder:0.1.7 docker compose up
+```
+
+The mounted project must provide `package.json`, `vite.config.js`, and
+`owb.config.js`. `OWB_SITE_CONFIG` defaults to `./owb.config.js`.
+
+## Filesystem and SQLite backends
+
+For the filesystem backend, mount the repository root so `/workspace` includes
+its `.git` directory. Git commands use the mounted repository and the copied
+SSH credentials. OWB trusts only this configured repository path for its Git
+subprocesses; it does not configure `safe.directory=*` or mutate host Git
+configuration.
+
+For the SQLite backend, set `sqliteDbPath` to a path inside the website project,
+such as `data/site.sqlite`. The bind mount persists the database, journals,
+images, configuration, and generated output. Git and SSH are present but the
+SQLite provider does not expose repository actions.
+
+## Dependency volume
+
+The named volume keeps Linux-native dependencies such as Sharp separate from
+the host's `node_modules`. To force a clean project dependency installation:
 
 ```bash
 docker compose down --volumes
 docker compose up
 ```
 
-## Publish from the container
+## Useful commands
 
-With the editor service running, publish the website in a second terminal:
+Generate the static site without uploading it:
 
 ```bash
 docker compose exec editor npm run generate
 ```
 
-The generated site is written to the project's configured output directory,
-normally `site/dist-publish/` on the host.
+Check Git and SSH from the same runtime used by the editor:
 
-## Linux file permissions
+```bash
+docker compose exec editor git status
+docker compose exec editor git ls-remote origin
+```
 
-Files created by the container may be owned by `root` on Linux. If that is a
-problem, add the following setting to the `editor` service and ensure the
-project directory and dependency volume are writable by that user:
+Stop the editor while retaining project dependencies:
 
-```yaml
-user: "${UID}:${GID}"
+```bash
+docker compose down
 ```

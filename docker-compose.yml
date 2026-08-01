@@ -1,0 +1,29 @@
+services:
+  editor:
+    image: ${OWB_IMAGE:-ghcr.io/loic294/open-website-builder:latest}
+    pull_policy: always
+    init: true
+    ports:
+      - "3003:3003" # external:internal - Change the one on the left if needed
+    volumes:
+      - ${OWB_PROJECT_PATH:-../my-personal-website}:/workspace
+      - project_node_modules:/workspace/node_modules
+      # The entrypoint copies these read-only files into an ephemeral ~/.ssh.
+      - ${HOME}/.ssh:/run/host-ssh:ro
+    environment:
+      OWB_SITE_CONFIG: ./owb.config.js
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3003/editor/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  project_node_modules:

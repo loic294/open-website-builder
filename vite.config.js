@@ -62,7 +62,9 @@ export default defineConfig(async ({ mode }) => {
     server: {
       port: 3003,
       fs: {
-        allow: [__dirname],
+        allow: [__dirname, siteConfig.contentRoot]
+          .filter(Boolean)
+          .map((path) => resolve(path)),
       },
       watch: {
         ignored: [
