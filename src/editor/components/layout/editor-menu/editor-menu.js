@@ -20,6 +20,7 @@ import { dataLayer } from "../../../data/data-layer.js";
 import { FileManager } from "../file-manager/file-manager.js";
 import { browserPopover } from "../../ui/browser-popover/browser-popover.js";
 import "../page-settings/page-settings.js";
+import "../../repository/repository-status/repository-status.js";
 import styles from "./styles.css?inline";
 import daisyUI from "../../../styles/daisyui.css?inline";
 
@@ -316,12 +317,20 @@ class EditorMenu extends LitElement {
       await this.reloadGroupItems();
       await this.reloadLayersConfig();
     };
+    this.onRepositoryUpdated = async () => {
+      await this.reloadGroupItems();
+      await this.reloadLayersConfig();
+    };
     this.onSettingsOwnerChanged = (event) => {
       this.activeLayerNodeId = String(event?.detail?.ownerNodeId || "");
     };
     window.addEventListener("popstate", this.onRouteChanged);
     window.addEventListener("editor-route-change", this.onRouteChanged);
     window.addEventListener("editor-data-changed", this.onDataChanged);
+    window.addEventListener(
+      "editor-repository-updated",
+      this.onRepositoryUpdated,
+    );
     window.addEventListener(
       "owb-active-settings-owner-changed",
       this.onSettingsOwnerChanged,
@@ -342,6 +351,10 @@ class EditorMenu extends LitElement {
     window.removeEventListener("popstate", this.onRouteChanged);
     window.removeEventListener("editor-route-change", this.onRouteChanged);
     window.removeEventListener("editor-data-changed", this.onDataChanged);
+    window.removeEventListener(
+      "editor-repository-updated",
+      this.onRepositoryUpdated,
+    );
     window.removeEventListener(
       "owb-active-settings-owner-changed",
       this.onSettingsOwnerChanged,
@@ -1315,6 +1328,7 @@ class EditorMenu extends LitElement {
       ${menuContent}
 
       <div class="sidebar-footer">
+        <repository-status variant="card"></repository-status>
         <button
           class="settings-button"
           type="button"

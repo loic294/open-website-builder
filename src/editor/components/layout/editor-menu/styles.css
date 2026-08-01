@@ -102,6 +102,10 @@
   overflow: visible;
 }
 
+.sidebar.collapsed repository-status {
+  display: none;
+}
+
 .settings-groups {
   gap: 0;
   overflow: hidden;
@@ -599,8 +603,12 @@
 }
 
 .sidebar-footer {
-  margin-top: 12px;
+  margin-top: auto;
   padding-top: 12px;
+}
+
+.sidebar-footer repository-status {
+  margin-bottom: 4px;
 }
 
 .settings-button {

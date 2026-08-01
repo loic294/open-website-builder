@@ -108,7 +108,7 @@ const publishProvider = createFilesystemPublishProvider({
 const result = await publishSite({
   publishProvider,
   outputDir: siteConfig.publishedOutputDir,
-  appRoot: resolve(siteRoot, "node_modules/open-website-builder"),
+  appRoot: siteConfig.packageRoot,
 });
 
 console.log(`Published ${result.pages.length} output(s)`);
@@ -116,6 +116,31 @@ console.log(`Published ${result.pages.length} output(s)`);
 
 Run `npm run generate`, then `npm run dev` and open
 `http://localhost:3000/editor`.
+
+## Repository synchronization
+
+When `contentRoot` is inside a Git repository, the editor checks its upstream
+branch when it opens and every five minutes. A notice appears when origin has
+newer commits, and the sidebar repository panel provides Refresh, Pull, and
+Commit & Push actions.
+
+Pull stashes tracked and untracked changes, performs a fast-forward-only pull,
+then reapplies the stash. If reapplying creates conflicts, the files remain in
+Git's conflict state for manual resolution and the editor shows the complete
+command output. A successful pull refreshes the editor content without
+reloading the browser.
+
+Commit & Push stages every repository change, creates a timestamped commit when
+needed, and pushes the current branch to its configured upstream. It never
+force pushes. Configure the branch upstream before using these actions:
+
+```bash
+git push --set-upstream origin main
+```
+
+OWB uses the credentials already configured for Git. It does not store tokens,
+SSH keys, or remote credentials. Git command failures can be inspected from the
+repository panel.
 
 ## Collections
 

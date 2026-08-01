@@ -1,0 +1,144 @@
+:host {
+  display: block;
+  color: var(--editor-text-color, #1a1a1a);
+}
+
+:host([variant="notice"]) {
+  position: fixed;
+  top: 76px;
+  right: 24px;
+  z-index: 120;
+  width: min(360px, calc(100vw - 32px));
+}
+
+.repository-status {
+  box-sizing: border-box;
+  border: var(--editor-default-border, 1px solid #ddd);
+  border-radius: 6px;
+  background: var(--editor-white-color, white);
+  box-shadow: var(--editor-box-shadow, 0 8px 24px rgb(0 0 0 / 12%));
+  padding: 12px;
+}
+
+.repository-status.card {
+  margin: 0 0 6px;
+  box-shadow: none;
+  padding: 8px;
+}
+
+.repository-status.card .status-heading {
+  gap: 7px;
+}
+
+.repository-status.card .status-icon svg,
+.repository-status.card .icon-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.repository-status.card .status-copy strong {
+  font-size: 11px;
+}
+
+.repository-status.card .status-copy span {
+  font-size: 10px;
+}
+
+.repository-status.card .status-actions {
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.repository-status.card .icon-action {
+  width: 28px;
+  min-width: 28px;
+}
+
+.repository-status.card editor-btn {
+  font-size: 10px;
+}
+
+.status-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-icon,
+.icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-icon svg,
+.icon-action svg {
+  width: 17px;
+  height: 17px;
+}
+
+.status-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.status-copy strong,
+.status-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-copy strong {
+  font-size: 12px;
+}
+
+.status-copy span {
+  color: var(--editor-muted-text-color, #666);
+  font-size: 11px;
+}
+
+.status-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.icon-action {
+  width: 34px;
+  min-width: 34px;
+  border: var(--editor-default-border, 1px solid #ddd);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.icon-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.error-output {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--editor-text-danger, #b42318);
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  :host([variant="notice"]) {
+    top: 68px;
+    right: 16px;
+  }
+
+  .status-actions {
+    flex-wrap: wrap;
+  }
+}

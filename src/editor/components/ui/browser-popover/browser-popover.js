@@ -65,6 +65,7 @@ class BrowserPopover extends LitElement {
 
     const isPrompt = this.options.type === "prompt";
     const isConfirm = this.options.type === "confirm";
+    const isOutput = this.options.type === "output";
 
     return html`
       <div
@@ -77,6 +78,9 @@ class BrowserPopover extends LitElement {
           <h3 class="text-lg font-bold">${this.options.title}</h3>
           ${this.options.message
             ? html`<p class="py-3 text-sm">${this.options.message}</p>`
+            : html``}
+          ${isOutput
+            ? html`<pre class="command-output">${this.options.output}</pre>`
             : html``}
           ${isPrompt
             ? html`
@@ -188,6 +192,15 @@ export const browserPopover = {
       defaultValue: options.defaultValue || "",
       inputType: options.inputType || "text",
       confirmLabel: options.confirmLabel || "Save",
+    });
+  },
+
+  output(output, options = {}) {
+    return getPopover().open({
+      type: "output",
+      title: options.title || "Command output",
+      output: String(output || "No command output was returned."),
+      confirmLabel: options.confirmLabel || "Close",
     });
   },
 };

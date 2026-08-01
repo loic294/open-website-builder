@@ -11,8 +11,11 @@ import {
   importSquarespaceXml,
   importSquarespaceStaticSiteDir,
 } from "../import/squarespace-import-service.js";
+import { createGitRepositoryService } from "../repository/git-repository-service.js";
+import { createRepositoryApiMiddleware } from "../repository/repository-api-middleware.js";
 
 export function createFilesystemBackendProviders({ appRoot, siteConfig, r2 }) {
+  let repositoryServicePromise = null;
   const publishProvider = createFilesystemPublishProvider({
     contentRoot: siteConfig.contentRoot,
     pagesRoot: siteConfig.pagesRoot,
@@ -71,6 +74,15 @@ export function createFilesystemBackendProviders({ appRoot, siteConfig, r2 }) {
   });
 
   return {
+    createRepositoryApiMiddleware: () =>
+      createRepositoryApiMiddleware({
+        getService: () => {
+          repositoryServicePromise ??= createGitRepositoryService({
+            contentRoot: siteConfig.contentRoot,
+          });
+          return repositoryServicePromise;
+        },
+      }),
     createDataApiMiddleware: () => createDataApiMiddleware(dataApiProvider),
     createFilesApiMiddleware: () =>
       createFilesApiMiddleware({

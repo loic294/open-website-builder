@@ -30,7 +30,7 @@ services:
   editor:
     image: node:22-bookworm-slim
     working_dir: /workspace
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: sh -c "apt-get update && apt-get install -y --no-install-recommends git openssh-client && rm -rf /var/lib/apt/lists/* && npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "3003:3003" # external:internal - change the one on the left
     volumes:
@@ -46,6 +46,12 @@ volumes:
 The project bind mount persists JSON content, images, configuration, and
 published output on the host. The named volume keeps Linux-compatible
 dependencies out of the host's `node_modules` directory.
+
+The filesystem command installs Git for repository status, Pull, and Commit &
+Push controls. The mounted `site` directory must include its `.git` directory.
+For private remotes, provide credentials through your normal Docker Git/SSH
+setup; do not place tokens or private keys in `docker-compose.yml`. OWB reports
+authentication failures and command output in the repository panel.
 
 The service uses the filesystem backend configured in `owb.config.js`; Compose
 does not select the backend. See the

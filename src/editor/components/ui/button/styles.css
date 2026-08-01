@@ -18,6 +18,27 @@ button:focus-visible {
   filter: brightness(0.92);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  filter: none;
+  opacity: 0.5;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 button.primary {
   background-color: var(--editor-primary-color, #ffc700);
   color: var(--editor-text-color, #000000);
@@ -37,6 +58,19 @@ button.icon {
   padding: 6px;
   min-width: 30px;
   min-height: 30px;
+}
+
+button.compact {
+  min-height: 28px;
+  padding: 5px 8px;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+button.compact .spinner {
+  width: 12px;
+  height: 12px;
 }
 
 button.text-danger {

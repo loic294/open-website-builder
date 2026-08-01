@@ -18,3 +18,17 @@
 .modal-backdrop {
   cursor: default;
 }
+
+.command-output {
+  max-height: min(55vh, 28rem);
+  margin: 12px 0 0;
+  overflow: auto;
+  border: 1px solid var(--color-base-300);
+  border-radius: 4px;
+  background: var(--color-base-200);
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  user-select: text;
+}

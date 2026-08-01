@@ -1,4 +1,7 @@
-function createHttpTransport(baseUrl = "/__data") {
+function createHttpTransport(
+  baseUrl = "/__data",
+  { emitDataChanges = true } = {},
+) {
   async function request(path, options = {}) {
     const response = await fetch(`${baseUrl}${path}`, options);
     const contentType = response.headers.get("Content-Type") || "";
@@ -10,7 +13,22 @@ function createHttpTransport(baseUrl = "/__data") {
 
     if (!response.ok) {
       const message = payload?.message || `Request failed: ${response.status}`;
-      throw new Error(message);
+      const error = new Error(message);
+      if (payload && typeof payload === "object") {
+        Object.assign(error, payload);
+      }
+      error.status = response.status;
+      throw error;
+    }
+
+    if (
+      emitDataChanges &&
+      options.method &&
+      options.method !== "GET" &&
+      path !== "/publish" &&
+      typeof window !== "undefined"
+    ) {
+      window.dispatchEvent(new CustomEvent("editor-data-changed"));
     }
 
     return payload;
@@ -44,8 +62,22 @@ function createHttpTransport(baseUrl = "/__data") {
   };
 }
 
-export function createDataLayer(transport = createHttpTransport()) {
+export function createDataLayer(
+  transport = createHttpTransport(),
+  repositoryTransport = createHttpTransport("/__repository", {
+    emitDataChanges: false,
+  }),
+) {
   return {
+    async getRepositoryStatus() {
+      return await repositoryTransport.get("/status");
+    },
+    async pullRepository() {
+      return await repositoryTransport.post("/pull", {});
+    },
+    async pushRepository() {
+      return await repositoryTransport.post("/push", {});
+    },
     async listPages() {
       return await transport.get("/pages");
     },

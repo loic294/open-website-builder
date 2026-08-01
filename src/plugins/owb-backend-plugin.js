@@ -2,6 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRemoteImagesMiddleware } from "../../server/data/images-middleware.js";
+import { createUnsupportedRepositoryApiMiddleware } from "../../server/repository/repository-api-middleware.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -145,6 +146,11 @@ export function createOwbBackendPlugin({
       server.middlewares.use(createComponentStylesMiddleware({ appRoot }));
       server.middlewares.use(
         createRemoteImagesMiddleware({ imageBaseUrl: siteConfig.imageBaseUrl }),
+      );
+      server.middlewares.use(
+        typeof backendProviders.createRepositoryApiMiddleware === "function"
+          ? backendProviders.createRepositoryApiMiddleware()
+          : createUnsupportedRepositoryApiMiddleware(),
       );
       server.middlewares.use(backendProviders.createFilesApiMiddleware());
       server.middlewares.use(backendProviders.createDataApiMiddleware());

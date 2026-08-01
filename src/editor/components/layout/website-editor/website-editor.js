@@ -10,6 +10,7 @@ import {
 
 import "../../ui/button/button.js";
 import "../../ui/radio-button/radio-button.js";
+import "../../repository/repository-status/repository-status.js";
 import { renderNode } from "../../../core/render-node.js";
 import { dataLayer } from "../../../data/data-layer.js";
 import { FileManager } from "../file-manager/file-manager.js";
@@ -37,6 +38,8 @@ class WebsiteEditor extends LitElement {
   static properties = {
     pageConfig: { state: true },
     publishStatus: { state: true },
+    hasUnpublishedChanges: { state: true },
+    isPublishing: { state: true },
     activeView: { state: true },
     activeSize: { state: true },
     activeOrientation: { state: true },
@@ -59,6 +62,9 @@ class WebsiteEditor extends LitElement {
     this.pageConfig = null;
     this.didLoadConfig = false;
     this.publishStatus = "";
+    this.hasUnpublishedChanges = false;
+    this.isPublishing = false;
+    this.changeRevision = 0;
     this.activeView = "editor";
     this.activeSize = "desktop";
     this.activeOrientation = "vertical";
@@ -233,9 +239,22 @@ class WebsiteEditor extends LitElement {
     this.onRouteChanged = async () => {
       await this.loadSelectionFromRoute();
     };
+    this.onDataChanged = () => {
+      this.changeRevision += 1;
+      this.hasUnpublishedChanges = true;
+      this.publishStatus = "";
+    };
+    this.onRepositoryUpdated = async () => {
+      await this.loadSelectionFromRoute();
+    };
 
     window.addEventListener("popstate", this.onRouteChanged);
     window.addEventListener("editor-route-change", this.onRouteChanged);
+    window.addEventListener("editor-data-changed", this.onDataChanged);
+    window.addEventListener(
+      "editor-repository-updated",
+      this.onRepositoryUpdated,
+    );
 
     if (!this.didLoadConfig) {
       this.didLoadConfig = true;
@@ -247,6 +266,11 @@ class WebsiteEditor extends LitElement {
     super.disconnectedCallback();
     window.removeEventListener("popstate", this.onRouteChanged);
     window.removeEventListener("editor-route-change", this.onRouteChanged);
+    window.removeEventListener("editor-data-changed", this.onDataChanged);
+    window.removeEventListener(
+      "editor-repository-updated",
+      this.onRepositoryUpdated,
+    );
   }
 
   updated(changedProperties) {
@@ -457,10 +481,17 @@ class WebsiteEditor extends LitElement {
   };
 
   onPublishClick = async () => {
+    if (!this.hasUnpublishedChanges || this.isPublishing) {
+      return;
+    }
+
+    this.isPublishing = true;
+    const publishRevision = this.changeRevision;
     this.publishStatus = "Publishing...";
     try {
       const result = await dataLayer.publishSite();
       const pagesCount = Array.isArray(result?.pages) ? result.pages.length : 0;
+      this.hasUnpublishedChanges = this.changeRevision !== publishRevision;
       this.publishStatus = `Published ${pagesCount} page(s)`;
     } catch (error) {
       console.error(error);
@@ -468,6 +499,8 @@ class WebsiteEditor extends LitElement {
         error instanceof Error
           ? `Publish failed: ${error.message}`
           : "Publish failed";
+    } finally {
+      this.isPublishing = false;
     }
   };
 
@@ -2036,74 +2069,80 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
       ? this.pageConfig.content
       : [];
 
-    return html`<div class="editor" data-theme="mylight">
-      <div class="editor-top-menu">
-        <div class="left-menu">
-          <div class="page-info">
-            <div class="page-info-main">
-              <span class="page-title"
-                >${this.pageConfig?.title ||
-                this.pageConfig?.id ||
-                "Untitled"}</span
+    return html`<repository-status variant="notice"></repository-status>
+      <div class="editor" data-theme="mylight">
+        <div class="editor-top-menu">
+          <div class="left-menu">
+            <div class="page-info">
+              <div class="page-info-main">
+                <span class="page-title"
+                  >${this.pageConfig?.title ||
+                  this.pageConfig?.id ||
+                  "Untitled"}</span
+                >
+              </div>
+              <span class="page-path"
+                >${this.pageConfig?.url ||
+                (this.currentSelection?.type === "collection"
+                  ? `/collections/${this.currentSelection.collectionId}/${this.currentSelection.itemId}`
+                  : this.currentSelection?.type === "collection-config"
+                    ? `/collections/${this.currentSelection.collectionId}/_config.json`
+                    : this.currentSelection?.type === "shared"
+                      ? `/shared/${this.currentSelection.componentId}`
+                      : `/${this.currentSelection?.pageId || "index"}`)}</span
               >
             </div>
-            <span class="page-path"
-              >${this.pageConfig?.url ||
-              (this.currentSelection?.type === "collection"
-                ? `/collections/${this.currentSelection.collectionId}/${this.currentSelection.itemId}`
-                : this.currentSelection?.type === "collection-config"
-                  ? `/collections/${this.currentSelection.collectionId}/_config.json`
-                  : this.currentSelection?.type === "shared"
-                    ? `/shared/${this.currentSelection.componentId}`
-                    : `/${this.currentSelection?.pageId || "index"}`)}</span
-            >
-          </div>
-          <div class="view-mode-switcher">
-            <editor-radio-button
-              .options=${this.viewOptions}
-              .value=${this.activeView}
-              @change=${this.onActiveViewChange}
-              disabledTooltip=${true}
-            ></editor-radio-button>
-          </div>
-        </div>
-        <div class="right-menu">
-          <div class="size-switcher">
-            <editor-radio-button
-              .options=${this.sizeOptions}
-              .value=${this.activeSize}
-              @change=${this.onActiveSizeChange}
-              disabledTooltip=${true}
-            ></editor-radio-button>
-          </div>
-          <editor-btn @click=${this.onPublishClick}>Save Changes</editor-btn>
-          ${this.publishStatus
-            ? html`<span
-                style="margin-left: 10px; font-size: 12px; opacity: 0.8;"
-                >${this.publishStatus}</span
-              >`
-            : null}
-        </div>
-      </div>
-      <div class="website website-container">
-        ${this.activeSize !== "desktop"
-          ? html`<div class="orientation-switcher">
+            <div class="view-mode-switcher">
               <editor-radio-button
-                .options=${this.orientationOptions}
-                .value=${this.activeOrientation}
-                @change=${this.onActiveOrientationChange}
+                .options=${this.viewOptions}
+                .value=${this.activeView}
+                @change=${this.onActiveViewChange}
                 disabledTooltip=${true}
               ></editor-radio-button>
-            </div>`
-          : ""}
-        <div
-          class="website-viewport size-${this.activeSize} orientation-${this
-            .activeOrientation}"
-        >
-          ${this.renderViewContent(content)}
+            </div>
+          </div>
+          <div class="right-menu">
+            <div class="size-switcher">
+              <editor-radio-button
+                .options=${this.sizeOptions}
+                .value=${this.activeSize}
+                @change=${this.onActiveSizeChange}
+                disabledTooltip=${true}
+              ></editor-radio-button>
+            </div>
+            <editor-btn
+              @click=${this.onPublishClick}
+              ?disabled=${!this.hasUnpublishedChanges}
+              ?loading=${this.isPublishing}
+              >${this.isPublishing ? "Saving" : "Save Changes"}</editor-btn
+            >
+            ${this.publishStatus
+              ? html`<span
+                  style="margin-left: 10px; font-size: 12px; opacity: 0.8;"
+                  >${this.publishStatus}</span
+                >`
+              : null}
+          </div>
         </div>
-      </div>
-    </div>`;
+        <div class="website website-container">
+          ${this.activeSize !== "desktop"
+            ? html`<div class="orientation-switcher">
+                <editor-radio-button
+                  .options=${this.orientationOptions}
+                  .value=${this.activeOrientation}
+                  @change=${this.onActiveOrientationChange}
+                  disabledTooltip=${true}
+                ></editor-radio-button>
+              </div>`
+            : ""}
+          <div
+            class="website-viewport size-${this.activeSize} orientation-${this
+              .activeOrientation}"
+          >
+            ${this.renderViewContent(content)}
+          </div>
+        </div>
+      </div>`;
   }
 }
 
