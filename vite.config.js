@@ -68,6 +68,7 @@ export default defineConfig(async ({ mode }) => {
       },
       watch: {
         ignored: [
+          "**/node_modules/**",
           "../*", // Ignore changes outside the project root
           "!./**", // Only watch inside the current directory
         ],
