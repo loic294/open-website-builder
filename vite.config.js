@@ -23,6 +23,7 @@ export default defineConfig(async ({ mode }) => {
   const r2 = r2Config.accountId ? createR2Client(r2Config) : null;
 
   return {
+    root: __dirname,
     plugins: [
       tailwindcss(),
       ...(typeof siteConfig.plugins === "function"

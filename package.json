@@ -1,6 +1,6 @@
 {
   "name": "open-website-builder",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
@@ -33,6 +33,8 @@
   "files": [
     "LICENSE",
     "README.md",
+    "index.html",
+    "editor/",
     "package.json",
     "vite.config.js",
     "vite.pub.config.js",
