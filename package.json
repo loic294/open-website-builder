@@ -19,6 +19,9 @@
     "./providers/sqlite-backend-providers.js": "./server/providers/sqlite-backend-providers.js",
     "./database/sqlite-database.js": "./server/database/sqlite-database.js",
     "./data/data-api-provider.js": "./server/data/data-api-provider.js",
+    "./styles/base.css": "./src/website/styles/base.css",
+    "./styles/theme.css": "./src/website/styles/theme.css",
+    "./published.js": "./dist-pub/published.js",
     "./publish/publish-provider.js": "./server/publish/publish-provider.js",
     "./publish/sqlite-publish-provider.js": "./server/publish/sqlite-publish-provider.js",
     "./server/files/sync-from-r2.js": "./server/files/sync-from-r2.js"
@@ -29,6 +32,7 @@
     "package.json",
     "vite.config.js",
     "vite.pub.config.js",
+    "dist-pub/",
     "src/",
     "server/"
   ],
@@ -36,6 +40,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:pub": "vite build --config vite.pub.config.js",
+    "prepack": "npm run build:pub",
     "test:publish": "node --test ./server/publish/*.test.js",
     "test:server": "node --test ./server/**/*.test.js",
     "check:urls": "node ./server/data/check-canonical-urls.js",
