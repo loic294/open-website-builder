@@ -2,6 +2,10 @@
   "name": "open-website-builder",
   "version": "0.1.2",
   "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loic294/open-website-builder.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.13.0"
