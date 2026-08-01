@@ -1,29 +1,73 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from "vitepress";
 
-// https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "Open Website Builder",
-  description: "Open Source visual website builder that is backend agnostic and easily extendable. ",
-  base: '/open-website-builder/',
+  description:
+    "A backend-agnostic visual website editor and static publishing toolkit.",
+  base: "/open-website-builder/",
   themeConfig: {
-    // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Examples', link: '/markdown-examples' }
+      { text: "Guide", link: "/guide/introduction" },
+      { text: "Editor", link: "/editor/" },
+      { text: "Backends", link: "/backends/choosing-a-backend" },
+      { text: "Publishing", link: "/publishing/" },
     ],
 
     sidebar: [
       {
-        text: 'Examples',
+        text: "Guide",
         items: [
-          { text: 'Markdown Examples', link: '/markdown-examples' },
-          { text: 'Runtime API Examples', link: '/api-examples' }
-        ]
-      }
+          { text: "Introduction", link: "/guide/introduction" },
+          { text: "Getting started", link: "/getting-started" },
+          { text: "Comparison", link: "/guide/comparison" },
+        ],
+      },
+      {
+        text: "Editor",
+        items: [
+          { text: "Using the editor", link: "/editor/" },
+          { text: "Pages", link: "/editor/pages" },
+          { text: "Collections", link: "/editor/collections" },
+          {
+            text: "Shared components",
+            link: "/editor/shared-components",
+          },
+          {
+            text: "Assets and publishing",
+            link: "/editor/assets-and-publishing",
+          },
+        ],
+      },
+      {
+        text: "Backends",
+        items: [
+          { text: "Choosing a backend", link: "/backends/choosing-a-backend" },
+          { text: "Filesystem", link: "/backends/filesystem" },
+          { text: "SQLite", link: "/backends/sqlite" },
+          { text: "Custom backend", link: "/backends/custom" },
+        ],
+      },
+      {
+        text: "Publishing",
+        items: [
+          { text: "Overview", link: "/publishing/" },
+          { text: "Cloudflare Pages", link: "/publishing/cloudflare-pages" },
+          { text: "Netlify", link: "/publishing/netlify" },
+          { text: "GitHub Pages", link: "/publishing/github-pages" },
+          { text: "Vercel", link: "/publishing/vercel" },
+          { text: "AWS and other hosts", link: "/publishing/other-hosts" },
+        ],
+      },
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/loic294/open-website-builder' }
-    ]
-  }
-})
+      {
+        icon: "github",
+        link: "https://github.com/loic294/open-website-builder",
+      },
+    ],
+
+    search: { provider: "local" },
+    outline: { level: [2, 3] },
+  },
+});
