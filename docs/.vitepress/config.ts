@@ -4,7 +4,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Open Website Builder",
   description: "Open Source visual website builder that is backend agnostic and easily extendable. ",
-  base: '/',
+  base: '/open-website-builder/',
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
