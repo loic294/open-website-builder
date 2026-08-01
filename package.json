@@ -43,6 +43,7 @@
     "server/"
   ],
   "scripts": {
+    "prepare": "husky",
     "dev": "vite",
     "build": "vite build",
     "build:pub": "vite build --config vite.pub.config.js",
@@ -87,7 +88,13 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.6",
     "vite": "^5.0.0",
     "vitepress": "^2.0.0-alpha.18"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,json,md,css,html,yml,yaml}": "prettier --write"
   }
 }
