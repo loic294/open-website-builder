@@ -40,7 +40,7 @@
     "test:server": "node --test ./server/**/*.test.js",
     "check:urls": "node ./server/data/check-canonical-urls.js",
     "preview": "vite preview",
-    "publish:site": "npm run build:pub && node ./server/publish/publish-cli.js",
+    "generate": "npm run build:pub && node ./server/publish/publish-cli.js",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"

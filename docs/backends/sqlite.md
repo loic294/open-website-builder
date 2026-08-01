@@ -106,6 +106,6 @@ try {
 }
 ```
 
-Run `npm run publish` whenever content changes. Do not open the database with a
+Run `npm run generate` whenever content changes. Do not open the database with a
 Node.js version older than the one used to create it. Squarespace imports are
 not currently supported by the SQLite provider.

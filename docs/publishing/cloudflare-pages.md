@@ -11,12 +11,12 @@ generated directory to a `pages.dev` domain or custom domain.
 3. Select the repository and production branch.
 4. Use these build settings:
 
-| Setting | Value |
-| --- | --- |
-| Framework preset | None |
-| Build command | `npm run publish` |
-| Build output directory | `dist-publish` |
-| Root directory | Website directory, or blank when it is the repository root |
+| Setting                | Value                                                      |
+| ---------------------- | ---------------------------------------------------------- |
+| Framework preset       | None                                                       |
+| Build command          | `npm run generate`                                         |
+| Build output directory | `dist-publish`                                             |
+| Root directory         | Website directory, or blank when it is the repository root |
 
 Set `NODE_VERSION` to a Node.js release compatible with OWB, currently 22.13 or
 newer. Add custom backend credentials as encrypted environment variables.
@@ -31,7 +31,7 @@ For a CI workflow that publishes before upload:
 
 ```bash
 npm ci
-npm run publish
+npm run generate
 npx wrangler pages deploy dist-publish --project-name=my-website
 ```
 

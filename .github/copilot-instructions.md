@@ -116,7 +116,7 @@ Before starting a new task in the above plan, update progress in the plan.
 - Keep communication concise and focused.
 - Follow development best practices.
 - Never edit files inside `dist-publish/` directly; treat them as generated artifacts only.
-- For publish output fixes, edit source files under `server/publish/` and `src/website/`, then run `npm run publish` to regenerate `dist-publish/`.
+- For publish output fixes, edit source files under `server/publish/` and `src/website/`, then run `npm run generate` to regenerate `dist-publish/`.
 - Keep component CSS in dedicated `.css` files instead of defining substantial styles inline inside component files.
 - When styling UI, use project CSS variables for colors, text, borders, shadows, and radii instead of raw hex, rgba, or ad hoc values.
 - If a needed design token does not exist yet, add it to the shared theme first and then consume the variable from component styles.

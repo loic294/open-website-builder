@@ -34,7 +34,7 @@ Select **Save Changes** to invoke the backend's publish operation from the
 editor. For a terminal or CI deployment, run:
 
 ```bash
-npm run publish
+npm run generate
 ```
 
 The publish provider reads site configuration, pages, shared components,

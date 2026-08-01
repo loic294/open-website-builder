@@ -9,7 +9,7 @@ Import the Git repository, choose **Other** as the framework preset, and set:
 | Setting          | Value                                    |
 | ---------------- | ---------------------------------------- |
 | Root directory   | Website directory, or repository root    |
-| Build command    | `npm run publish`                        |
+| Build command    | `npm run generate`                       |
 | Output directory | `dist-publish`                           |
 | Node.js version  | A release compatible with Node.js 22.13+ |
 
@@ -23,7 +23,7 @@ The equivalent `vercel.json` is:
 ```json
 {
   "framework": null,
-  "buildCommand": "npm run publish",
+  "buildCommand": "npm run generate",
   "outputDirectory": "dist-publish"
 }
 ```
@@ -36,7 +36,7 @@ the public site.
 
 ```bash
 npm ci
-npm run publish
+npm run generate
 npx vercel deploy
 npx vercel deploy --prod
 ```

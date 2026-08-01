@@ -263,18 +263,18 @@ To launch from the website repo directly, run its local `npm run dev`. That repo
 
 ## Scripts
 
-| Command           | Description                                             |
-| ----------------- | ------------------------------------------------------- |
-| `npm run dev`     | Start the development server (editor + preview)         |
-| `npm run build`   | Build the editor for production                         |
-| `npm run publish` | Generate the static published site into `dist-publish/` |
+| Command            | Description                                             |
+| ------------------ | ------------------------------------------------------- |
+| `npm run dev`      | Start the development server (editor + preview)         |
+| `npm run build`    | Build the editor for production                         |
+| `npm run generate` | Generate the static published site into `dist-publish/` |
 
 ## Publishing
 
 `my-personal-website/dist-publish/` is generated output — never edit it directly.
 
 - Update source files in `src/website/`, `src/plugins/`, or `server/publish/`.
-- Run `npm run publish` to regenerate the published output.
+- Run `npm run generate` to regenerate the published output.
 
 ### Working From the Website Repo
 

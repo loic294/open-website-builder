@@ -43,7 +43,7 @@ every field edit. The status beside the button reports whether publishing
 succeeded and how many pages were generated.
 
 Use **Preview** to inspect the published URL inside the editor. Run the site's
-`npm run publish` command when publishing outside the editor, such as in CI.
+`npm run generate` command when publishing outside the editor, such as in CI.
 
 Next, learn how to work with [pages](/editor/pages),
 [collections](/editor/collections), and

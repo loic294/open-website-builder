@@ -23,7 +23,7 @@ Generate and inspect the site locally:
 
 ```bash
 npm ci
-npm run publish
+npm run generate
 npx serve dist-publish
 ```
 
@@ -38,7 +38,7 @@ Most Git-integrated static hosts need the same values:
 | ---------------- | ---------------------- |
 | Runtime          | Node.js 22.13 or newer |
 | Install command  | `npm ci`               |
-| Build command    | `npm run publish`      |
+| Build command    | `npm run generate`     |
 | Output directory | `dist-publish`         |
 
 If the website is inside a monorepo, set the provider's root or base directory
@@ -48,7 +48,7 @@ works when that adjacent package is also present in the checkout.
 
 The build also needs access to content:
 
-- Filesystem content must be committed or downloaded before `npm run publish`.
+- Filesystem content must be committed or downloaded before `npm run generate`.
 - A SQLite database must be committed, restored from backup, or downloaded to
   the configured path. Do not expect writes made on an ephemeral build machine
   to persist after deployment.

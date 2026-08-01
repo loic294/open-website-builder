@@ -102,7 +102,7 @@ docker compose up
 With the editor service running, publish the website in a second terminal:
 
 ```bash
-docker compose exec editor npm run publish
+docker compose exec editor npm run generate
 ```
 
 The generated site is written to the project's configured output directory,

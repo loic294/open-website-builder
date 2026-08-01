@@ -44,7 +44,7 @@ jobs:
           node-version: 22.13
           cache: npm
       - run: npm ci
-      - run: npm run publish
+      - run: npm run generate
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

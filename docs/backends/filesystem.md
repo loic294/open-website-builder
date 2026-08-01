@@ -114,7 +114,7 @@ const result = await publishSite({
 console.log(`Published ${result.pages.length} output(s)`);
 ```
 
-Run `npm run publish`, then `npm run dev` and open
+Run `npm run generate`, then `npm run dev` and open
 `http://localhost:3000/editor`.
 
 ## Collections

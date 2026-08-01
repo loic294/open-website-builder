@@ -158,7 +158,7 @@ For each layout type:
 
 ## Phase 6 — Verify
 
-- [ ] `cd open-website-builder && npm run publish` → expect
+- [ ] `cd open-website-builder && npm run generate` → expect
       `✓ 1747 modules transformed`, `Published 162 page(s)`, 0 errors.
 - [ ] Manual smoke test in editor UI:
   - [ ] Click empty area of section → settings open with General + Design tabs.

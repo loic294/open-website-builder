@@ -18,7 +18,7 @@ frontend:
         - npm ci
     build:
       commands:
-        - npm run publish
+        - npm run generate
   artifacts:
     baseDirectory: dist-publish
     files:
@@ -36,7 +36,7 @@ Publish and synchronize the generated output:
 
 ```bash
 npm ci
-npm run publish
+npm run generate
 aws s3 sync dist-publish/ s3://my-website-bucket/ --delete
 ```
 
@@ -71,7 +71,7 @@ WORKDIR /site
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run publish
+RUN npm run generate
 
 FROM nginx:alpine
 COPY --from=build /site/dist-publish /usr/share/nginx/html

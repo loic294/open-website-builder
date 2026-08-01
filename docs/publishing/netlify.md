@@ -10,7 +10,7 @@ Import the Git repository and configure:
 | Setting           | Value                                          |
 | ----------------- | ---------------------------------------------- |
 | Base directory    | Website directory, or blank at repository root |
-| Build command     | `npm run publish`                              |
+| Build command     | `npm run generate`                             |
 | Publish directory | `dist-publish`                                 |
 
 Select Node.js 22.13 or newer and add custom backend credentials through
@@ -22,7 +22,7 @@ Create `netlify.toml` at the website project root:
 
 ```toml
 [build]
-  command = "npm run publish"
+  command = "npm run generate"
   publish = "dist-publish"
 
 [build.environment]
@@ -42,7 +42,7 @@ After linking the project with the Netlify CLI:
 
 ```bash
 npm ci
-npm run publish
+npm run generate
 npx netlify deploy --dir=dist-publish
 npx netlify deploy --dir=dist-publish --prod
 ```

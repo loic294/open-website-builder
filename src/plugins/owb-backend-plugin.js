@@ -74,7 +74,7 @@ function createPublishedPreviewMiddleware({ publishedDir }) {
       response.statusCode = 404;
       response.setHeader("Content-Type", "text/html; charset=utf-8");
       response.end(
-        '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px"><h2>No published site found.</h2><p>Run <code>npm run publish</code> first, then refresh.</p><p>Editor is available at <a href="/editor">/editor</a>.</p></body></html>',
+        '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px"><h2>No published site found.</h2><p>Run <code>npm run generate</code> first, then refresh.</p><p>Editor is available at <a href="/editor">/editor</a>.</p></body></html>',
       );
       return;
     }

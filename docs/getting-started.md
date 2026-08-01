@@ -33,7 +33,7 @@ Set the project to use ES modules and add the common commands:
   "scripts": {
     "dev": "OWB_SITE_CONFIG=./owb.config.js vite",
     "build": "OWB_SITE_CONFIG=./owb.config.js vite build",
-    "publish": "node ./scripts/publish.mjs"
+    "generate": "node ./scripts/publish.mjs"
   },
   "dependencies": {
     "open-website-builder": "^0.1.0"
@@ -98,7 +98,7 @@ Open `http://localhost:3000/editor` for the editor. The root URL previews the
 last published version, so run the first publish in another terminal:
 
 ```bash
-npm run publish
+npm run generate
 ```
 
 The generated static site is written to `dist-publish/`. Treat that directory
