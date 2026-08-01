@@ -6,6 +6,10 @@ versioned with the rest of the website.
 
 Complete the [project setup](/getting-started) first.
 
+See the complete
+[filesystem example repository](https://github.com/loic294/owb-file-example)
+for a working website with this backend.
+
 ## Create the content directories
 
 ```bash

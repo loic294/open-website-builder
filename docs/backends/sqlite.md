@@ -7,6 +7,10 @@ binaries, `config.json`, `public/`, and generated output remain ordinary files.
 SQLite support requires Node.js 22.13 or newer. Complete the
 [project setup](/getting-started) first.
 
+See the complete
+[SQLite example repository](https://github.com/loic294/owb-sqlite-example)
+for a working website with this backend.
+
 ## Configure the editor backend
 
 Create `owb.config.js`:
