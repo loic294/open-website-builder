@@ -9,6 +9,24 @@ import { createR2Client } from "./server/files/r2-client.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+function configureEditorRoutes(server) {
+  server.middlewares.use((request, response, next) => {
+    if (request.url === "/editor") {
+      response.statusCode = 302;
+      response.setHeader("Location", "/editor/");
+      response.end();
+      return;
+    }
+    if (request.url === "/editor/importer") {
+      response.statusCode = 302;
+      response.setHeader("Location", "/editor/importer/");
+      response.end();
+      return;
+    }
+    next();
+  });
+}
+
 export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
   const siteConfig = await loadSiteConfig(env.OWB_SITE_CONFIG || "");
@@ -31,23 +49,8 @@ export default defineConfig(async ({ mode }) => {
         : []),
       {
         name: "editor-route",
-        configureServer(server) {
-          server.middlewares.use((request, response, next) => {
-            if (request.url === "/editor") {
-              response.statusCode = 302;
-              response.setHeader("Location", "/editor/");
-              response.end();
-              return;
-            }
-            if (request.url === "/editor/importer") {
-              response.statusCode = 302;
-              response.setHeader("Location", "/editor/importer/");
-              response.end();
-              return;
-            }
-            next();
-          });
-        },
+        configureServer: configureEditorRoutes,
+        configurePreviewServer: configureEditorRoutes,
       },
     ],
     build: {
@@ -73,6 +76,9 @@ export default defineConfig(async ({ mode }) => {
           "!./**", // Only watch inside the current directory
         ],
       },
+    },
+    preview: {
+      port: 3003,
     },
   };
 });

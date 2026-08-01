@@ -18,7 +18,7 @@ COPY editor ./editor
 COPY server ./server
 COPY src ./src
 
-RUN npm run build:pub
+RUN npm run build
 
 COPY docker-entrypoint.sh /usr/local/bin/owb-entrypoint
 RUN chmod 0755 /usr/local/bin/owb-entrypoint \
@@ -29,4 +29,4 @@ WORKDIR /workspace
 EXPOSE 3003
 
 ENTRYPOINT ["/usr/local/bin/owb-entrypoint"]
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3003"]
+CMD ["./node_modules/.bin/vite", "preview", "--host", "0.0.0.0", "--port", "3003"]

@@ -6,6 +6,11 @@ and its Linux dependencies. GitHub Actions builds it from the included
 Registry. Your website remains outside the image and is mounted at `/workspace`,
 so editor changes and generated output persist on the host.
 
+The editor frontend is built into the image and served as static files. The
+container does not run Vite's development watcher or HMR server. Backend API
+middleware remains active for editing content, repository operations, image
+uploads, and publishing.
+
 ## Project layout
 
 The included `docker-compose.yml` defaults to the repository's sibling

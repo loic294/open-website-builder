@@ -146,26 +146,29 @@ export function createOwbBackendPlugin({
     );
   }
 
-  return {
-    name: "owb-backend",
-    configureServer(server) {
-      server.middlewares.use(createComponentStylesMiddleware({ appRoot }));
-      server.middlewares.use(
+  function configureMiddlewares(server) {
+    server.middlewares.use(createComponentStylesMiddleware({ appRoot }));
+    server.middlewares.use(
         createRemoteImagesMiddleware({ imageBaseUrl: siteConfig.imageBaseUrl }),
       );
-      server.middlewares.use(
+    server.middlewares.use(
         typeof backendProviders.createRepositoryApiMiddleware === "function"
           ? backendProviders.createRepositoryApiMiddleware()
           : createUnsupportedRepositoryApiMiddleware(),
       );
-      server.middlewares.use(backendProviders.createDeploymentApiMiddleware());
-      server.middlewares.use(backendProviders.createFilesApiMiddleware());
-      server.middlewares.use(backendProviders.createDataApiMiddleware());
-      server.middlewares.use(
-        createPublishedPreviewMiddleware({
-          publishedDir: siteConfig.publishedOutputDir,
-        }),
-      );
-    },
+    server.middlewares.use(backendProviders.createDeploymentApiMiddleware());
+    server.middlewares.use(backendProviders.createFilesApiMiddleware());
+    server.middlewares.use(backendProviders.createDataApiMiddleware());
+    server.middlewares.use(
+      createPublishedPreviewMiddleware({
+        publishedDir: siteConfig.publishedOutputDir,
+      }),
+    );
+  }
+
+  return {
+    name: "owb-backend",
+    configureServer: configureMiddlewares,
+    configurePreviewServer: configureMiddlewares,
   };
 }
