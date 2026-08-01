@@ -149,13 +149,13 @@ export function createOwbBackendPlugin({
   function configureMiddlewares(server) {
     server.middlewares.use(createComponentStylesMiddleware({ appRoot }));
     server.middlewares.use(
-        createRemoteImagesMiddleware({ imageBaseUrl: siteConfig.imageBaseUrl }),
-      );
+      createRemoteImagesMiddleware({ imageBaseUrl: siteConfig.imageBaseUrl }),
+    );
     server.middlewares.use(
-        typeof backendProviders.createRepositoryApiMiddleware === "function"
-          ? backendProviders.createRepositoryApiMiddleware()
-          : createUnsupportedRepositoryApiMiddleware(),
-      );
+      typeof backendProviders.createRepositoryApiMiddleware === "function"
+        ? backendProviders.createRepositoryApiMiddleware()
+        : createUnsupportedRepositoryApiMiddleware(),
+    );
     server.middlewares.use(backendProviders.createDeploymentApiMiddleware());
     server.middlewares.use(backendProviders.createFilesApiMiddleware());
     server.middlewares.use(backendProviders.createDataApiMiddleware());
