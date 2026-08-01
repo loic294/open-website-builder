@@ -2,6 +2,9 @@
   "name": "open-website-builder",
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "main": "./src/index.js",
   "module": "./src/index.js",
   "exports": {
@@ -12,8 +15,11 @@
     "./plugins/owb-image-plugin.js": "./src/plugins/owb-image-plugin.js",
     "./providers/filesystem-backend-providers.js": "./server/providers/filesystem-backend-providers.js",
     "./providers/in-memory-backend-providers.js": "./server/providers/in-memory-backend-providers.js",
+    "./providers/sqlite-backend-providers.js": "./server/providers/sqlite-backend-providers.js",
+    "./database/sqlite-database.js": "./server/database/sqlite-database.js",
     "./data/data-api-provider.js": "./server/data/data-api-provider.js",
     "./publish/publish-provider.js": "./server/publish/publish-provider.js",
+    "./publish/sqlite-publish-provider.js": "./server/publish/sqlite-publish-provider.js",
     "./server/files/sync-from-r2.js": "./server/files/sync-from-r2.js"
   },
   "files": [

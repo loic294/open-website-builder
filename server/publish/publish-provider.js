@@ -17,7 +17,7 @@ async function readJson(filePath) {
   return JSON.parse(content);
 }
 
-async function copyDirectoryRecursive(sourceDir, targetDir) {
+export async function copyDirectoryRecursive(sourceDir, targetDir) {
   let sourceStats;
   try {
     sourceStats = await stat(sourceDir);

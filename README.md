@@ -70,6 +70,38 @@ await publishSite({
   - `createFilesystemPublishProvider(...)`
 - Fileless reference backend (development/prototyping):
   - `createInMemoryBackendProviders(...)`
+- SQLite backend (Node 22.13 or newer):
+  - `createSqliteBackendProviders(...)`
+  - `createSqlitePublishProvider(...)`
+
+SQLite stores pages, collections, collection items, shared components, image
+metadata, and image folders. Site `config.json`, image files, `public/`, and the
+published output remain filesystem-backed.
+
+```js
+import {
+  createOwbBackendPlugin,
+  createOwbImagePlugin,
+  createSqliteBackendProviders,
+} from "open-website-builder";
+
+export function plugins({ appRoot, r2, siteConfig }) {
+  const backendProviders = createSqliteBackendProviders({
+    appRoot,
+    siteConfig,
+    r2,
+  });
+
+  return [
+    createOwbBackendPlugin({ appRoot, siteConfig, backendProviders }),
+    createOwbImagePlugin({ imageBaseUrl: siteConfig.imageBaseUrl }),
+  ];
+}
+```
+
+Set `sqliteDbPath`, `contentRoot`, `imagesRoot`, `publicRoot`, and
+`publishedOutputDir` in the site config. Squarespace imports are not supported
+by the SQLite backend yet.
 
 ### 4. Required provider capabilities for custom backends
 
