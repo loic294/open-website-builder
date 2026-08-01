@@ -11,7 +11,7 @@ RUN apt-get update \
 WORKDIR /opt/open-website-builder
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY LICENSE index.html vite.config.js vite.pub.config.js ./
 COPY editor ./editor
