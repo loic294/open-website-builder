@@ -123,18 +123,18 @@ For each layout type:
 
 - [ ] Replace `<owb-*-editor>` with:
       `html
-    <owb-section .node=... .pageConfig=...>
-      <!-- light-DOM children -->
-      ${childNodes.map(renderChild)}
-      <owb-layout-editor-overlay
-        slot="editor-overlay"
-        variant="section"
-        .node=...
-        .pageConfig=...
-        @page-config-updated=${onPageConfigUpdated}
-      ></owb-layout-editor-overlay>
-    </owb-section>
-    `
+                <owb-section .node=... .pageConfig=...>
+                      <!-- light-DOM children -->
+                      ${childNodes.map(renderChild)}
+                      <owb-layout-editor-overlay
+                            slot="editor-overlay"
+                            variant="section"
+                            .node=...
+                            .pageConfig=...
+                            @page-config-updated=${onPageConfigUpdated}
+                      ></owb-layout-editor-overlay>
+                </owb-section>
+                `
 - [ ] Children for grid mode get `slot=""` + `style="grid-column:..."` +
       `data-grid-child-id` applied by the render function (overlay reads
       placements via DOM query / shared state, not via `renderNodeFn`).
@@ -172,7 +172,7 @@ For each layout type:
         section-only chrome).
 - [ ] `customElements.get("owb-section-editor")` → `undefined` in dev console.
 - [ ] No `EditorComponent`/`EditorHostBase` imports remain outside
-      [editor-component/](open-website-builder/src/editor/components/layout/editor-component).
+      `src/editor/components/layout/editor-component/`.
 
 ## Risks & rollback
 
