@@ -51,6 +51,18 @@ Before starting the container:
    fingerprint from GitHub's published documentation and verify it before
    adding it. Host-key verification is not disabled by this setup.
 
+Set the commit identity in your shell or a Compose `.env` file. Both values
+must be provided together:
+
+```dotenv
+GIT_USER_NAME=Your Name
+GIT_USER_EMAIL=you@example.com
+```
+
+The entrypoint writes this identity to the container's system Git
+configuration, so it is available to both the editor process and root exec
+shells. It does not modify the host Git configuration.
+
 Do not put private keys, tokens, or credentials in the Dockerfile, Compose
 environment, or image build context.
 

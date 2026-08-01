@@ -15,6 +15,13 @@ case "$host_uid:$host_gid" in
     ;;
 esac
 
+if [ -n "${GIT_USER_NAME:-}" ] || [ -n "${GIT_USER_EMAIL:-}" ]; then
+  if [ -z "${GIT_USER_NAME:-}" ] || [ -z "${GIT_USER_EMAIL:-}" ]; then
+    echo "GIT_USER_NAME and GIT_USER_EMAIL must both be set." >&2
+    exit 1
+  fi
+fi
+
 for required_file in package.json vite.config.js "${OWB_SITE_CONFIG:-owb.config.js}"; do
   if [ ! -f "$project_root/$required_file" ]; then
     echo "Mounted website is missing $required_file in $project_root." >&2
@@ -28,6 +35,10 @@ if [ ! -d /opt/open-website-builder/node_modules ]; then
 fi
 
 git config --system --replace-all safe.directory "$project_root"
+if [ -n "${GIT_USER_NAME:-}" ]; then
+  git config --system --replace-all user.name "$GIT_USER_NAME"
+  git config --system --replace-all user.email "$GIT_USER_EMAIL"
+fi
 
 mkdir -p "$project_modules" "$runtime_home" "$runtime_cache"
 chown "$host_uid:$host_gid" "$project_modules" "$runtime_home" "$runtime_cache"
