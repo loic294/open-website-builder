@@ -111,7 +111,7 @@ export class RepositoryStatus extends LitElement {
       >
       ${this.variant === "card"
         ? html`<editor-btn
-          compact
+            compact
             ?disabled=${busy || !status?.upstream}
             ?loading=${action === "push"}
             @click=${() => this.runAction("push")}
