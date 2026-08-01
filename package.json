@@ -1,6 +1,7 @@
 {
   "name": "open-website-builder",
   "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"
@@ -23,6 +24,7 @@
     "./server/files/sync-from-r2.js": "./server/files/sync-from-r2.js"
   },
   "files": [
+    "LICENSE",
     "README.md",
     "package.json",
     "vite.config.js",

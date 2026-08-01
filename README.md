@@ -2,6 +2,18 @@
 
 A visual website editor built with [Lit](https://lit.dev/) and Vite. The package exports the editor runtime, publish pipeline, and plugin factories; the website repo owns the site config and composes those exports.
 
+## License
+
+Open Website Builder is free for personal use, public open-source projects, and
+independent creatives using it for their own work. This includes small content
+creators, photographers, artists, writers, and other sole proprietors, even
+when their website promotes or earns income from that work.
+
+A commercial license is required for professional use by a company or
+organization with multiple employees, paid client work, or a commercial
+product or service. See [LICENSE](./LICENSE) for the complete terms and the
+[licensing guide](https://loic294.github.io/open-website-builder/guide/licensing).
+
 ## Backend Setup
 
 The backend is plugin-driven. Your site config must explicitly provide backend providers to the editor plugin and a publish provider to the publish script.

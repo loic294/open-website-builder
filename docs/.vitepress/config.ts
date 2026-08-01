@@ -20,6 +20,7 @@ export default defineConfig({
           { text: "Introduction", link: "/guide/introduction" },
           { text: "Getting started", link: "/getting-started" },
           { text: "Comparison", link: "/guide/comparison" },
+          { text: "Licensing", link: "/guide/licensing" },
         ],
       },
       {

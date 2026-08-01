@@ -1,0 +1,86 @@
+Open Website Builder License
+Version 1.0, July 2026
+
+Copyright (c) 2026 Loic Bellemare-Alford
+
+1. Acceptance
+
+By using, copying, modifying, or distributing Open Website Builder (the
+"Software"), you agree to this license.
+
+2. Free Uses
+
+Subject to the conditions below, you may use, copy, modify, and distribute the
+Software without paying a license fee for:
+
+a. personal, educational, or noncommercial use;
+
+b. your own website as an individual or sole proprietor working as a content
+   creator, photographer, artist, designer, writer, musician, or other
+   independent creative, including when that website promotes or earns income
+   from your own work; or
+
+c. an open-source project whose complete source code is publicly available
+   under an OSI-approved open-source license, provided the Software is not used
+   primarily to provide paid website-building, hosting, or consulting services.
+
+3. Commercial License Required
+
+You must obtain a separate commercial license from the copyright holder before
+using the Software:
+
+a. for the professional or internal business purposes of a company or other
+   organization with two or more employees;
+
+b. to build, operate, or maintain a website for a client as part of paid
+   agency, consulting, development, hosting, or similar services; or
+
+c. in a product or service that is sold, licensed, or offered for a fee.
+
+Contractors and workers performing substantially the same role as employees
+count as employees for this section. A commercial license may grant additional
+rights and may override these restrictions in writing.
+
+4. Conditions
+
+For every permitted copy or substantial portion of the Software, you must:
+
+a. keep this license and the copyright notice with the Software;
+
+b. clearly identify significant modifications; and
+
+c. not use the names or trademarks of Open Website Builder or its contributors
+   to endorse or promote a product without prior written permission.
+
+Any distribution of the Software or a modified version remains subject to this
+license unless the copyright holder grants different terms in writing.
+
+5. Third-Party Software and Website Content
+
+Third-party dependencies remain governed by their own licenses. This license
+does not claim ownership of the content, designs, images, data, or generated
+static output of a website created with the Software.
+
+6. Termination
+
+Your rights under this license terminate automatically if you breach its terms.
+They are reinstated when you cure the breach within 30 days after discovering
+it, provided this is your first breach. The copyright holder may reinstate
+rights in writing after any other breach.
+
+7. Disclaimer of Warranty and Limitation of Liability
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED
+BY LAW, THE COPYRIGHT HOLDER AND CONTRIBUTORS WILL NOT BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.
+
+8. Commercial Licensing
+
+To request a commercial license, contact the copyright holder through the
+Open Website Builder repository:
+https://github.com/loic294/open-website-builder
+
+This is a source-available license with a commercial-use restriction. It is not
+an open-source license as that term is defined by the Open Source Initiative.
