@@ -13,6 +13,7 @@ import "../../ui/radio-button/radio-button.js";
 import "../../repository/repository-status/repository-status.js";
 import { renderNode } from "../../../core/render-node.js";
 import { dataLayer } from "../../../data/data-layer.js";
+import { repositoryStatusController } from "../../../data/repository-status-controller.js";
 import { FileManager } from "../file-manager/file-manager.js";
 import { browserPopover } from "../../ui/browser-popover/browser-popover.js";
 
@@ -40,6 +41,7 @@ class WebsiteEditor extends LitElement {
     publishStatus: { state: true },
     hasUnpublishedChanges: { state: true },
     isPublishing: { state: true },
+    isDeploying: { state: true },
     activeView: { state: true },
     activeSize: { state: true },
     activeOrientation: { state: true },
@@ -64,6 +66,7 @@ class WebsiteEditor extends LitElement {
     this.publishStatus = "";
     this.hasUnpublishedChanges = false;
     this.isPublishing = false;
+    this.isDeploying = false;
     this.changeRevision = 0;
     this.activeView = "editor";
     this.activeSize = "desktop";
@@ -481,7 +484,7 @@ class WebsiteEditor extends LitElement {
   };
 
   onPublishClick = async () => {
-    if (!this.hasUnpublishedChanges || this.isPublishing) {
+    if (!this.hasUnpublishedChanges || this.isPublishing || this.isDeploying) {
       return;
     }
 
@@ -501,6 +504,43 @@ class WebsiteEditor extends LitElement {
           : "Publish failed";
     } finally {
       this.isPublishing = false;
+    }
+  };
+
+  onDeployClick = async () => {
+    if (this.isPublishing || this.isDeploying) return;
+
+    this.isDeploying = true;
+    const publishRevision = this.changeRevision;
+    this.publishStatus = "Publishing...";
+    try {
+      const result = await dataLayer.publishProject();
+      this.hasUnpublishedChanges = this.changeRevision !== publishRevision;
+      repositoryStatusController.adoptStatus(result?.repository);
+      this.publishStatus = "Published successfully";
+    } catch (error) {
+      console.error(error);
+      this.publishStatus = `Publish failed: ${error?.message || "Unknown error"}`;
+      const output = [
+        error?.command ? `$ ${error.command}` : "",
+        error?.stdout || "",
+        error?.stderr || "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+      if (output) {
+        const phaseLabel =
+          error?.phase === "repository"
+            ? "Git"
+            : error?.phase === "upload"
+              ? "Upload"
+              : "Deployment";
+        await browserPopover.output(output, {
+          title: `${phaseLabel} failed`,
+        });
+      }
+    } finally {
+      this.isDeploying = false;
     }
   };
 
@@ -2110,12 +2150,23 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
                 disabledTooltip=${true}
               ></editor-radio-button>
             </div>
-            <editor-btn
-              @click=${this.onPublishClick}
-              ?disabled=${!this.hasUnpublishedChanges}
-              ?loading=${this.isPublishing}
-              >${this.isPublishing ? "Saving" : "Save Changes"}</editor-btn
-            >
+            <div class="publish-actions">
+              <editor-btn
+                @click=${this.onPublishClick}
+                ?disabled=${!this.hasUnpublishedChanges ||
+                this.isPublishing ||
+                this.isDeploying}
+                ?loading=${this.isPublishing}
+                >${this.isPublishing ? "Saving" : "Save Changes"}</editor-btn
+              >
+              <editor-btn
+                style="primary"
+                @click=${this.onDeployClick}
+                ?disabled=${this.isPublishing || this.isDeploying}
+                ?loading=${this.isDeploying}
+                >${this.isDeploying ? "Publishing" : "Publish"}</editor-btn
+              >
+            </div>
             ${this.publishStatus
               ? html`<span
                   style="margin-left: 10px; font-size: 12px; opacity: 0.8;"

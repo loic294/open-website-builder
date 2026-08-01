@@ -67,8 +67,14 @@ export function createDataLayer(
   repositoryTransport = createHttpTransport("/__repository", {
     emitDataChanges: false,
   }),
+  deploymentTransport = createHttpTransport("/__deployment", {
+    emitDataChanges: false,
+  }),
 ) {
   return {
+    async publishProject() {
+      return await deploymentTransport.post("/publish", {});
+    },
     async getRepositoryStatus() {
       return await repositoryTransport.get("/status");
     },

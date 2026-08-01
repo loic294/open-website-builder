@@ -8,6 +8,9 @@ import { createSqliteFoldersStore } from "../files/sqlite-folders-store.js";
 import { createSqliteMetadataStore } from "../files/sqlite-metadata-store.js";
 import { createSqlitePublishProvider } from "../publish/sqlite-publish-provider.js";
 import { publishSite } from "../publish/publish-site.js";
+import { createNpmScriptService } from "../deployment/npm-script-service.js";
+import { createDeploymentService } from "../deployment/deployment-service.js";
+import { createDeploymentApiMiddleware } from "../deployment/deployment-api-middleware.js";
 
 export function createSqliteBackendProviders({ appRoot, siteConfig, r2 }) {
   if (!siteConfig.sqliteDbPath) {
@@ -32,19 +35,30 @@ export function createSqliteBackendProviders({ appRoot, siteConfig, r2 }) {
       "Squarespace import is not supported by the SQLite backend.",
     );
   };
+  const generateSite = async () =>
+    await publishSite({
+      publishProvider,
+      outputDir: siteConfig.publishedOutputDir,
+      appRoot,
+    });
+  const npmScriptService = createNpmScriptService({
+    projectRoot: siteConfig.contentRoot,
+    scriptName: siteConfig.uploadScript,
+  });
+  const deploymentService = createDeploymentService({
+    generate: generateSite,
+    upload: () => npmScriptService.run(),
+  });
   const dataApiProvider = createDataApiProvider({
     ...dataResolvers,
-    publishSite: async () =>
-      await publishSite({
-        publishProvider,
-        outputDir: siteConfig.publishedOutputDir,
-        appRoot,
-      }),
+    publishSite: generateSite,
     importSquarespaceXml: unsupportedImport,
     importSquarespaceStaticSiteDir: unsupportedImport,
   });
 
   return {
+    createDeploymentApiMiddleware: () =>
+      createDeploymentApiMiddleware({ service: deploymentService }),
     createDataApiMiddleware: () => createDataApiMiddleware(dataApiProvider),
     createFilesApiMiddleware: () =>
       createFilesApiMiddleware({

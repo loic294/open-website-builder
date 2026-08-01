@@ -30,6 +30,28 @@ npx serve dist-publish
 Check several page URLs, images, `robots.txt`, and `sitemap.xml`. Never edit
 `dist-publish/` directly because the next publish replaces generated files.
 
+## Publish from the editor
+
+**Save Changes** generates the static site locally. **Publish** generates it
+again, then runs the project's `upload` npm script from the project root. Set a
+different script name in `owb.config.js` when needed:
+
+```js
+export const owbConfig = {
+  // Other paths and settings...
+  uploadScript: "deploy",
+};
+```
+
+The script must exist in the project's `package.json`. OWB runs
+`npm run <uploadScript>` without a shell and shows its command output when it
+fails. Retrying Publish reruns generation and the upload script.
+
+With the filesystem backend, a successful upload is followed by the same
+Commit & Push operation available in the repository panel. A Git failure marks
+Publish as failed even though the upload completed; retrying runs the complete
+workflow again. SQLite and in-memory backends do not perform this Git step.
+
 ## Build settings
 
 Most Git-integrated static hosts need the same values:

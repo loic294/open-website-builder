@@ -13,6 +13,9 @@ import {
 } from "../import/squarespace-import-service.js";
 import { createGitRepositoryService } from "../repository/git-repository-service.js";
 import { createRepositoryApiMiddleware } from "../repository/repository-api-middleware.js";
+import { createNpmScriptService } from "../deployment/npm-script-service.js";
+import { createDeploymentService } from "../deployment/deployment-service.js";
+import { createDeploymentApiMiddleware } from "../deployment/deployment-api-middleware.js";
 
 export function createFilesystemBackendProviders({ appRoot, siteConfig, r2 }) {
   let repositoryServicePromise = null;
@@ -43,14 +46,31 @@ export function createFilesystemBackendProviders({ appRoot, siteConfig, r2 }) {
     imagesRoot: siteConfig.imagesRoot,
   });
 
+  const generateSite = async () =>
+    await publishSite({
+      publishProvider,
+      outputDir: siteConfig.publishedOutputDir,
+      appRoot,
+    });
+  const getRepositoryService = () => {
+    repositoryServicePromise ??= createGitRepositoryService({
+      contentRoot: siteConfig.contentRoot,
+    });
+    return repositoryServicePromise;
+  };
+  const npmScriptService = createNpmScriptService({
+    projectRoot: siteConfig.contentRoot,
+    scriptName: siteConfig.uploadScript,
+  });
+  const deploymentService = createDeploymentService({
+    generate: generateSite,
+    upload: () => npmScriptService.run(),
+    afterUpload: async () => (await getRepositoryService()).commitAndPush(),
+  });
+
   const dataApiProvider = createDataApiProvider({
     ...dataResolvers,
-    publishSite: async () =>
-      await publishSite({
-        publishProvider,
-        outputDir: siteConfig.publishedOutputDir,
-        appRoot,
-      }),
+    publishSite: generateSite,
     importSquarespaceXml: async ({ xmlContent, sourceName, options }) =>
       await importSquarespaceXml({
         xmlContent,
@@ -76,13 +96,10 @@ export function createFilesystemBackendProviders({ appRoot, siteConfig, r2 }) {
   return {
     createRepositoryApiMiddleware: () =>
       createRepositoryApiMiddleware({
-        getService: () => {
-          repositoryServicePromise ??= createGitRepositoryService({
-            contentRoot: siteConfig.contentRoot,
-          });
-          return repositoryServicePromise;
-        },
+        getService: getRepositoryService,
       }),
+    createDeploymentApiMiddleware: () =>
+      createDeploymentApiMiddleware({ service: deploymentService }),
     createDataApiMiddleware: () => createDataApiMiddleware(dataApiProvider),
     createFilesApiMiddleware: () =>
       createFilesApiMiddleware({

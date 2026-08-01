@@ -15,6 +15,7 @@ export function getDefaultSiteConfig() {
     publicRoot: process.env.OWB_PUBLIC_ROOT,
     publishedOutputDir: process.env.OWB_PUBLISHED_OUTPUT_DIR,
     imageBaseUrl: process.env.OWB_IMAGE_BASE_URL || "",
+    uploadScript: process.env.OWB_UPLOAD_SCRIPT || "upload",
   };
 }
 
@@ -33,6 +34,7 @@ export function resolveSiteConfig(overrides = {}) {
     publishedOutputDir:
       overrides.publishedOutputDir || defaults.publishedOutputDir,
     imageBaseUrl: overrides.imageBaseUrl || defaults.imageBaseUrl,
+    uploadScript: overrides.uploadScript || defaults.uploadScript,
   };
 }
 

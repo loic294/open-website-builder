@@ -140,6 +140,12 @@ export function createOwbBackendPlugin({
     throw new Error("backendProviders.createFilesApiMiddleware is required.");
   }
 
+  if (typeof backendProviders.createDeploymentApiMiddleware !== "function") {
+    throw new Error(
+      "backendProviders.createDeploymentApiMiddleware is required.",
+    );
+  }
+
   return {
     name: "owb-backend",
     configureServer(server) {
@@ -152,6 +158,7 @@ export function createOwbBackendPlugin({
           ? backendProviders.createRepositoryApiMiddleware()
           : createUnsupportedRepositoryApiMiddleware(),
       );
+      server.middlewares.use(backendProviders.createDeploymentApiMiddleware());
       server.middlewares.use(backendProviders.createFilesApiMiddleware());
       server.middlewares.use(backendProviders.createDataApiMiddleware());
       server.middlewares.use(

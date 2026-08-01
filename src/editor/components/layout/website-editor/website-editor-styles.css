@@ -20,7 +20,16 @@
 .editor-top-menu .right-menu {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.editor-top-menu .publish-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 
 .editor-top-menu .radio-button-container {

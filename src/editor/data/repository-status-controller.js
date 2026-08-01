@@ -137,6 +137,13 @@ class RepositoryStatusController {
   push() {
     return this.runAction("push");
   }
+
+  adoptStatus(status) {
+    if (!status) return;
+    this.status = status;
+    this.error = null;
+    this.notify();
+  }
 }
 
 export const repositoryStatusController = new RepositoryStatusController();

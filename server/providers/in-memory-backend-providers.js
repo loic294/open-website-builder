@@ -3,6 +3,9 @@ import { createDataApiMiddleware } from "../data/data-api-middleware.js";
 import { createFilesApiMiddleware } from "../files/files-api-middleware.js";
 import { buildDefaultImagePaths } from "../files/image-paths.js";
 import { publishSite } from "../publish/publish-site.js";
+import { createNpmScriptService } from "../deployment/npm-script-service.js";
+import { createDeploymentService } from "../deployment/deployment-service.js";
+import { createDeploymentApiMiddleware } from "../deployment/deployment-api-middleware.js";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -596,6 +599,20 @@ export function createInMemoryBackendProviders({ appRoot, siteConfig }) {
     return { urls };
   }
 
+  const generateSite = async () =>
+    await publishSite({
+      publishProvider: createPublishProvider(),
+      outputDir: siteConfig.publishedOutputDir,
+      appRoot,
+    });
+  const npmScriptService = createNpmScriptService({
+    projectRoot: siteConfig.contentRoot,
+    scriptName: siteConfig.uploadScript,
+  });
+  const deploymentService = createDeploymentService({
+    generate: generateSite,
+    upload: () => npmScriptService.run(),
+  });
   const dataApiProvider = createDataApiProvider({
     listPages,
     getPageConfig,
@@ -603,12 +620,7 @@ export function createInMemoryBackendProviders({ appRoot, siteConfig }) {
     updatePageIdentity,
     createPage,
     deletePage,
-    publishSite: async () =>
-      await publishSite({
-        publishProvider: createPublishProvider(),
-        outputDir: siteConfig.publishedOutputDir,
-        appRoot,
-      }),
+    publishSite: generateSite,
     importSquarespaceXml: async () => {
       throw new Error(
         "Squarespace XML import is not implemented for in-memory provider.",
@@ -695,6 +707,8 @@ export function createInMemoryBackendProviders({ appRoot, siteConfig }) {
   }
 
   return {
+    createDeploymentApiMiddleware: () =>
+      createDeploymentApiMiddleware({ service: deploymentService }),
     createDataApiMiddleware: () => createDataApiMiddleware(dataApiProvider),
     createFilesApiMiddleware: () =>
       createFilesApiMiddleware({
