@@ -1,5 +1,5 @@
 Open Website Builder License
-Version 1.0, July 2026
+Version 1.1, July 2026
 
 Copyright (c) 2026 Loic Bellemare-Alford
 
@@ -55,20 +55,48 @@ to endorse or promote a product without prior written permission.
 Any distribution of the Software or a modified version remains subject to this
 license unless the copyright holder grants different terms in writing.
 
-5. Third-Party Software and Website Content
+5. Prohibited Uses and Content
+
+You may not use the Software to create, publish, promote, facilitate, or
+distribute content or services that:
+
+a. violate applicable law or the rights of another person;
+
+b. encourage, facilitate, or credibly threaten violence, abuse, exploitation,
+harassment, stalking, or other physical or psychological harm;
+
+c. promote hatred or unlawful discrimination against a person or group based
+on a protected characteristic;
+
+d. sexually exploit or endanger minors, or facilitate human trafficking;
+
+e. distribute malware, conduct fraud or phishing, unlawfully invade privacy,
+or enable other malicious or deceptive activity; or
+
+f. are clearly distasteful, grossly offensive, or otherwise undesirable in a
+manner that a reasonable person would expect to cause substantial harm to
+individuals, communities, or the reputation of Open Website Builder.
+
+Artistic, journalistic, educational, documentary, and research material is not
+prohibited merely because it discusses difficult or controversial subjects,
+provided it does not promote or facilitate the conduct listed above. The
+copyright holder may determine in good faith whether a use violates this
+section and may require that use to stop.
+
+6. Third-Party Software and Website Content
 
 Third-party dependencies remain governed by their own licenses. This license
 does not claim ownership of the content, designs, images, data, or generated
 static output of a website created with the Software.
 
-6. Termination
+7. Termination
 
 Your rights under this license terminate automatically if you breach its terms.
 They are reinstated when you cure the breach within 30 days after discovering
 it, provided this is your first breach. The copyright holder may reinstate
 rights in writing after any other breach.
 
-7. Disclaimer of Warranty and Limitation of Liability
+8. Disclaimer of Warranty and Limitation of Liability
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -76,7 +104,7 @@ FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED
 BY LAW, THE COPYRIGHT HOLDER AND CONTRIBUTORS WILL NOT BE LIABLE FOR ANY CLAIM,
 DAMAGES, OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.
 
-8. Commercial Licensing
+9. Commercial Licensing
 
 To request a commercial license, contact the copyright holder through the
 Open Website Builder repository:

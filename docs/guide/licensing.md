@@ -37,15 +37,30 @@ creative practice remains covered by free use.
 
 ## Examples
 
-| Use | License |
-| --- | --- |
-| Personal blog or family website | Free |
-| Independent photographer's portfolio and print shop | Free |
-| Solo content creator's monetized website | Free |
-| Public project under an OSI-approved license | Free |
+| Use                                                 | License    |
+| --------------------------------------------------- | ---------- |
+| Personal blog or family website                     | Free       |
+| Independent photographer's portfolio and print shop | Free       |
+| Solo content creator's monetized website            | Free       |
+| Public project under an OSI-approved license        | Free       |
 | Company website maintained by a multi-employee team | Commercial |
-| Agency website built for a paying client | Commercial |
+| Agency website built for a paying client            | Commercial |
 | Hosted website-builder service offered to customers | Commercial |
+
+## Acceptable use
+
+Neither the free license nor a commercial license permits using Open Website
+Builder for illegal, harmful, malicious, or exploitative content or services.
+This includes credible threats or facilitation of violence, abuse, harassment,
+hate or unlawful discrimination, sexual exploitation of minors, human
+trafficking, malware, fraud, phishing, and unlawful privacy invasion.
+
+Clearly distasteful, grossly offensive, or otherwise undesirable uses are also
+prohibited when a reasonable person would expect them to cause substantial harm
+to people, communities, or the reputation of Open Website Builder. This is not
+intended to prohibit legitimate artistic, journalistic, educational,
+documentary, or research work merely because it addresses controversial or
+difficult subjects.
 
 ## Source available, not OSI open source
 
