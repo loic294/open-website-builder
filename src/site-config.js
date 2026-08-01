@@ -2,7 +2,7 @@ import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
-const packageRoot = dirname(fileURLToPath(new URL("..", import.meta.url)));
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 export function getDefaultSiteConfig() {
   return {
