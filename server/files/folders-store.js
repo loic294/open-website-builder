@@ -46,7 +46,8 @@ export function createFoldersStore({ contentRoot, imagesRoot }) {
     /** Used by the sync script to import a folder with an id that already exists in R2. */
     async importFolder(id, name) {
       const folders = await read();
-      if (folders.some((f) => f.id === id)) return folders.find((f) => f.id === id);
+      if (folders.some((f) => f.id === id))
+        return folders.find((f) => f.id === id);
       const folder = { id, name };
       folders.push(folder);
       await write(folders);
