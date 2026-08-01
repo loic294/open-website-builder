@@ -86,7 +86,7 @@ The `OWB_SITE_CONFIG` environment variable tells OWB where to load the site's
 - Continue with [SQLite backend](/backends/sqlite) for a local database.
 - Read [Custom backend](/backends/custom) to integrate another store.
 
-## Run and publish
+## Option 1: Run with Node.js and npm
 
 After completing a backend guide:
 
@@ -103,6 +103,12 @@ npm run publish
 
 The generated static site is written to `dist-publish/`. Treat that directory
 as build output and deploy it to any static hosting service.
+
+## Option 2: Run with Docker Compose
+
+As an alternative to running Node.js directly on the host, follow the
+[Docker Compose guide](/docker-compose). It includes separate configurations
+for filesystem and SQLite websites.
 
 ## Project layout
 
