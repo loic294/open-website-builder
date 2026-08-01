@@ -8,10 +8,22 @@ Node.js directly on the host. Complete the shared project setup in
 Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or
 another Docker environment that includes Compose.
 
+Keep the Compose file outside the website directory:
+
+```text
+my-project/
+├── docker-compose.yml
+└── site/
+  ├── package.json
+  ├── owb.config.js
+  ├── config.json
+  └── data/
+```
+
 ## Option 1: Filesystem backend
 
 Use this option when pages, collections, and shared components are JSON files
-under `data/`. Create `compose.yaml` in the website project:
+under `site/data/`. Create `docker-compose.yml` beside the `site/` directory:
 
 ```yaml
 services:
@@ -20,9 +32,9 @@ services:
     working_dir: /workspace
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
-      - "3000:3000"
+      - "3003:3003" # external:internal - change the one on the left
     volumes:
-      - .:/workspace
+      - ./site:/workspace
       - node_modules:/workspace/node_modules
     environment:
       OWB_SITE_CONFIG: ./owb.config.js
@@ -43,7 +55,7 @@ for a complete project.
 ## Option 2: SQLite backend
 
 Use this option when content and image metadata are stored in a local SQLite
-database. Create `compose.yaml` in the website project:
+database. Create `docker-compose.yml` beside the `site/` directory:
 
 ```yaml
 services:
@@ -52,9 +64,9 @@ services:
     working_dir: /workspace
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
-      - "3000:3000"
+      - "3003:3003" # external:internal - change the one on the left
     volumes:
-      - .:/workspace
+      - ./site:/workspace
       - node_modules:/workspace/node_modules
     environment:
       OWB_SITE_CONFIG: ./owb.config.js
@@ -63,7 +75,7 @@ volumes:
   node_modules:
 ```
 
-Set `sqliteDbPath` in `owb.config.js` to a path inside the mounted project, such
+Set `sqliteDbPath` in `site/owb.config.js` to a path inside the mounted project, such
 as `data/site.sqlite`. The project bind mount then persists the database and
 its journal files alongside images, configuration, and published output. Do
 not store the database inside the container-only `node_modules` volume.
@@ -74,14 +86,14 @@ for a complete project.
 
 ## Start and stop the editor
 
-Start either configuration from the website project:
+Start either configuration from the directory containing `docker-compose.yml`:
 
 ```bash
 docker compose up
 ```
 
 The `--host 0.0.0.0` option in the service command makes Vite reachable through
-Docker's published port. Open `http://localhost:3000/editor`.
+Docker's published port. Open `http://localhost:3003/editor`.
 
 Changes made in the editor are written through the bind mount. Stop the
 foreground process with `Ctrl+C`, or stop and remove the container with:
@@ -106,7 +118,7 @@ docker compose exec editor npm run generate
 ```
 
 The generated site is written to the project's configured output directory,
-normally `dist-publish/`.
+normally `site/dist-publish/` on the host.
 
 ## Linux file permissions
 
