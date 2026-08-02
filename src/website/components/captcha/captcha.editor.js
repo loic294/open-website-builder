@@ -32,18 +32,13 @@ installEditorPlugin(OwbCaptcha, {
       content: () => {
         const editor = EditorComponent.instance;
         return html`
-          <settings-section
-            title="Captcha"
-            ?overridden=${editor.hasAnyOverriddenKeys(
-              "settingCaptchaChallengeUrl",
-            )}
-          >
+          <settings-section title="Captcha">
             <editor-text-input
               label="Challenge URL"
               placeholder="https://example.com/challenge"
               .value=${editor.settingCaptchaChallengeUrl}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   settingCaptchaChallengeUrl: event.detail.value,
                 });
               }}

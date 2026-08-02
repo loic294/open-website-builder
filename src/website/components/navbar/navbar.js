@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
 
 const bool = (v) => v === true || v === "true";
 
@@ -111,6 +112,8 @@ export class OwbNavbar extends LitElement {
       s.navbarFontWeight && `--navbar-font-weight: ${s.navbarFontWeight}`,
       s.navbarColor && `--navbar-color: ${s.navbarColor}`,
       s.navbarHoverColor && `--navbar-hover-color: ${s.navbarHoverColor}`,
+      `--navbar-hover-decoration: ${bool(s.navbarUnderlineOnHover) ? "underline" : "none"}`,
+      `--navbar-active-decoration: ${bool(s.navbarUnderlineActive) ? "underline" : "none"}`,
     ]
       .filter(Boolean)
       .join("; ");
@@ -133,9 +136,53 @@ export class OwbNavbar extends LitElement {
         `--navbar-mobile-font-size: ${s.navbarMobileFontSize}`,
       s.navbarMobileFontWeight &&
         `--navbar-mobile-font-weight: ${s.navbarMobileFontWeight}`,
+      s.navbarMobileMenuIconSize &&
+        `--navbar-mobile-icon-size: ${s.navbarMobileMenuIconSize}`,
     ]
       .filter(Boolean)
       .join("; ");
+  }
+
+  _buildResponsiveStyle(settings) {
+    return buildResponsiveCss(settings, (effectiveSettings) => [
+      {
+        selector: ".navbar-block",
+        declarations: [
+          effectiveSettings.navbarGap &&
+            `--navbar-gap: ${effectiveSettings.navbarGap}`,
+          effectiveSettings.navbarFontFamily &&
+            `--navbar-font-family: ${effectiveSettings.navbarFontFamily}`,
+          effectiveSettings.navbarFontSize &&
+            `--navbar-font-size: ${effectiveSettings.navbarFontSize}`,
+          effectiveSettings.navbarFontWeight &&
+            `--navbar-font-weight: ${effectiveSettings.navbarFontWeight}`,
+          effectiveSettings.navbarColor &&
+            `--navbar-color: ${effectiveSettings.navbarColor}`,
+          effectiveSettings.navbarHoverColor &&
+            `--navbar-hover-color: ${effectiveSettings.navbarHoverColor}`,
+          `--navbar-hover-decoration: ${bool(effectiveSettings.navbarUnderlineOnHover) ? "underline" : "none"}`,
+          `--navbar-active-decoration: ${bool(effectiveSettings.navbarUnderlineActive) ? "underline" : "none"}`,
+          effectiveSettings.navbarMobileBackgroundColor &&
+            `--navbar-mobile-bg: ${effectiveSettings.navbarMobileBackgroundColor}`,
+          effectiveSettings.navbarMobileTextColor &&
+            `--navbar-mobile-color: ${effectiveSettings.navbarMobileTextColor}`,
+          effectiveSettings.navbarMobileGap &&
+            `--navbar-mobile-gap: ${effectiveSettings.navbarMobileGap}`,
+          effectiveSettings.navbarMobilePadding &&
+            `--navbar-mobile-padding: ${effectiveSettings.navbarMobilePadding}`,
+          effectiveSettings.navbarMobileAlignH &&
+            `--navbar-mobile-align-h: ${effectiveSettings.navbarMobileAlignH}`,
+          effectiveSettings.navbarMobileAlignV &&
+            `--navbar-mobile-justify-v: ${effectiveSettings.navbarMobileAlignV}`,
+          effectiveSettings.navbarMobileFontSize &&
+            `--navbar-mobile-font-size: ${effectiveSettings.navbarMobileFontSize}`,
+          effectiveSettings.navbarMobileFontWeight &&
+            `--navbar-mobile-font-weight: ${effectiveSettings.navbarMobileFontWeight}`,
+          effectiveSettings.navbarMobileMenuIconSize &&
+            `--navbar-mobile-icon-size: ${effectiveSettings.navbarMobileMenuIconSize}`,
+        ],
+      },
+    ]);
   }
 
   render() {
@@ -164,32 +211,40 @@ export class OwbNavbar extends LitElement {
     const navStyle = this._buildNavStyle(settings);
     const mobileStyle = this._buildMobileStyle(settings);
     const spacingCss = getSpacingStyleBlock(settings);
+    const responsiveCss = this._buildResponsiveStyle(settings);
     const isEditorMode = OwbNavbar.editorPlugin !== null;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/navbar.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
-      ${mobileOn
-        ? unsafeHTML(
-            `<style>@media (max-width: ${breakpoint}) { .navbar { display: none !important; } .navbar-mobile-toggle { display: flex !important; } }</style>`,
-          )
-        : null}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
+      ${
+        mobileOn
+          ? unsafeHTML(
+              `<style>@media (max-width: ${breakpoint}) { .navbar { display: none !important; } .navbar-mobile-toggle { display: flex !important; } }</style>`,
+            )
+          : null
+      }
       <div
-        class="navbar-block${isEditorMode && this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
+        class="navbar-block${
+          isEditorMode && this.isSettingsOpen ? " is-settings-open" : ""
+        }"
         style=${mobileOn ? mobileStyle : ""}
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbNavbar.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbNavbar.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
         <nav
-          class="navbar${hasUnderline
-            ? " has-underline-hover"
-            : ""}${hasUnderlineActive ? " has-underline-active" : ""}"
+          class="navbar${
+            hasUnderline ? " has-underline-hover" : ""
+          }${hasUnderlineActive ? " has-underline-active" : ""}"
           style=${navStyle}
         >
           ${links.map(
@@ -204,55 +259,61 @@ export class OwbNavbar extends LitElement {
             `,
           )}
         </nav>
-        ${mobileOn
-          ? html`
-              <button
-                type="button"
-                class="navbar-mobile-toggle"
-                style=${iconSize ? `font-size:${iconSize}` : ""}
-                @click=${() => {
-                  this._mobileOpen = !this._mobileOpen;
-                }}
-              >
-                ${hamburger}
-              </button>
-              <div
-                class="navbar-mobile-menu ${mobileType === "fullscreen"
-                  ? "is-fullscreen"
-                  : "is-dropdown"}${this._mobileOpen ? " is-open" : ""}"
-                style=${mobileStyle}
-              >
-                ${mobileType === "fullscreen"
-                  ? html`
-                      <button
-                        type="button"
-                        class="navbar-mobile-close"
-                        @click=${() => {
-                          this._mobileOpen = false;
-                        }}
-                      >
-                        ✕
-                      </button>
-                    `
-                  : null}
-                <div class="navbar-mobile-links">
-                  ${links.map(
-                    (link) => html`
-                      <a
-                        class="navbar-mobile-link"
-                        href=${link.url || link.pageId || "#"}
-                        target=${link.target || "_self"}
-                        @click=${isEditorMode
-                          ? (e) => e.preventDefault()
-                          : null}
-                        >${link.label || link.url || link.pageId}</a
-                      >
-                    `,
-                  )}
+        ${
+          mobileOn
+            ? html`
+                <button
+                  type="button"
+                  class="navbar-mobile-toggle"
+                  style=${iconSize ? `font-size:${iconSize}` : ""}
+                  @click=${() => {
+                    this._mobileOpen = !this._mobileOpen;
+                  }}
+                >
+                  ${hamburger}
+                </button>
+                <div
+                  class="navbar-mobile-menu ${
+                    mobileType === "fullscreen"
+                      ? "is-fullscreen"
+                      : "is-dropdown"
+                  }${this._mobileOpen ? " is-open" : ""}"
+                  style=${mobileStyle}
+                >
+                  ${
+                    mobileType === "fullscreen"
+                      ? html`
+                          <button
+                            type="button"
+                            class="navbar-mobile-close"
+                            @click=${() => {
+                            this._mobileOpen = false;
+                          }}
+                          >
+                            ✕
+                          </button>
+                        `
+                      : null
+                  }
+                  <div class="navbar-mobile-links">
+                    ${links.map(
+                      (link) => html`
+                        <a
+                          class="navbar-mobile-link"
+                          href=${link.url || link.pageId || "#"}
+                          target=${link.target || "_self"}
+                          @click=${
+                          isEditorMode ? (e) => e.preventDefault() : null
+                        }
+                          >${link.label || link.url || link.pageId}</a
+                        >
+                      `,
+                    )}
+                  </div>
                 </div>
-              </div>
-            `
-          : null}
+              `
+            : null
+        }
       </div>
     `;
   }

@@ -1,15 +1,42 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
-import {
-  getImageSize,
-  getImageUrlForSize,
-} from "../../utils/image-size.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
+import { getImageSize, getImageUrlForSize } from "../../utils/image-size.js";
 
 export const defaultSliderConfig = {
   type: "slider",
   images: [],
 };
+
+export function buildResponsiveSliderCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => {
+    const format = String(effectiveSettings.sliderFormat || "3 / 2");
+    const isAuto = format === "auto";
+    const itemWidth = String(effectiveSettings.sliderItemWidth || "80%");
+    const height = String(effectiveSettings.sliderHeight || "400px");
+    return [
+      {
+        selector: ".slider-track",
+        declarations: {
+          "--slider-item-width": itemWidth,
+          "--slider-gap": String(effectiveSettings.sliderGap || "12px"),
+          "--slider-height": height,
+          "--slider-ratio": isAuto ? "auto" : format,
+        },
+      },
+      {
+        selector: ".slider-slide",
+        declarations: [
+          `aspect-ratio: ${isAuto ? "auto" : format}`,
+          `flex: 0 0 ${isAuto ? "auto" : itemWidth}`,
+          `height: ${isAuto ? height : "auto"}`,
+          "width: auto",
+        ],
+      },
+    ];
+  });
+}
 
 export class OwbSlider extends LitElement {
   static editorPlugin = null;
@@ -192,21 +219,27 @@ export class OwbSlider extends LitElement {
     const imageSize = getImageSize(settings.sliderImageSize);
     const count = images.length;
     const spacingCss = getSpacingStyleBlock(settings);
+    const responsiveCss = buildResponsiveSliderCss(settings);
 
     const isEditorMode = OwbSlider.editorPlugin !== null;
 
     if (count === 0) {
       return html`
         <link rel="stylesheet" href="/owb-styles/slider.css" />
-        ${spacingCss
-          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-          : null}
+        ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+        ${
+          spacingCss
+            ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+            : null
+        }
         <div
           class="slider-block${this.isSettingsOpen ? " is-settings-open" : ""}"
           data-editor-block=${isEditorMode ? "" : nothing}
-          @pointerdown=${isEditorMode
-            ? () => OwbSlider.editorPlugin?.onPointerDown?.(this)
-            : nothing}
+          @pointerdown=${
+            isEditorMode
+              ? () => OwbSlider.editorPlugin?.onPointerDown?.(this)
+              : nothing
+          }
         >
           <div class="slider-empty">No slider images configured</div>
         </div>
@@ -221,54 +254,59 @@ export class OwbSlider extends LitElement {
 
     const slideTemplate = (url) =>
       html`<div class=${slideClass}>
-        <img
-          src=${getImageUrlForSize(url, imageSize)}
-          alt=""
-          loading="lazy"
-        />
+        <img src=${getImageUrlForSize(url, imageSize)} alt="" loading="lazy" />
       </div>`;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/slider.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
       <div
         class="slider-block${this.isSettingsOpen ? " is-settings-open" : ""}"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbSlider.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbSlider.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
         <div class="slider-track-wrapper">
           <div class="slider-track" style="${trackStyle}">
-            ${count > 1
-              ? [...images, ...images, ...images].map(slideTemplate)
-              : images.map(slideTemplate)}
+            ${
+              count > 1
+                ? [...images, ...images, ...images].map(slideTemplate)
+                : images.map(slideTemplate)
+            }
           </div>
         </div>
-        ${count > 1
-          ? html`
-              <div class="slider-nav">
-                <button
-                  type="button"
-                  class="slider-nav-btn"
-                  title="Previous"
-                  @click=${() => this.navigate(-1)}
-                >
-                  &#8249;
-                </button>
-                <button
-                  type="button"
-                  class="slider-nav-btn"
-                  title="Next"
-                  @click=${() => this.navigate(1)}
-                >
-                  &#8250;
-                </button>
-              </div>
-            `
-          : null}
+        ${
+          count > 1
+            ? html`
+                <div class="slider-nav">
+                  <button
+                    type="button"
+                    class="slider-nav-btn"
+                    title="Previous"
+                    @click=${() => this.navigate(-1)}
+                  >
+                    &#8249;
+                  </button>
+                  <button
+                    type="button"
+                    class="slider-nav-btn"
+                    title="Next"
+                    @click=${() => this.navigate(1)}
+                  >
+                    &#8250;
+                  </button>
+                </div>
+              `
+            : null
+        }
       </div>
     `;
   }

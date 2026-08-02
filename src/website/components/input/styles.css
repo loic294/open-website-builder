@@ -23,6 +23,7 @@
 
 .form-input-field,
 .form-input-textarea {
+  box-sizing: border-box;
   width: 100%;
   border: 1px solid color-mix(in srgb, #111111 22%, transparent);
   border-radius: 8px;

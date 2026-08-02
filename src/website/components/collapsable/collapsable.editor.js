@@ -53,15 +53,12 @@ installEditorPlugin(OwbCollapsable, {
       content: () => {
         const editor = EditorComponent.instance;
         return html`
-          <settings-section
-            title="Title"
-            ?overridden=${editor.hasAnyOverriddenKeys("settingTitle")}
-          >
+          <settings-section title="Title">
             <editor-text-input
               label="Title text"
               .value=${editor.settingTitle}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   settingTitle: event.detail.value,
                 });
               }}
@@ -84,7 +81,7 @@ installEditorPlugin(OwbCollapsable, {
                 { label: "No icon", value: "none" },
               ]}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateResponsiveSettingsState({
                   settingIconStyle: event.detail.value,
                 });
               }}
@@ -97,17 +94,14 @@ installEditorPlugin(OwbCollapsable, {
                 { label: "Left", value: "left" },
               ]}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateResponsiveSettingsState({
                   settingIconPosition: event.detail.value,
                 });
               }}
             ></editor-select>
           </settings-section>
 
-          <settings-section
-            title="Behavior"
-            ?overridden=${editor.hasAnyOverriddenKeys("settingDefaultOpen")}
-          >
+          <settings-section title="Behavior">
             <editor-select
               label="Default state"
               .value=${String(Boolean(editor.settingDefaultOpen))}
@@ -116,7 +110,7 @@ installEditorPlugin(OwbCollapsable, {
                 { label: "Closed", value: "false" },
               ]}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   settingDefaultOpen: event.detail.value === "true",
                 });
               }}
@@ -135,7 +129,7 @@ installEditorPlugin(OwbCollapsable, {
               label="Text color"
               .value=${editor.settingTitleColor}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateResponsiveSettingsState({
                   settingTitleColor: event.detail.value,
                 });
               }}
@@ -144,7 +138,7 @@ installEditorPlugin(OwbCollapsable, {
               label="Background color"
               .value=${editor.settingTitleBackgroundColor}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateResponsiveSettingsState({
                   settingTitleBackgroundColor: event.detail.value,
                 });
               }}
@@ -153,7 +147,7 @@ installEditorPlugin(OwbCollapsable, {
               label="Border color"
               .value=${editor.settingTitleBorderColor}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateResponsiveSettingsState({
                   settingTitleBorderColor: event.detail.value,
                 });
               }}
@@ -203,9 +197,16 @@ export const editorRenderCollapsable = (
     .pageConfig=${pageConfig}
     @page-config-updated=${onPageConfigUpdated}
   >
-    ${childContainer
-      ? renderNode(childContainer, pageConfig, onPageConfigUpdated, renderNode)
-      : null}
+    ${
+      childContainer
+        ? renderNode(
+            childContainer,
+            pageConfig,
+            onPageConfigUpdated,
+            renderNode,
+          )
+        : null
+    }
   </owb-collapsable>`;
 };
 

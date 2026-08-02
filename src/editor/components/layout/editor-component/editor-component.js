@@ -92,6 +92,14 @@ export class EditorComponent extends LitElement {
     this.settings.updateSettingsState(nextState);
   }
 
+  updateResponsiveSettingsState(nextState) {
+    this.settings.updateResponsiveSettingsState(nextState);
+  }
+
+  updateGlobalSettingsState(nextState) {
+    this.settings.updateGlobalSettingsState(nextState);
+  }
+
   hasAnyOverriddenKeys(...keys) {
     return this.settings.hasAnyOverriddenKeys(...keys);
   }

@@ -313,11 +313,11 @@ function openTextSettings(element) {
 
         <settings-section
           title="Typography"
-          ?overridden=${editor.hasAnyOverriddenKeys("fontSize", "headingStyle")}
+          ?overridden=${editor.hasAnyOverriddenKeys("fontSize")}
         >
           <editor-select
             label="Font size"
-            .value=${getCurrentFontSize(element)}
+            .value=${editor.fontSize}
             .options=${[
               { label: "Default", value: "" },
               { label: "12", value: "12px" },
@@ -329,8 +329,9 @@ function openTextSettings(element) {
               { label: "32", value: "32px" },
             ]}
             @change=${(event) => {
-              setFontSize(element, event.detail.value);
-              editor.updateSettingsState({ fontSize: event.detail.value });
+              editor.updateResponsiveSettingsState({
+                fontSize: event.detail.value,
+              });
             }}
           ></editor-select>
 
@@ -348,7 +349,9 @@ function openTextSettings(element) {
             ]}
             @change=${(event) => {
               setHeadingStyle(element, event.detail.value);
-              editor.updateSettingsState({ headingStyle: event.detail.value });
+              editor.updateGlobalSettingsState({
+                headingStyle: event.detail.value,
+              });
             }}
           ></editor-select>
         </settings-section>

@@ -50,16 +50,13 @@ installEditorPlugin(OwbShared, {
         ];
 
         return html`
-          <settings-section
-            title="Shared component"
-            ?overridden=${editor.hasAnyOverriddenKeys("shared_component_id")}
-          >
+          <settings-section title="Shared component">
             <editor-select
               label="Component"
               .value=${currentId}
               .options=${selectOptions}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   shared_component_id: event.detail.value,
                 });
                 element.loadComponentIfNeeded();

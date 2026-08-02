@@ -52,7 +52,7 @@ const FORM_VARIANT_CONFIG = {
           placeholder="https://example.com/contact"
           .value=${host.formActionUrl}
           @change=${(event) => {
-            host.settings.updateSettingsState({
+            host.settings.updateGlobalSettingsState({
               formActionUrl: event.detail.value,
             });
           }}
@@ -65,7 +65,7 @@ const FORM_VARIANT_CONFIG = {
             { label: "GET", value: "get" },
           ]}
           @change=${(event) => {
-            host.settings.updateSettingsState({
+            host.settings.updateGlobalSettingsState({
               formMethod: event.detail.value,
             });
           }}
@@ -79,7 +79,7 @@ const FORM_VARIANT_CONFIG = {
           ]}
           @change=${(event) => {
             const nextMode = event.detail.value;
-            host.settings.updateSettingsState({
+            host.settings.updateGlobalSettingsState({
               formSubmitMode: nextMode,
               formSuccessMessage:
                 nextMode === "success-message" ? host.formSuccessMessage : "",
@@ -89,27 +89,29 @@ const FORM_VARIANT_CONFIG = {
           }}
         ></editor-select>
 
-        ${host.formSubmitMode === "redirect"
-          ? html`<editor-text-input
-              label="Redirect URL"
-              placeholder="/thank-you"
-              .value=${host.formRedirectUrl}
-              @change=${(event) => {
-                host.settings.updateSettingsState({
-                  formRedirectUrl: event.detail.value,
-                });
-              }}
-            ></editor-text-input>`
-          : html`<editor-text-input
-              label="Success message"
-              placeholder="Thanks! Your form has been submitted."
-              .value=${host.formSuccessMessage}
-              @change=${(event) => {
-                host.settings.updateSettingsState({
-                  formSuccessMessage: event.detail.value,
-                });
-              }}
-            ></editor-text-input>`}
+        ${
+          host.formSubmitMode === "redirect"
+            ? html`<editor-text-input
+                label="Redirect URL"
+                placeholder="/thank-you"
+                .value=${host.formRedirectUrl}
+                @change=${(event) => {
+                  host.settings.updateGlobalSettingsState({
+                    formRedirectUrl: event.detail.value,
+                  });
+                }}
+              ></editor-text-input>`
+            : html`<editor-text-input
+                label="Success message"
+                placeholder="Thanks! Your form has been submitted."
+                .value=${host.formSuccessMessage}
+                @change=${(event) => {
+                  host.settings.updateGlobalSettingsState({
+                    formSuccessMessage: event.detail.value,
+                  });
+                }}
+              ></editor-text-input>`
+        }
       </settings-section>
     `;
   },

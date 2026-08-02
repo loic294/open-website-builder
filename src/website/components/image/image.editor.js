@@ -3,10 +3,7 @@ import { EditorComponent } from "../../../editor/components/layout/editor-compon
 import { FileManager } from "../../../editor/components/layout/file-manager/file-manager.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbImage, getImageMode } from "./image.js";
-import {
-  getImageSize,
-  IMAGE_SIZE_OPTIONS,
-} from "../../utils/image-size.js";
+import { getImageSize, IMAGE_SIZE_OPTIONS } from "../../utils/image-size.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 // Apply editor block styles (hover ring, is-settings-open indicator, etc.)
@@ -87,14 +84,16 @@ const imageEditorPlugin = {
                       imageEditorPlugin._updateImageUrl(element, path || "");
                     },
                   })}
-              >Browse Files…</button>
+              >
+                Browse Files…
+              </button>
 
               <editor-select
                 label="Image size"
                 .value=${getImageSize(editor.imageSourceSize)}
                 .options=${IMAGE_SIZE_OPTIONS}
                 @change=${(event) =>
-                  editor.updateSettingsState({
+                  editor.updateGlobalSettingsState({
                     imageSourceSize: getImageSize(event.detail.value),
                   })}
               ></editor-select>
@@ -112,19 +111,12 @@ const imageEditorPlugin = {
                   if (normalizedMode === "full-width") {
                     nextState.gridRowSpan = 1;
                   }
-                  editor.updateSettingsState(nextState);
+                  editor.updateResponsiveSettingsState(nextState);
                 }}
               ></editor-radio-button>
             </settings-section>
 
-            <settings-section
-              title="Interaction"
-              ?overridden=${editor.hasAnyOverriddenKeys(
-                "imageClickAction",
-                "imageLinkUrl",
-                "imageLinkTarget",
-              )}
-            >
+            <settings-section title="Interaction">
               <editor-radio-button
                 .options=${[
                   { label: "Do nothing", value: "none" },
@@ -133,38 +125,40 @@ const imageEditorPlugin = {
                 ]}
                 .value=${editor.imageClickAction}
                 @change=${(event) => {
-                  editor.updateSettingsState({
+                  editor.updateGlobalSettingsState({
                     imageClickAction: event.detail.value,
                   });
                 }}
               ></editor-radio-button>
 
-              ${editor.imageClickAction === "link"
-                ? html`
-                    <editor-text-input
-                      label="Link URL"
-                      placeholder="https://example.com"
-                      .value=${editor.imageLinkUrl}
-                      @change=${(event) => {
-                        editor.updateSettingsState({
-                          imageLinkUrl: event.detail.value,
-                        });
-                      }}
-                    ></editor-text-input>
-                    <editor-radio-button
-                      .options=${[
-                        { label: "Open in current page", value: "current" },
-                        { label: "Open in new tab", value: "new" },
-                      ]}
-                      .value=${editor.imageLinkTarget}
-                      @change=${(event) => {
-                        editor.updateSettingsState({
-                          imageLinkTarget: event.detail.value,
-                        });
-                      }}
-                    ></editor-radio-button>
-                  `
-                : null}
+              ${
+                editor.imageClickAction === "link"
+                  ? html`
+                      <editor-text-input
+                        label="Link URL"
+                        placeholder="https://example.com"
+                        .value=${editor.imageLinkUrl}
+                        @change=${(event) => {
+                          editor.updateGlobalSettingsState({
+                            imageLinkUrl: event.detail.value,
+                          });
+                        }}
+                      ></editor-text-input>
+                      <editor-radio-button
+                        .options=${[
+                          { label: "Open in current page", value: "current" },
+                          { label: "Open in new tab", value: "new" },
+                        ]}
+                        .value=${editor.imageLinkTarget}
+                        @change=${(event) => {
+                          editor.updateGlobalSettingsState({
+                            imageLinkTarget: event.detail.value,
+                          });
+                        }}
+                      ></editor-radio-button>
+                    `
+                  : null
+              }
             </settings-section>
           </div>
         `;

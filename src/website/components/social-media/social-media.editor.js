@@ -272,9 +272,11 @@ installEditorPlugin(OwbSocialMedia, {
                           }}
                         ></editor-text-input>
                       </div>
-                      ${element._activeIconPickerItemId === item.id
-                        ? renderIconPicker(item, element)
-                        : null}
+                      ${
+                        element._activeIconPickerItemId === item.id
+                          ? renderIconPicker(item, element)
+                          : null
+                      }
                       <editor-text-input
                         label="Link"
                         placeholder="https://..."
@@ -331,7 +333,7 @@ installEditorPlugin(OwbSocialMedia, {
                   ]}
                   .value=${editor.socialDisplayMode}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateResponsiveSettingsState({
                       socialDisplayMode: event.detail.value,
                     })}
                 ></editor-radio-button>
@@ -359,7 +361,7 @@ installEditorPlugin(OwbSocialMedia, {
                     { label: "Muted", value: "muted" },
                   ]}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateResponsiveSettingsState({
                       socialButtonTheme: event.detail.value,
                     })}
                 ></editor-select>
@@ -371,7 +373,7 @@ installEditorPlugin(OwbSocialMedia, {
                   ]}
                   .value=${editor.socialButtonVariant}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateResponsiveSettingsState({
                       socialButtonVariant: event.detail.value,
                     })}
                 ></editor-radio-button>
@@ -385,7 +387,7 @@ installEditorPlugin(OwbSocialMedia, {
                   ]}
                   .value=${editor.socialButtonSize}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateResponsiveSettingsState({
                       socialButtonSize: event.detail.value,
                     })}
                 ></editor-radio-button>
@@ -397,7 +399,7 @@ installEditorPlugin(OwbSocialMedia, {
                   ]}
                   .value=${editor.socialButtonAlignment}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateResponsiveSettingsState({
                       socialButtonAlignment: event.detail.value,
                     })}
                 ></editor-radio-button>
@@ -408,7 +410,7 @@ installEditorPlugin(OwbSocialMedia, {
                   ]}
                   .value=${editor.socialIconColorMode}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateResponsiveSettingsState({
                       socialIconColorMode: event.detail.value,
                     })}
                 ></editor-radio-button>
@@ -420,24 +422,26 @@ installEditorPlugin(OwbSocialMedia, {
                   ]}
                   .value=${editor.socialButtonShape}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateResponsiveSettingsState({
                       socialButtonShape: event.detail.value,
                     })}
                 ></editor-radio-button>
-                ${editor.socialButtonShape === "custom"
-                  ? html`
-                      <editor-text-input
-                        label="Radius"
-                        placeholder="12px"
-                        .value=${editor.socialButtonRadiusCustom}
-                        @change=${(event) =>
-                          editor.updateSettingsState({
-                            socialButtonRadiusCustom:
-                              getTextInputEventValue(event),
-                          })}
-                      ></editor-text-input>
-                    `
-                  : null}
+                ${
+                  editor.socialButtonShape === "custom"
+                    ? html`
+                        <editor-text-input
+                          label="Radius"
+                          placeholder="12px"
+                          .value=${editor.socialButtonRadiusCustom}
+                          @change=${(event) =>
+                            editor.updateResponsiveSettingsState({
+                              socialButtonRadiusCustom:
+                                getTextInputEventValue(event),
+                            })}
+                        ></editor-text-input>
+                      `
+                    : null
+                }
               </settings-section>
             </settings-section>
           `;

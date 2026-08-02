@@ -7,13 +7,14 @@ import {
   initSettingsHostState,
   getActiveSettingsOwner,
 } from "../../../editor/components/layout/editor-component/settings-controller.js";
+import { getEffectiveSettings } from "../../utils/responsive.js";
+import {
+  GRID_PLACEMENT_KEYS,
+  buildResponsiveLayoutItemCss,
+  getLayoutItemDeclarations,
+} from "../../utils/layout-item.js";
 
-const GRID_SETTINGS_KEYS = {
-  columnStart: "gridColumnStart",
-  rowStart: "gridRowStart",
-  columnSpan: "gridColumnSpan",
-  rowSpan: "gridRowSpan",
-};
+const GRID_SETTINGS_KEYS = GRID_PLACEMENT_KEYS;
 
 const GRID_EDITOR_ROW_SIZE = 30;
 const GRID_HANDLE_HOVER_PADDING = 16;
@@ -623,11 +624,15 @@ export class LayoutEditorController {
       node && typeof node.settings === "object" && node.settings
         ? node.settings
         : {};
+    const effectiveSettings = getEffectiveSettings(
+      settings,
+      this.host.settings.activeViewportBucket,
+    );
     return {
-      columnStart: settings[GRID_SETTINGS_KEYS.columnStart],
-      rowStart: settings[GRID_SETTINGS_KEYS.rowStart],
-      columnSpan: settings[GRID_SETTINGS_KEYS.columnSpan],
-      rowSpan: settings[GRID_SETTINGS_KEYS.rowSpan],
+      columnStart: effectiveSettings[GRID_SETTINGS_KEYS.columnStart],
+      rowStart: effectiveSettings[GRID_SETTINGS_KEYS.rowStart],
+      columnSpan: effectiveSettings[GRID_SETTINGS_KEYS.columnSpan],
+      rowSpan: effectiveSettings[GRID_SETTINGS_KEYS.rowSpan],
     };
   }
 
@@ -859,13 +864,50 @@ export class LayoutEditorController {
         currentSettings && typeof currentSettings === "object"
           ? currentSettings
           : {};
-      const nextSettings = {
-        ...baseSettings,
+      const nextPlacementSettings = {
         [GRID_SETTINGS_KEYS.columnStart]: normalizedPlacement.columnStart,
         [GRID_SETTINGS_KEYS.rowStart]: normalizedPlacement.rowStart,
         [GRID_SETTINGS_KEYS.columnSpan]: normalizedPlacement.columnSpan,
         [GRID_SETTINGS_KEYS.rowSpan]: normalizedPlacement.rowSpan,
       };
+      const bucket = this.host.settings.activeViewportBucket;
+      if (bucket) {
+        const currentOverrides = baseSettings.responsiveOverrides || {};
+        const settingsWithoutCurrentBucket = {
+          ...baseSettings,
+          responsiveOverrides: Object.fromEntries(
+            Object.entries(currentOverrides).filter(
+              ([overrideBucket]) => overrideBucket !== bucket,
+            ),
+          ),
+        };
+        const inheritedSettings = getEffectiveSettings(
+          settingsWithoutCurrentBucket,
+          bucket,
+        );
+        const nextBucket = { ...(currentOverrides[bucket] || {}) };
+        for (const [key, value] of Object.entries(nextPlacementSettings)) {
+          if (value === inheritedSettings[key]) {
+            delete nextBucket[key];
+          } else {
+            nextBucket[key] = value;
+          }
+        }
+        const nextOverrides = { ...currentOverrides };
+        if (Object.keys(nextBucket).length > 0) {
+          nextOverrides[bucket] = nextBucket;
+        } else {
+          delete nextOverrides[bucket];
+        }
+        const nextSettings = { ...baseSettings };
+        if (Object.keys(nextOverrides).length > 0) {
+          nextSettings.responsiveOverrides = nextOverrides;
+        } else {
+          delete nextSettings.responsiveOverrides;
+        }
+        return nextSettings;
+      }
+      const nextSettings = { ...baseSettings, ...nextPlacementSettings };
       if (
         baseSettings[GRID_SETTINGS_KEYS.columnStart] ===
           nextSettings[GRID_SETTINGS_KEYS.columnStart] &&
@@ -909,6 +951,12 @@ export class LayoutEditorController {
   renderChildNode(node, renderOptions = {}) {
     if (typeof this.host.renderNodeFn !== "function") return html``;
     const childId = typeof node?.id === "string" ? node.id : "";
+    const itemStyle = getLayoutItemDeclarations(node?.settings || {}).join(
+      "; ",
+    );
+    const hostStyle = [itemStyle, renderOptions.hostStyle]
+      .filter(Boolean)
+      .join("; ");
     return this.host.renderNodeFn(
       node,
       this.host.pageConfig,
@@ -916,6 +964,7 @@ export class LayoutEditorController {
       this.host.renderNodeFn,
       {
         ...renderOptions,
+        hostStyle,
         hostDataGridChildId: renderOptions.hostDataGridChildId ?? childId,
       },
     );
@@ -1352,18 +1401,20 @@ export class LayoutEditorController {
               });
             }}
           ></editor-radio-button>
-          ${host.settingWidth === "custom"
-            ? html`<editor-text-input
-                label="Custom Width"
-                placeholder="1024px"
-                .value=${host.settingWidthCustomValue}
-                @change=${(e) => {
-                  host.settings.updateSettingsState({
-                    settingWidthCustomValue: e.detail.value,
-                  });
-                }}
-              ></editor-text-input>`
-            : null}
+          ${
+            host.settingWidth === "custom"
+              ? html`<editor-text-input
+                  label="Custom Width"
+                  placeholder="1024px"
+                  .value=${host.settingWidthCustomValue}
+                  @change=${(e) => {
+                    host.settings.updateSettingsState({
+                      settingWidthCustomValue: e.detail.value,
+                    });
+                  }}
+                ></editor-text-input>`
+              : null
+          }
         </settings-section>
         <settings-section
           title="Sizing"
@@ -1390,27 +1441,29 @@ export class LayoutEditorController {
               });
             }}
           ></editor-radio-button>
-          ${host.settingSizing === "custom"
-            ? html`
-                <editor-padding-input
-                  .value=${{
-                    top: host.settingPaddingTop,
-                    right: host.settingPaddingRight,
-                    bottom: host.settingPaddingBottom,
-                    left: host.settingPaddingLeft,
-                  }}
-                  @change=${(e) => {
-                    const paddingValues = e.detail.value || {};
-                    host.settings.updateSettingsState({
-                      settingPaddingTop: paddingValues.top || "",
-                      settingPaddingRight: paddingValues.right || "",
-                      settingPaddingBottom: paddingValues.bottom || "",
-                      settingPaddingLeft: paddingValues.left || "",
-                    });
-                  }}
-                ></editor-padding-input>
-              `
-            : null}
+          ${
+            host.settingSizing === "custom"
+              ? html`
+                  <editor-padding-input
+                    .value=${{
+                      top: host.settingPaddingTop,
+                      right: host.settingPaddingRight,
+                      bottom: host.settingPaddingBottom,
+                      left: host.settingPaddingLeft,
+                    }}
+                    @change=${(e) => {
+                      const paddingValues = e.detail.value || {};
+                      host.settings.updateSettingsState({
+                        settingPaddingTop: paddingValues.top || "",
+                        settingPaddingRight: paddingValues.right || "",
+                        settingPaddingBottom: paddingValues.bottom || "",
+                        settingPaddingLeft: paddingValues.left || "",
+                      });
+                    }}
+                  ></editor-padding-input>
+                `
+              : null
+          }
         </settings-section>
         <settings-section
           title="Alignment"
@@ -1487,56 +1540,67 @@ export class LayoutEditorController {
               host.showGridPreviewOverlay = Boolean(e.detail?.visible);
             }}
           ></editor-alignment-options>
-          ${host.settingAlignmentMode !== "visual"
-            ? html`
-                <editor-text-input
-                  label="Fixed min height"
-                  placeholder="320px"
-                  .value=${host.settingFixedHeight}
-                  @change=${(event) => {
-                    host.settings.updateSettingsState({
-                      settingFixedHeight: event.detail.value,
-                    });
-                  }}
-                ></editor-text-input>
-              `
-            : null}
+          ${
+            host.settingAlignmentMode !== "visual"
+              ? html`
+                  <editor-text-input
+                    label="Fixed min height"
+                    placeholder="320px"
+                    .value=${host.settingFixedHeight}
+                    @change=${(event) => {
+                      host.settings.updateSettingsState({
+                        settingFixedHeight: event.detail.value,
+                      });
+                    }}
+                  ></editor-text-input>
+                `
+              : null
+          }
         </settings-section>
         ${this.renderGeneralSettingsExtras()}
-        ${this.supportsReplaceWithSharedComponent()
-          ? html`
-              <settings-section title="Replace section">
-                <editor-select
-                  label="Shared component"
-                  .options=${host.sharedComponentOptions.length > 0
-                    ? host.sharedComponentOptions
-                    : [{ label: "No shared components available", value: "" }]}
-                  .value=${host.replaceWithSharedComponentId}
-                  .disabled=${host.sharedComponentOptions.length === 0}
-                  @change=${(event) => {
-                    host.replaceWithSharedComponentId = event.detail.value;
-                  }}
-                ></editor-select>
-                <editor-text-input
-                  label="Or enter ID"
-                  placeholder="navbar"
-                  .value=${host.replaceWithSharedComponentId}
-                  @change=${(event) => {
-                    host.replaceWithSharedComponentId = event.detail.value;
-                  }}
-                ></editor-text-input>
-                <editor-btn
-                  style="light"
-                  ?disabled=${!String(
-                    host.replaceWithSharedComponentId || "",
-                  ).trim()}
-                  @click=${() =>
-                    this.replaceCurrentSectionWithSharedComponent()}
-                  >Replace with shared component</editor-btn
-                >
-              </settings-section>
-            `
-          : null}
+        ${
+          this.supportsReplaceWithSharedComponent()
+            ? html`
+                <settings-section title="Replace section">
+                  <editor-select
+                    label="Shared component"
+                    .options=${
+                      host.sharedComponentOptions.length > 0
+                        ? host.sharedComponentOptions
+                        : [
+                            {
+                              label: "No shared components available",
+                              value: "",
+                            },
+                          ]
+                    }
+                    .value=${host.replaceWithSharedComponentId}
+                    .disabled=${host.sharedComponentOptions.length === 0}
+                    @change=${(event) => {
+                      host.replaceWithSharedComponentId = event.detail.value;
+                    }}
+                  ></editor-select>
+                  <editor-text-input
+                    label="Or enter ID"
+                    placeholder="navbar"
+                    .value=${host.replaceWithSharedComponentId}
+                    @change=${(event) => {
+                      host.replaceWithSharedComponentId = event.detail.value;
+                    }}
+                  ></editor-text-input>
+                  <editor-btn
+                    style="light"
+                    ?disabled=${!String(
+                      host.replaceWithSharedComponentId || "",
+                    ).trim()}
+                    @click=${() =>
+                      this.replaceCurrentSectionWithSharedComponent()}
+                    >Replace with shared component</editor-btn
+                  >
+                </settings-section>
+              `
+            : null
+        }
       </div>`;
     }
 
@@ -1646,6 +1710,7 @@ export class LayoutEditorController {
         `justify-content: ${host.settingFlexJustifyContent};`,
       );
       layoutStyleParts.push(`align-items: ${host.settingFlexAlignItems};`);
+      layoutStyleParts.push(`align-content: ${host.settingFlexAlignContent};`);
       if (host.settingGap) layoutStyleParts.push(`gap: ${host.settingGap};`);
     }
 
@@ -1660,6 +1725,7 @@ export class LayoutEditorController {
       layoutStyleParts.push(
         `justify-content: ${host.settingGridJustifyContent};`,
       );
+      layoutStyleParts.push(`justify-items: ${host.settingGridJustifyItems};`);
       layoutStyleParts.push(`align-items: ${host.settingGridAlignItems};`);
       layoutStyleParts.push(`align-content: ${host.settingGridAlignContent};`);
       if (host.settingGap) layoutStyleParts.push(`gap: ${host.settingGap};`);
@@ -1703,8 +1769,29 @@ export class LayoutEditorController {
     const sectionPaddingStyle = `--section-padding-top: ${sectionPadding.top}; --section-padding-right: ${sectionPadding.right}; --section-padding-bottom: ${sectionPadding.bottom}; --section-padding-left: ${sectionPadding.left};`;
     const sectionClassName =
       `${host.isSettingsEditorOpen ? "is-settings-open" : ""} ${isFocusedHandleStateLocked ? "is-focus-locked" : ""}`.trim();
+    const responsiveChildCss = childNodes
+      .map((child) => {
+        const childId = typeof child?.id === "string" ? child.id : "";
+        if (!childId) return "";
+        const escapedChildId = globalThis.CSS?.escape
+          ? globalThis.CSS.escape(childId)
+          : childId.replace(/["\\]/g, "\\$&");
+        return buildResponsiveLayoutItemCss(
+          child.settings || {},
+          `[data-grid-child-id="${escapedChildId}"]`,
+        );
+      })
+      .filter(Boolean)
+      .join("\n");
 
     return html`<div>
+      ${
+        responsiveChildCss
+          ? html`<style>
+              ${responsiveChildCss}
+            </style>`
+          : null
+      }
       <section
         class="${sectionClassName}"
         style="${backgroundColorStyle}${textColorStyle}${childBackgroundVarStyle}${childTextVarStyle}"
@@ -1712,183 +1799,197 @@ export class LayoutEditorController {
         @pointermove=${(event) => this.onGridContainerPointerMove(event)}
         @pointerleave=${() => this.onSectionPointerLeave()}
       >
-        ${this.shouldShowAddSectionButtons()
-          ? html`
-              <editor-btn
-                style="primary"
-                class="add-section-button"
-                @click=${() => this.addSection("before")}
-              >
-                Add section
-              </editor-btn>
-            `
-          : null}
-        ${host.node?.type === "shared"
-          ? html`<span class="shared-badge">Shared Component</span>`
-          : ""}
+        ${
+          this.shouldShowAddSectionButtons()
+            ? html`
+                <editor-btn
+                  style="primary"
+                  class="add-section-button"
+                  @click=${() => this.addSection("before")}
+                >
+                  Add section
+                </editor-btn>
+              `
+            : null
+        }
+        ${
+          host.node?.type === "shared"
+            ? html`<span class="shared-badge">Shared Component</span>`
+            : ""
+        }
         <div
-          class="container is-${host.settingWidth}-width ${isGridChildEditingEnabled
-            ? `is-grid-child-editing is-${host.settingAlignmentMode}-mode`
-            : ""}"
+          class="container is-${host.settingWidth}-width ${
+            isGridChildEditingEnabled
+              ? `is-grid-child-editing is-${host.settingAlignmentMode}-mode`
+              : ""
+          }"
           style="${widthStyle}${layoutStyle}${sectionPaddingStyle}${gridEditingStyle}${fixedHeightStyle}"
         >
-          ${childNodes.length === 0
-            ? html`
-                <div class="section-empty-state">
-                  <p>This section is empty.</p>
-                  <div class="section-empty-state-actions">
-                    <editor-btn
-                      style="primary"
-                      @click=${() => {
-                        host.blockPickerType = "text";
-                        host.isBlockPickerOpen = true;
-                      }}
-                      >Add first block</editor-btn
-                    >
-                    <editor-btn
-                      style="light"
-                      @click=${() => this.addChildBlock("shared")}
-                      >Use shared component</editor-btn
-                    >
-                  </div>
-                </div>
-              `
-            : isGridChildEditingEnabled
+          ${
+            childNodes.length === 0
               ? html`
-                  ${childNodes.map((child, index) => {
-                    const childId =
-                      typeof child?.id === "string" ? child.id : "";
-                    const placement = this.getGridPlacementForChild(
-                      child,
-                      index,
-                      previewColumns,
-                      previewRows,
-                    );
-                    const isInteracting =
-                      this.activeGridPointerState?.childId === childId;
-                    return host.renderNodeFn(
-                      child,
-                      host.pageConfig,
-                      host.onPageConfigUpdated,
-                      host.renderNodeFn,
-                      {
+                  <div class="section-empty-state">
+                    <p>This section is empty.</p>
+                    <div class="section-empty-state-actions">
+                      <editor-btn
+                        style="primary"
+                        @click=${() => {
+                          host.blockPickerType = "text";
+                          host.isBlockPickerOpen = true;
+                        }}
+                        >Add first block</editor-btn
+                      >
+                      <editor-btn
+                        style="light"
+                        @click=${() => this.addChildBlock("shared")}
+                        >Use shared component</editor-btn
+                      >
+                    </div>
+                  </div>
+                `
+              : isGridChildEditingEnabled
+                ? html`
+                    ${childNodes.map((child, index) => {
+                      const childId =
+                        typeof child?.id === "string" ? child.id : "";
+                      const placement = this.getGridPlacementForChild(
+                        child,
+                        index,
+                        previewColumns,
+                        previewRows,
+                      );
+                      const isInteracting =
+                        this.activeGridPointerState?.childId === childId;
+                      return this.renderChildNode(child, {
                         hostClass: `section-grid-item ${isInteracting ? "is-interacting" : ""}`,
                         hostStyle: `grid-column: ${placement.columnStart} / span ${placement.columnSpan}; grid-row: ${placement.rowStart} / span ${placement.rowSpan};`,
                         hostDataGridChildId: childId,
-                      },
-                    );
-                  })}
+                      });
+                    })}
+                  `
+                : html`${childNodes.map((child) => this.renderChildNode(child))}`
+          }
+          ${
+            shouldRenderGridOverlay
+              ? html`
+                  <div
+                    class="grid-preview-overlay"
+                    style=${`--grid-preview-columns: ${previewColumns}; --grid-preview-rows: ${previewRows}; --grid-preview-gap: ${host.settingGap || "0px"};`}
+                  >
+                    ${Array.from(
+                      { length: previewCellCount },
+                      () => html`<span class="grid-preview-cell"></span>`,
+                    )}
+                  </div>
                 `
-              : html`${childNodes.map((child) => this.renderChildNode(child))}`}
-          ${shouldRenderGridOverlay
+              : null
+          }
+        </div>
+        ${
+          shouldRenderGlobalGridHandles
             ? html`
                 <div
-                  class="grid-preview-overlay"
-                  style=${`--grid-preview-columns: ${previewColumns}; --grid-preview-rows: ${previewRows}; --grid-preview-gap: ${host.settingGap || "0px"};`}
+                  class="global-grid-handles"
+                  style=${`--grid-handle-left: ${this.globalGridHandlePosition.left}px; --grid-handle-top: ${this.globalGridHandlePosition.top}px; --grid-handle-right: ${this.globalGridHandlePosition.right}px; --grid-handle-bottom: ${this.globalGridHandlePosition.bottom}px;`}
                 >
-                  ${Array.from(
-                    { length: previewCellCount },
-                    () => html`<span class="grid-preview-cell"></span>`,
-                  )}
+                  <div
+                    class="grid-item-highlight-outline"
+                    aria-hidden="true"
+                  ></div>
+                  <button
+                    class="grid-item-move-handle"
+                    type="button"
+                    title="Move on grid"
+                    ?disabled=${!trackedGridChildId}
+                    @pointerdown=${(event) =>
+                      this.startGridPointerInteraction(
+                        event,
+                        trackedGridChildId,
+                        "move",
+                      )}
+                  >
+                    ${createElement(Move)}
+                  </button>
+                  ${
+                    showVerticalResizeHandles
+                      ? html`
+                          <button
+                            class="grid-item-resize-bar is-top"
+                            type="button"
+                            title="Resize from top"
+                            ?disabled=${!trackedGridChildId}
+                            @pointerdown=${(event) =>
+                              this.startGridPointerInteraction(
+                                event,
+                                trackedGridChildId,
+                                "resize",
+                                "top",
+                              )}
+                          ></button>
+                        `
+                      : null
+                  }
+                  ${
+                    showHorizontalResizeHandles
+                      ? html`
+                          <button
+                            class="grid-item-resize-bar is-right"
+                            type="button"
+                            title="Resize from right"
+                            ?disabled=${!trackedGridChildId}
+                            @pointerdown=${(event) =>
+                              this.startGridPointerInteraction(
+                                event,
+                                trackedGridChildId,
+                                "resize",
+                                "right",
+                              )}
+                          ></button>
+                        `
+                      : null
+                  }
+                  ${
+                    showVerticalResizeHandles
+                      ? html`
+                          <button
+                            class="grid-item-resize-bar is-bottom"
+                            type="button"
+                            title="Resize from bottom"
+                            ?disabled=${!trackedGridChildId}
+                            @pointerdown=${(event) =>
+                              this.startGridPointerInteraction(
+                                event,
+                                trackedGridChildId,
+                                "resize",
+                                "bottom",
+                              )}
+                          ></button>
+                        `
+                      : null
+                  }
+                  ${
+                    showHorizontalResizeHandles
+                      ? html`
+                          <button
+                            class="grid-item-resize-bar is-left"
+                            type="button"
+                            title="Resize from left"
+                            ?disabled=${!trackedGridChildId}
+                            @pointerdown=${(event) =>
+                              this.startGridPointerInteraction(
+                                event,
+                                trackedGridChildId,
+                                "resize",
+                                "left",
+                              )}
+                          ></button>
+                        `
+                      : null
+                  }
                 </div>
               `
-            : null}
-        </div>
-        ${shouldRenderGlobalGridHandles
-          ? html`
-              <div
-                class="global-grid-handles"
-                style=${`--grid-handle-left: ${this.globalGridHandlePosition.left}px; --grid-handle-top: ${this.globalGridHandlePosition.top}px; --grid-handle-right: ${this.globalGridHandlePosition.right}px; --grid-handle-bottom: ${this.globalGridHandlePosition.bottom}px;`}
-              >
-                <div
-                  class="grid-item-highlight-outline"
-                  aria-hidden="true"
-                ></div>
-                <button
-                  class="grid-item-move-handle"
-                  type="button"
-                  title="Move on grid"
-                  ?disabled=${!trackedGridChildId}
-                  @pointerdown=${(event) =>
-                    this.startGridPointerInteraction(
-                      event,
-                      trackedGridChildId,
-                      "move",
-                    )}
-                >
-                  ${createElement(Move)}
-                </button>
-                ${showVerticalResizeHandles
-                  ? html`
-                      <button
-                        class="grid-item-resize-bar is-top"
-                        type="button"
-                        title="Resize from top"
-                        ?disabled=${!trackedGridChildId}
-                        @pointerdown=${(event) =>
-                          this.startGridPointerInteraction(
-                            event,
-                            trackedGridChildId,
-                            "resize",
-                            "top",
-                          )}
-                      ></button>
-                    `
-                  : null}
-                ${showHorizontalResizeHandles
-                  ? html`
-                      <button
-                        class="grid-item-resize-bar is-right"
-                        type="button"
-                        title="Resize from right"
-                        ?disabled=${!trackedGridChildId}
-                        @pointerdown=${(event) =>
-                          this.startGridPointerInteraction(
-                            event,
-                            trackedGridChildId,
-                            "resize",
-                            "right",
-                          )}
-                      ></button>
-                    `
-                  : null}
-                ${showVerticalResizeHandles
-                  ? html`
-                      <button
-                        class="grid-item-resize-bar is-bottom"
-                        type="button"
-                        title="Resize from bottom"
-                        ?disabled=${!trackedGridChildId}
-                        @pointerdown=${(event) =>
-                          this.startGridPointerInteraction(
-                            event,
-                            trackedGridChildId,
-                            "resize",
-                            "bottom",
-                          )}
-                      ></button>
-                    `
-                  : null}
-                ${showHorizontalResizeHandles
-                  ? html`
-                      <button
-                        class="grid-item-resize-bar is-left"
-                        type="button"
-                        title="Resize from left"
-                        ?disabled=${!trackedGridChildId}
-                        @pointerdown=${(event) =>
-                          this.startGridPointerInteraction(
-                            event,
-                            trackedGridChildId,
-                            "resize",
-                            "left",
-                          )}
-                      ></button>
-                    `
-                  : null}
-              </div>
-            `
-          : null}
+            : null
+        }
         <div class="section-controls">
           <editor-btn
             style="light"
@@ -1898,78 +1999,86 @@ export class LayoutEditorController {
             }}
             >${createElement(Plus)} Add element</editor-btn
           >
-          ${this.shouldShowSectionReorderButtons()
-            ? html`
-                <editor-btn
-                  style="light"
-                  title="Move section up"
-                  @click=${() => this.moveSection("up")}
-                  >${createElement(ArrowUp)}</editor-btn
-                >
-                <editor-btn
-                  style="light"
-                  title="Move section down"
-                  @click=${() => this.moveSection("down")}
-                  >${createElement(ArrowDown)}</editor-btn
-                >
-              `
-            : null}
-          ${this.shouldShowDeleteButton()
-            ? html`
-                <editor-btn
-                  style="light text-danger"
-                  title="Delete section"
-                  @click=${() => this.deleteSection()}
-                  >${createElement(Trash)}</editor-btn
-                >
-              `
-            : null}
-        </div>
-        ${host.isBlockPickerOpen
-          ? html`
-              <div class="section-block-picker">
-                <editor-select
-                  label="Block type"
-                  .options=${this.getInsertBlockOptions()}
-                  .value=${host.blockPickerType}
-                  @change=${(event) => {
-                    host.blockPickerType = event.detail.value;
-                  }}
-                ></editor-select>
-                <div class="section-block-picker-actions">
+          ${
+            this.shouldShowSectionReorderButtons()
+              ? html`
                   <editor-btn
-                    style="primary"
-                    @click=${() => this.addChildBlock(host.blockPickerType)}
-                    >Insert block</editor-btn
+                    style="light"
+                    title="Move section up"
+                    @click=${() => this.moveSection("up")}
+                    >${createElement(ArrowUp)}</editor-btn
                   >
                   <editor-btn
                     style="light"
-                    @click=${() => {
-                      host.isBlockPickerOpen = false;
-                    }}
-                    >Cancel</editor-btn
+                    title="Move section down"
+                    @click=${() => this.moveSection("down")}
+                    >${createElement(ArrowDown)}</editor-btn
                   >
+                `
+              : null
+          }
+          ${
+            this.shouldShowDeleteButton()
+              ? html`
+                  <editor-btn
+                    style="light text-danger"
+                    title="Delete section"
+                    @click=${() => this.deleteSection()}
+                    >${createElement(Trash)}</editor-btn
+                  >
+                `
+              : null
+          }
+        </div>
+        ${
+          host.isBlockPickerOpen
+            ? html`
+                <div class="section-block-picker">
+                  <editor-select
+                    label="Block type"
+                    .options=${this.getInsertBlockOptions()}
+                    .value=${host.blockPickerType}
+                    @change=${(event) => {
+                      host.blockPickerType = event.detail.value;
+                    }}
+                  ></editor-select>
+                  <div class="section-block-picker-actions">
+                    <editor-btn
+                      style="primary"
+                      @click=${() => this.addChildBlock(host.blockPickerType)}
+                      >Insert block</editor-btn
+                    >
+                    <editor-btn
+                      style="light"
+                      @click=${() => {
+                        host.isBlockPickerOpen = false;
+                      }}
+                      >Cancel</editor-btn
+                    >
+                  </div>
                 </div>
-              </div>
-            `
-          : null}
+              `
+            : null
+        }
         <button
           class="section-resize-handle"
           type="button"
           title="Resize section"
           @pointerdown=${(event) => this.startSectionResize(event)}
         ></button>
-        ${this.shouldShowAddSectionButtons()
-          ? html`
-              <editor-btn
-                style="primary"
-                class="add-section-button bottom"
-                @click=${() => this.addSection("after")}
-              >
-                Add section
-              </editor-btn>
-            `
-          : null}
+        ${
+          this.shouldShowAddSectionButtons()
+            ? html`
+                <editor-btn
+                  style="primary"
+                  class="add-section-button bottom"
+                  @click=${() => this.addSection("after")}
+                >
+                  Add section
+                </editor-btn>
+              `
+            : null
+        }
       </section>
     </div>`;
   }

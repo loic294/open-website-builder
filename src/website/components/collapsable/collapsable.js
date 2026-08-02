@@ -1,6 +1,8 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { buildEditorCustomCss } from "../../utils/custom-css.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
 
 export const defaultCollapsableConfig = {
   type: "collapsable",
@@ -25,12 +27,70 @@ function toBool(value) {
   return String(value || "").toLowerCase() === "true";
 }
 
-function renderIcon(iconStyle, isOpen) {
-  if (iconStyle === "none") return "";
-  if (iconStyle === "plus-minus") {
-    return isOpen ? MINUS_SVG : PLUS_SVG;
-  }
-  return CHEVRON_DOWN_SVG;
+function renderIconSlot(position) {
+  return html`<span class="collapsable-icon icon-slot-${position}">
+    <span class="icon-variant icon-variant-chevron"
+      >${unsafeHTML(CHEVRON_DOWN_SVG)}</span
+    >
+    <span class="icon-variant icon-variant-plus">${unsafeHTML(PLUS_SVG)}</span>
+    <span class="icon-variant icon-variant-minus"
+      >${unsafeHTML(MINUS_SVG)}</span
+    >
+  </span>`;
+}
+
+export function buildResponsiveCollapsableCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => {
+    const iconStyle = String(effectiveSettings.settingIconStyle || "chevron");
+    const iconPosition =
+      effectiveSettings.settingIconPosition === "left" ? "left" : "right";
+    return [
+      {
+        selector: ".collapsable-title",
+        declarations: [
+          effectiveSettings.settingTitleColor
+            ? `color: ${effectiveSettings.settingTitleColor}`
+            : "",
+          effectiveSettings.settingTitleBackgroundColor
+            ? `background-color: ${effectiveSettings.settingTitleBackgroundColor}`
+            : "",
+          effectiveSettings.settingTitleBorderColor
+            ? `border-color: ${effectiveSettings.settingTitleBorderColor}`
+            : "",
+        ],
+      },
+      {
+        selector: ".icon-slot-left",
+        declarations: [
+          `display: ${iconPosition === "left" ? "inline-flex" : "none"}`,
+        ],
+      },
+      {
+        selector: ".icon-slot-right",
+        declarations: [
+          `display: ${iconPosition === "right" ? "inline-flex" : "none"}`,
+        ],
+      },
+      {
+        selector: ".icon-variant-chevron",
+        declarations: [
+          `display: ${iconStyle === "chevron" ? "block" : "none"}`,
+        ],
+      },
+      {
+        selector: ".collapsable-block.is-closed .icon-variant-plus",
+        declarations: [
+          `display: ${iconStyle === "plus-minus" ? "block" : "none"}`,
+        ],
+      },
+      {
+        selector: ".collapsable-block.is-open .icon-variant-minus",
+        declarations: [
+          `display: ${iconStyle === "plus-minus" ? "block" : "none"}`,
+        ],
+      },
+    ];
+  });
 }
 
 export class OwbCollapsable extends LitElement {
@@ -169,6 +229,7 @@ export class OwbCollapsable extends LitElement {
     const settings = this.settings || {};
     const spacingCss = getSpacingStyleBlock(settings);
     const customCss = String(settings.customCss || "").trim();
+    const renderedCustomCss = buildEditorCustomCss(customCss, isEditorMode);
     const isOpen = isEditorMode
       ? true
       : this._userToggled
@@ -176,8 +237,8 @@ export class OwbCollapsable extends LitElement {
         : Boolean(this.settingDefaultOpen);
     const iconStyle = this.settingIconStyle || "chevron";
     const iconPosition = this.settingIconPosition === "left" ? "left" : "right";
-    const iconSvg = renderIcon(iconStyle, isOpen);
     const titleStyle = this._titleInlineStyle();
+    const responsiveCss = buildResponsiveCollapsableCss(settings);
     const blockClasses = [
       "collapsable-block",
       isOpen ? "is-open" : "is-closed",
@@ -199,22 +260,25 @@ export class OwbCollapsable extends LitElement {
           if (!isEditorMode) event.preventDefault();
         }}
       >
-        ${iconPosition === "left" && iconSvg
-          ? html`<span class="collapsable-icon">${unsafeHTML(iconSvg)}</span>`
-          : null}
+        ${renderIconSlot("left")}
         <span class="collapsable-title-text">${this.settingTitle}</span>
-        ${iconPosition === "right" && iconSvg
-          ? html`<span class="collapsable-icon">${unsafeHTML(iconSvg)}</span>`
-          : null}
+        ${renderIconSlot("right")}
       </button>
     `;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/collapsable.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
-      ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
+      ${
+        renderedCustomCss
+          ? unsafeHTML(`<style>${renderedCustomCss}</style>`)
+          : null
+      }
       <div
         class=${blockClasses}
         data-editor-block=${isEditorMode ? "" : nothing}

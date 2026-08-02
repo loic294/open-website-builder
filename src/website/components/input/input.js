@@ -1,4 +1,6 @@
 import { LitElement, html, nothing } from "lit";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
 
 export const defaultInputConfig = {
   type: "input",
@@ -26,6 +28,20 @@ function toBool(value) {
   return String(value || "").toLowerCase() === "true";
 }
 
+function getTextareaMinHeight(rows) {
+  const rowCount = Math.max(1, Number.parseInt(rows, 10) || 4);
+  return `calc(${rowCount} * 1.4em + 22px)`;
+}
+
+export function buildResponsiveInputCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => ({
+    selector: ".form-input-textarea",
+    declarations: {
+      "min-height": getTextareaMinHeight(effectiveSettings.settingRows),
+    },
+  }));
+}
+
 export class OwbInput extends LitElement {
   static editorPlugin = null;
 
@@ -44,6 +60,7 @@ export class OwbInput extends LitElement {
     settingMinLength: { type: String },
     settingMaxLength: { type: String },
     settingPattern: { type: String },
+    settings: { type: Object },
     isSettingsOpen: { state: true },
   };
 
@@ -63,6 +80,7 @@ export class OwbInput extends LitElement {
     this.settingMinLength = "";
     this.settingMaxLength = "";
     this.settingPattern = "";
+    this.settings = {};
     this.isSettingsOpen = false;
     this._onActiveOwnerChanged = this._onActiveOwnerChanged.bind(this);
   }
@@ -74,6 +92,7 @@ export class OwbInput extends LitElement {
         const props = JSON.parse(dataProps);
         const s = props?.settings;
         if (s && typeof s === "object") {
+          this.settings = s;
           if (s.settingFieldType !== undefined)
             this.settingFieldType = String(s.settingFieldType);
           if (s.settingLabel !== undefined)
@@ -190,15 +209,21 @@ export class OwbInput extends LitElement {
   render() {
     const isEditorMode = OwbInput.editorPlugin !== null;
     const required = toBool(this.settingRequired);
+    const textareaCss = `.form-input-textarea { min-height: ${getTextareaMinHeight(this.settingRows)}; }`;
+    const responsiveCss = buildResponsiveInputCss(this.settings);
     return html` <link rel="stylesheet" href="/owb-styles/input.css" />
+      ${unsafeHTML(`<style>${textareaCss}</style>`)}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
       <div
-        class="form-input-block${isEditorMode && this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
+        class="form-input-block${
+          isEditorMode && this.isSettingsOpen ? " is-settings-open" : ""
+        }"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbInput.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbInput.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
         <label class="form-input-label">
           ${this.settingLabel || "Field label"}

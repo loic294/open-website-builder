@@ -1,6 +1,8 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { buildEditorCustomCss } from "../../utils/custom-css.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
 
 export const defaultButtonConfig = {
   type: "button",
@@ -57,6 +59,81 @@ export function getButtonShapeRadius(shape, customRadius) {
   }
 
   return customRadius || "12px";
+}
+
+const BUTTON_TONES = {
+  primary: [
+    "var(--website-primary-color, #116dff)",
+    "var(--website-text-light-color, #ffffff)",
+  ],
+  secondary: [
+    "var(--website-secondary-color, #f97316)",
+    "var(--website-text-light-color, #ffffff)",
+  ],
+  light: [
+    "var(--website-light-color, #f5f5f5)",
+    "var(--website-text-dark-color, #111827)",
+  ],
+  dark: [
+    "var(--website-dark-color, #111827)",
+    "var(--website-text-light-color, #ffffff)",
+  ],
+  muted: [
+    "var(--website-muted-color, #6b7280)",
+    "var(--website-text-light-color, #ffffff)",
+  ],
+};
+
+export function getButtonVisualDeclarations(settings = {}) {
+  const size = String(settings.buttonSize || "m");
+  const theme = String(settings.buttonTheme || "primary");
+  const variant = String(settings.buttonVariant || "filled");
+  const shape = String(settings.buttonShape || "rounded");
+  const radius = getButtonShapeRadius(
+    shape,
+    String(settings.buttonRadiusCustom || "12px"),
+  );
+  const [tone, toneText] = BUTTON_TONES[theme] || BUTTON_TONES.primary;
+  const declarations = getButtonSizeStyle(size, settings)
+    .split(";")
+    .map((declaration) => declaration.trim())
+    .filter(Boolean);
+
+  declarations.push(
+    `--button-radius: ${radius}`,
+    `--button-tone: ${tone}`,
+    `--button-tone-text: ${toneText}`,
+    `border-radius: ${radius}`,
+  );
+
+  if (variant === "border") {
+    declarations.push(
+      "background: transparent",
+      `border-color: ${tone}`,
+      `color: ${tone}`,
+    );
+  } else if (variant === "ghost") {
+    declarations.push(
+      `background: color-mix(in srgb, ${tone} 14%, transparent)`,
+      "border-color: transparent",
+      `color: ${tone}`,
+    );
+  } else {
+    declarations.push(
+      `background: ${tone}`,
+      "border-color: transparent",
+      `color: ${toneText}`,
+    );
+  }
+
+  return declarations;
+}
+
+export function buildResponsiveButtonCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => ({
+    selector: ".site-button",
+    declarations: getButtonVisualDeclarations(effectiveSettings),
+  }));
 }
 
 export function renderButtonPreview({
@@ -182,23 +259,34 @@ export class OwbButton extends LitElement {
     const spacingCss = getSpacingStyleBlock(settings);
     const sizeStyle = getButtonSizeStyle(size, settings);
     const radius = getButtonShapeRadius(shape, customRadius);
+    const responsiveCss = buildResponsiveButtonCss(settings);
 
     const isEditorMode = OwbButton.editorPlugin !== null;
+    const renderedCustomCss = buildEditorCustomCss(customCss, isEditorMode);
 
     return html`
       <link rel="stylesheet" href="/owb-styles/button.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
-      ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
+      ${
+        renderedCustomCss
+          ? unsafeHTML(`<style>${renderedCustomCss}</style>`)
+          : null
+      }
       <div
-        class="button-block${isEditorMode && this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
+        class="button-block${
+          isEditorMode && this.isSettingsOpen ? " is-settings-open" : ""
+        }"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbButton.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbButton.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
         <div class="button-preview-wrap">
           ${renderButtonPreview({

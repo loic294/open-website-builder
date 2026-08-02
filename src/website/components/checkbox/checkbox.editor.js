@@ -64,21 +64,12 @@ installEditorPlugin(OwbCheckbox, {
       content: () => {
         const editor = EditorComponent.instance;
         return html`
-          <settings-section
-            title="Checkbox"
-            ?overridden=${editor.hasAnyOverriddenKeys(
-              "settingCheckboxLabel",
-              "settingCheckboxName",
-              "settingCheckboxValue",
-              "settingCheckboxDefaultChecked",
-              "settingCheckboxRequired",
-            )}
-          >
+          <settings-section title="Checkbox">
             <editor-text-input
               label="Label"
               .value=${editor.settingCheckboxLabel}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   settingCheckboxLabel: event.detail.value,
                 });
               }}
@@ -87,7 +78,7 @@ installEditorPlugin(OwbCheckbox, {
               label="Name"
               .value=${editor.settingCheckboxName}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   settingCheckboxName: event.detail.value,
                 });
               }}
@@ -96,7 +87,7 @@ installEditorPlugin(OwbCheckbox, {
               label="Value"
               .value=${editor.settingCheckboxValue}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   settingCheckboxValue: event.detail.value,
                 });
               }}
@@ -109,7 +100,7 @@ installEditorPlugin(OwbCheckbox, {
                 { label: "Yes", value: "true" },
               ]}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   settingCheckboxDefaultChecked: event.detail.value === "true",
                 });
               }}
@@ -122,7 +113,7 @@ installEditorPlugin(OwbCheckbox, {
                 { label: "Yes", value: "true" },
               ]}
               @change=${(event) => {
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   settingCheckboxRequired: event.detail.value === "true",
                 });
               }}

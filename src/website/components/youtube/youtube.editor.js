@@ -146,21 +146,14 @@ installEditorPlugin(OwbYoutube, {
 
 function renderGeneralTab(editor) {
   return html`
-    <settings-section
-      title="Source"
-      ?overridden=${editor.hasAnyOverriddenKeys(
-        "settingVideoId",
-        "settingListId",
-        "settingListType",
-      )}
-    >
+    <settings-section title="Source">
       <editor-text-input
         label="Video ID or URL"
         placeholder="dQw4w9WgXcQ or full YouTube URL"
         .value=${editor.settingVideoId}
         @change=${(event) => {
           const parsed = tryParseYoutubeId(event.detail.value);
-          editor.updateSettingsState({ settingVideoId: parsed });
+          editor.updateGlobalSettingsState({ settingVideoId: parsed });
         }}
       ></editor-text-input>
       <editor-select
@@ -172,20 +165,26 @@ function renderGeneralTab(editor) {
           { label: "User uploads", value: "user_uploads" },
         ]}
         @change=${(event) => {
-          editor.updateSettingsState({ settingListType: event.detail.value });
+          editor.updateGlobalSettingsState({
+            settingListType: event.detail.value,
+          });
         }}
       ></editor-select>
       <editor-text-input
-        label=${editor.settingListType === "user_uploads"
-          ? "YouTube channel/user name"
-          : "Playlist ID or URL"}
-        placeholder=${editor.settingListType === "user_uploads"
-          ? "username"
-          : "PLxxxxxxxxxxxxxx"}
+        label=${
+          editor.settingListType === "user_uploads"
+            ? "YouTube channel/user name"
+            : "Playlist ID or URL"
+        }
+        placeholder=${
+          editor.settingListType === "user_uploads"
+            ? "username"
+            : "PLxxxxxxxxxxxxxx"
+        }
         .value=${editor.settingListId}
         @change=${(event) => {
           const parsed = tryParseYoutubeListId(event.detail.value);
-          editor.updateSettingsState({ settingListId: parsed });
+          editor.updateGlobalSettingsState({ settingListId: parsed });
         }}
       ></editor-text-input>
     </settings-section>
@@ -205,7 +204,7 @@ function renderGeneralTab(editor) {
           { label: "9:16 (vertical)", value: "9:16" },
         ]}
         @change=${(event) => {
-          editor.updateSettingsState({
+          editor.updateResponsiveSettingsState({
             settingAspectRatio: event.detail.value,
           });
         }}
@@ -216,25 +215,14 @@ function renderGeneralTab(editor) {
 
 function renderPlaybackTab(editor) {
   return html`
-    <settings-section
-      title="Playback"
-      ?overridden=${editor.hasAnyOverriddenKeys(
-        "settingAutoplay",
-        "settingControls",
-        "settingLoop",
-        "settingPlaysinline",
-      )}
-    >
+    <settings-section title="Playback">
       ${boolSelect(editor, "settingAutoplay", "Autoplay")}
       ${boolSelect(editor, "settingControls", "Show player controls")}
       ${boolSelect(editor, "settingLoop", "Loop video")}
       ${boolSelect(editor, "settingPlaysinline", "Play inline on iOS")}
     </settings-section>
 
-    <settings-section
-      title="Time range"
-      ?overridden=${editor.hasAnyOverriddenKeys("settingStart", "settingEnd")}
-    >
+    <settings-section title="Time range">
       <editor-text-input
         label="Start (seconds)"
         type="number"
@@ -242,7 +230,9 @@ function renderPlaybackTab(editor) {
         placeholder="0"
         .value=${editor.settingStart}
         @change=${(event) => {
-          editor.updateSettingsState({ settingStart: event.detail.value });
+          editor.updateGlobalSettingsState({
+            settingStart: event.detail.value,
+          });
         }}
       ></editor-text-input>
       <editor-text-input
@@ -252,7 +242,7 @@ function renderPlaybackTab(editor) {
         placeholder=""
         .value=${editor.settingEnd}
         @change=${(event) => {
-          editor.updateSettingsState({ settingEnd: event.detail.value });
+          editor.updateGlobalSettingsState({ settingEnd: event.detail.value });
         }}
       ></editor-text-input>
     </settings-section>
@@ -261,16 +251,7 @@ function renderPlaybackTab(editor) {
 
 function renderPlayerTab(editor) {
   return html`
-    <settings-section
-      title="Appearance"
-      ?overridden=${editor.hasAnyOverriddenKeys(
-        "settingColor",
-        "settingFs",
-        "settingIvLoadPolicy",
-        "settingRel",
-        "settingDisablekb",
-      )}
-    >
+    <settings-section title="Appearance">
       <editor-select
         label="Progress bar color"
         .value=${editor.settingColor}
@@ -279,7 +260,9 @@ function renderPlayerTab(editor) {
           { label: "White", value: "white" },
         ]}
         @change=${(event) => {
-          editor.updateSettingsState({ settingColor: event.detail.value });
+          editor.updateGlobalSettingsState({
+            settingColor: event.detail.value,
+          });
         }}
       ></editor-select>
       ${boolSelect(editor, "settingFs", "Show fullscreen button")}
@@ -292,21 +275,14 @@ function renderPlayerTab(editor) {
       ${boolSelect(editor, "settingDisablekb", "Disable keyboard controls")}
     </settings-section>
 
-    <settings-section
-      title="Captions & language"
-      ?overridden=${editor.hasAnyOverriddenKeys(
-        "settingCcLoadPolicy",
-        "settingCcLangPref",
-        "settingHl",
-      )}
-    >
+    <settings-section title="Captions & language">
       ${boolSelect(editor, "settingCcLoadPolicy", "Force closed captions on")}
       <editor-text-input
         label="Caption language (cc_lang_pref)"
         placeholder="en, fr, de…"
         .value=${editor.settingCcLangPref}
         @change=${(event) => {
-          editor.updateSettingsState({
+          editor.updateGlobalSettingsState({
             settingCcLangPref: event.detail.value,
           });
         }}
@@ -316,26 +292,21 @@ function renderPlayerTab(editor) {
         placeholder="en, fr, de…"
         .value=${editor.settingHl}
         @change=${(event) => {
-          editor.updateSettingsState({ settingHl: event.detail.value });
+          editor.updateGlobalSettingsState({ settingHl: event.detail.value });
         }}
       ></editor-text-input>
     </settings-section>
 
-    <settings-section
-      title="JavaScript API"
-      ?overridden=${editor.hasAnyOverriddenKeys(
-        "settingEnablejsapi",
-        "settingOrigin",
-        "settingWidgetReferrer",
-      )}
-    >
+    <settings-section title="JavaScript API">
       ${boolSelect(editor, "settingEnablejsapi", "Enable JavaScript API")}
       <editor-text-input
         label="Origin"
         placeholder="https://your-site.com"
         .value=${editor.settingOrigin}
         @change=${(event) => {
-          editor.updateSettingsState({ settingOrigin: event.detail.value });
+          editor.updateGlobalSettingsState({
+            settingOrigin: event.detail.value,
+          });
         }}
       ></editor-text-input>
       <editor-text-input
@@ -343,7 +314,7 @@ function renderPlayerTab(editor) {
         placeholder="https://your-site.com/page"
         .value=${editor.settingWidgetReferrer}
         @change=${(event) => {
-          editor.updateSettingsState({
+          editor.updateGlobalSettingsState({
             settingWidgetReferrer: event.detail.value,
           });
         }}
@@ -361,7 +332,9 @@ function boolSelect(editor, key, label) {
       { label: "Yes", value: "true" },
     ]}
     @change=${(event) => {
-      editor.updateSettingsState({ [key]: event.detail.value === "true" });
+      editor.updateGlobalSettingsState({
+        [key]: event.detail.value === "true",
+      });
     }}
   ></editor-select>`;
 }

@@ -166,156 +166,170 @@ function renderLinksTab(element) {
       ${styles}
     </style>
     <settings-section title="Links">
-      ${element.links.length === 0
-        ? html`<p style="font-size:13px;color:#888;margin:0 0 4px;">
-            No links yet. Add your first link below.
-          </p>`
-        : element.links.map(
-            (link, index) => html`
-              <div class="navbar-link-item">
-                <span class="navbar-link-item-label"
-                  >${link.label || link.url || link.pageId}</span
-                >
-                <span class="navbar-link-item-badge"
-                  >${link.type === "page"
-                    ? "page"
-                    : link.target === "_blank"
-                      ? "ext"
-                      : "url"}</span
-                >
-                ${index > 0
-                  ? html`<editor-btn
-                      data-style="light"
-                      @click=${() => {
-                        const next = [...element.links];
-                        [next[index - 1], next[index]] = [
-                          next[index],
-                          next[index - 1],
-                        ];
-                        commitLinks(element, next);
-                      }}
-                      >↑</editor-btn
-                    >`
-                  : null}
-                ${index < element.links.length - 1
-                  ? html`<editor-btn
-                      data-style="light"
-                      @click=${() => {
-                        const next = [...element.links];
-                        [next[index], next[index + 1]] = [
-                          next[index + 1],
-                          next[index],
-                        ];
-                        commitLinks(element, next);
-                      }}
-                      >↓</editor-btn
-                    >`
-                  : null}
-                <editor-btn
-                  data-style="light danger"
-                  @click=${() =>
-                    commitLinks(
-                      element,
-                      element.links.filter((l) => l.id !== link.id),
-                    )}
-                  >✕</editor-btn
-                >
-              </div>
-            `,
-          )}
+      ${
+        element.links.length === 0
+          ? html`<p style="font-size:13px;color:#888;margin:0 0 4px;">
+              No links yet. Add your first link below.
+            </p>`
+          : element.links.map(
+              (link, index) => html`
+                <div class="navbar-link-item">
+                  <span class="navbar-link-item-label"
+                    >${link.label || link.url || link.pageId}</span
+                  >
+                  <span class="navbar-link-item-badge"
+                    >${
+                      link.type === "page"
+                        ? "page"
+                        : link.target === "_blank"
+                          ? "ext"
+                          : "url"
+                    }</span
+                  >
+                  ${
+                    index > 0
+                      ? html`<editor-btn
+                          data-style="light"
+                          @click=${() => {
+                          const next = [...element.links];
+                          [next[index - 1], next[index]] = [
+                            next[index],
+                            next[index - 1],
+                          ];
+                          commitLinks(element, next);
+                        }}
+                          >↑</editor-btn
+                        >`
+                      : null
+                  }
+                  ${
+                    index < element.links.length - 1
+                      ? html`<editor-btn
+                          data-style="light"
+                          @click=${() => {
+                          const next = [...element.links];
+                          [next[index], next[index + 1]] = [
+                            next[index + 1],
+                            next[index],
+                          ];
+                          commitLinks(element, next);
+                        }}
+                          >↓</editor-btn
+                        >`
+                      : null
+                  }
+                  <editor-btn
+                    data-style="light danger"
+                    @click=${() =>
+                      commitLinks(
+                        element,
+                        element.links.filter((l) => l.id !== link.id),
+                      )}
+                    >✕</editor-btn
+                  >
+                </div>
+              `,
+            )
+      }
     </settings-section>
-    ${element._addingLink
-      ? html`
-          <settings-section title="New link">
-            <div class="navbar-add-form">
-              <editor-select
-                label="Type"
-                .value=${element._addLinkType}
-                .options=${[
-                  { label: "Existing page", value: "page" },
-                  { label: "Custom URL", value: "custom" },
-                ]}
-                @change=${(e) => {
-                  element._addLinkType = e.detail.value;
-                  editor?.updateSettingsState({});
-                }}
-              ></editor-select>
-              ${element._addLinkType === "page"
-                ? html`
-                    <editor-select
-                      label="Page"
-                      .value=${element._addLinkPageId}
-                      .options=${(element._pageOptions || []).length > 0
-                        ? element._pageOptions
-                        : [{ label: "Loading…", value: "" }]}
-                      @change=${(e) => {
-                        element._addLinkPageId = e.detail.value;
-                      }}
-                    ></editor-select>
-                  `
-                : html`
-                    <editor-text-input
-                      label="URL"
-                      placeholder="https://..."
-                      .value=${element._addLinkUrl}
-                      @change=${(e) => {
-                        element._addLinkUrl = e.detail.value;
-                      }}
-                    ></editor-text-input>
-                    <editor-select
-                      label="Open in"
-                      .value=${element._addLinkTarget}
-                      .options=${[
-                        { label: "Same tab", value: "_self" },
-                        { label: "New tab", value: "_blank" },
-                      ]}
-                      @change=${(e) => {
-                        element._addLinkTarget = e.detail.value;
-                      }}
-                    ></editor-select>
-                  `}
-              <editor-text-input
-                label="Label (optional)"
-                placeholder="Link label"
-                .value=${element._addLinkLabel}
-                @change=${(e) => {
-                  element._addLinkLabel = e.detail.value;
-                }}
-              ></editor-text-input>
-              <div class="navbar-add-form-actions">
-                <editor-btn
-                  data-style="primary"
-                  @click=${() => addLink(element)}
-                  >Add link</editor-btn
-                >
-                <editor-btn
-                  data-style="light"
-                  @click=${() => {
-                    element._addingLink = false;
+    ${
+      element._addingLink
+        ? html`
+            <settings-section title="New link">
+              <div class="navbar-add-form">
+                <editor-select
+                  label="Type"
+                  .value=${element._addLinkType}
+                  .options=${[
+                    { label: "Existing page", value: "page" },
+                    { label: "Custom URL", value: "custom" },
+                  ]}
+                  @change=${(e) => {
+                    element._addLinkType = e.detail.value;
                     editor?.updateSettingsState({});
                   }}
-                  >Cancel</editor-btn
-                >
+                ></editor-select>
+                ${
+                  element._addLinkType === "page"
+                    ? html`
+                        <editor-select
+                          label="Page"
+                          .value=${element._addLinkPageId}
+                          .options=${
+                          (element._pageOptions || []).length > 0
+                            ? element._pageOptions
+                            : [{ label: "Loading…", value: "" }]
+                        }
+                          @change=${(e) => {
+                          element._addLinkPageId = e.detail.value;
+                        }}
+                        ></editor-select>
+                      `
+                    : html`
+                        <editor-text-input
+                          label="URL"
+                          placeholder="https://..."
+                          .value=${element._addLinkUrl}
+                          @change=${(e) => {
+                          element._addLinkUrl = e.detail.value;
+                        }}
+                        ></editor-text-input>
+                        <editor-select
+                          label="Open in"
+                          .value=${element._addLinkTarget}
+                          .options=${[
+                          { label: "Same tab", value: "_self" },
+                          { label: "New tab", value: "_blank" },
+                        ]}
+                          @change=${(e) => {
+                          element._addLinkTarget = e.detail.value;
+                        }}
+                        ></editor-select>
+                      `
+                }
+                <editor-text-input
+                  label="Label (optional)"
+                  placeholder="Link label"
+                  .value=${element._addLinkLabel}
+                  @change=${(e) => {
+                    element._addLinkLabel = e.detail.value;
+                  }}
+                ></editor-text-input>
+                <div class="navbar-add-form-actions">
+                  <editor-btn
+                    data-style="primary"
+                    @click=${() => addLink(element)}
+                    >Add link</editor-btn
+                  >
+                  <editor-btn
+                    data-style="light"
+                    @click=${() => {
+                      element._addingLink = false;
+                      editor?.updateSettingsState({});
+                    }}
+                    >Cancel</editor-btn
+                  >
+                </div>
               </div>
-            </div>
-          </settings-section>
-        `
-      : html`
-          <editor-btn
-            data-style="primary"
-            @click=${() => {
-              element._addingLink = true;
-              element._addLinkType = "page";
-              element._addLinkLabel = "";
-              element._addLinkUrl = "";
-              element._addLinkPageId =
-                (element._pageOptions || [])[0]?.value || "";
-              element._addLinkTarget = "_self";
-              editor?.updateSettingsState({});
-            }}
-            >＋ Add link</editor-btn
-          >
-        `}
+            </settings-section>
+          `
+        : html`
+            <editor-btn
+              data-style="primary"
+              @click=${() => {
+                element._addingLink = true;
+                element._addLinkType = "page";
+                element._addLinkLabel = "";
+                element._addLinkUrl = "";
+                element._addLinkPageId =
+                  (element._pageOptions || [])[0]?.value || "";
+                element._addLinkTarget = "_self";
+                editor?.updateSettingsState({});
+              }}
+              >＋ Add link</editor-btn
+            >
+          `
+    }
   `;
 }
 
@@ -327,35 +341,45 @@ function renderDesignTab(editor) {
         placeholder="Inherit"
         .value=${editor.navbarFontFamily}
         @change=${(e) =>
-          editor.updateSettingsState({ navbarFontFamily: e.detail.value })}
+          editor.updateResponsiveSettingsState({
+            navbarFontFamily: e.detail.value,
+          })}
       ></editor-text-input>
       <editor-text-input
         label="Font size"
         placeholder="Inherit"
         .value=${editor.navbarFontSize}
         @change=${(e) =>
-          editor.updateSettingsState({ navbarFontSize: e.detail.value })}
+          editor.updateResponsiveSettingsState({
+            navbarFontSize: e.detail.value,
+          })}
       ></editor-text-input>
       <editor-select
         label="Font weight"
         .value=${String(editor.navbarFontWeight || "")}
         .options=${[{ label: "Inherit", value: "" }, ...FONT_WEIGHT_OPTIONS]}
         @change=${(e) =>
-          editor.updateSettingsState({ navbarFontWeight: e.detail.value })}
+          editor.updateResponsiveSettingsState({
+            navbarFontWeight: e.detail.value,
+          })}
       ></editor-select>
       <editor-text-input
         label="Color"
         placeholder="Inherit"
         .value=${editor.navbarColor}
         @change=${(e) =>
-          editor.updateSettingsState({ navbarColor: e.detail.value })}
+          editor.updateResponsiveSettingsState({
+            navbarColor: e.detail.value,
+          })}
       ></editor-text-input>
       <editor-text-input
         label="Hover color"
         placeholder="Inherit"
         .value=${editor.navbarHoverColor}
         @change=${(e) =>
-          editor.updateSettingsState({ navbarHoverColor: e.detail.value })}
+          editor.updateResponsiveSettingsState({
+            navbarHoverColor: e.detail.value,
+          })}
       ></editor-text-input>
       <editor-select
         label="Underline on hover"
@@ -365,7 +389,7 @@ function renderDesignTab(editor) {
           { label: "Yes", value: "true" },
         ]}
         @change=${(e) =>
-          editor.updateSettingsState({
+          editor.updateResponsiveSettingsState({
             navbarUnderlineOnHover: e.detail.value === "true",
           })}
       ></editor-select>
@@ -377,7 +401,7 @@ function renderDesignTab(editor) {
           { label: "Yes", value: "true" },
         ]}
         @change=${(e) =>
-          editor.updateSettingsState({
+          editor.updateResponsiveSettingsState({
             navbarUnderlineActive: e.detail.value === "true",
           })}
       ></editor-select>
@@ -388,7 +412,7 @@ function renderDesignTab(editor) {
         placeholder="24px"
         .value=${editor.navbarGap}
         @change=${(e) =>
-          editor.updateSettingsState({ navbarGap: e.detail.value })}
+          editor.updateResponsiveSettingsState({ navbarGap: e.detail.value })}
       ></editor-text-input>
     </settings-section>
   `;
@@ -406,132 +430,134 @@ function renderMobileTab(editor) {
           { label: "Yes", value: "true" },
         ]}
         @change=${(e) =>
-          editor.updateSettingsState({
+          editor.updateGlobalSettingsState({
             navbarMobileEnabled: e.detail.value === "true",
           })}
       ></editor-select>
     </settings-section>
-    ${mobileOn
-      ? html`
-          <settings-section title="Menu style">
-            <editor-select
-              label="Menu type"
-              .value=${editor.navbarMobileType}
-              .options=${MOBILE_TYPE_OPTIONS}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileType: e.detail.value,
-                })}
-            ></editor-select>
-            <editor-text-input
-              label="Breakpoint"
-              placeholder="768px"
-              .value=${editor.navbarMobileBreakpoint}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileBreakpoint: e.detail.value,
-                })}
-            ></editor-text-input>
-            <editor-text-input
-              label="Menu icon"
-              placeholder="hamburger"
-              .value=${editor.navbarMobileMenuIcon}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileMenuIcon: e.detail.value,
-                })}
-            ></editor-text-input>
-            <editor-text-input
-              label="Menu icon size"
-              placeholder="1.5rem"
-              .value=${editor.navbarMobileMenuIconSize}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileMenuIconSize: e.detail.value,
-                })}
-            ></editor-text-input>
-          </settings-section>
-          <settings-section title="Menu appearance">
-            <editor-text-input
-              label="Background color"
-              placeholder="#ffffff"
-              .value=${editor.navbarMobileBackgroundColor}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileBackgroundColor: e.detail.value,
-                })}
-            ></editor-text-input>
-            <editor-text-input
-              label="Text color"
-              placeholder="Inherit"
-              .value=${editor.navbarMobileTextColor}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileTextColor: e.detail.value,
-                })}
-            ></editor-text-input>
-            <editor-select
-              label="Horizontal alignment"
-              .value=${editor.navbarMobileAlignH}
-              .options=${ALIGN_H_OPTIONS}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileAlignH: e.detail.value,
-                })}
-            ></editor-select>
-            <editor-select
-              label="Vertical alignment"
-              .value=${editor.navbarMobileAlignV}
-              .options=${ALIGN_V_OPTIONS}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileAlignV: e.detail.value,
-                })}
-            ></editor-select>
-            <editor-text-input
-              label="Padding"
-              placeholder="32px"
-              .value=${editor.navbarMobilePadding}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobilePadding: e.detail.value,
-                })}
-            ></editor-text-input>
-          </settings-section>
-          <settings-section title="Menu typography">
-            <editor-text-input
-              label="Font size"
-              placeholder="Inherit"
-              .value=${editor.navbarMobileFontSize}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileFontSize: e.detail.value,
-                })}
-            ></editor-text-input>
-            <editor-select
-              label="Font weight"
-              .value=${String(editor.navbarMobileFontWeight || "")}
-              .options=${[
-                { label: "Inherit", value: "" },
-                ...FONT_WEIGHT_OPTIONS,
-              ]}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileFontWeight: e.detail.value,
-                })}
-            ></editor-select>
-            <editor-text-input
-              label="Gap between links"
-              placeholder="24px"
-              .value=${editor.navbarMobileGap}
-              @change=${(e) =>
-                editor.updateSettingsState({
-                  navbarMobileGap: e.detail.value,
-                })}
-            ></editor-text-input>
-          </settings-section>
-        `
-      : null}
+    ${
+      mobileOn
+        ? html`
+            <settings-section title="Menu style">
+              <editor-select
+                label="Menu type"
+                .value=${editor.navbarMobileType}
+                .options=${MOBILE_TYPE_OPTIONS}
+                @change=${(e) =>
+                  editor.updateGlobalSettingsState({
+                    navbarMobileType: e.detail.value,
+                  })}
+              ></editor-select>
+              <editor-text-input
+                label="Breakpoint"
+                placeholder="768px"
+                .value=${editor.navbarMobileBreakpoint}
+                @change=${(e) =>
+                  editor.updateGlobalSettingsState({
+                    navbarMobileBreakpoint: e.detail.value,
+                  })}
+              ></editor-text-input>
+              <editor-text-input
+                label="Menu icon"
+                placeholder="hamburger"
+                .value=${editor.navbarMobileMenuIcon}
+                @change=${(e) =>
+                  editor.updateGlobalSettingsState({
+                    navbarMobileMenuIcon: e.detail.value,
+                  })}
+              ></editor-text-input>
+              <editor-text-input
+                label="Menu icon size"
+                placeholder="1.5rem"
+                .value=${editor.navbarMobileMenuIconSize}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobileMenuIconSize: e.detail.value,
+                  })}
+              ></editor-text-input>
+            </settings-section>
+            <settings-section title="Menu appearance">
+              <editor-text-input
+                label="Background color"
+                placeholder="#ffffff"
+                .value=${editor.navbarMobileBackgroundColor}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobileBackgroundColor: e.detail.value,
+                  })}
+              ></editor-text-input>
+              <editor-text-input
+                label="Text color"
+                placeholder="Inherit"
+                .value=${editor.navbarMobileTextColor}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobileTextColor: e.detail.value,
+                  })}
+              ></editor-text-input>
+              <editor-select
+                label="Horizontal alignment"
+                .value=${editor.navbarMobileAlignH}
+                .options=${ALIGN_H_OPTIONS}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobileAlignH: e.detail.value,
+                  })}
+              ></editor-select>
+              <editor-select
+                label="Vertical alignment"
+                .value=${editor.navbarMobileAlignV}
+                .options=${ALIGN_V_OPTIONS}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobileAlignV: e.detail.value,
+                  })}
+              ></editor-select>
+              <editor-text-input
+                label="Padding"
+                placeholder="32px"
+                .value=${editor.navbarMobilePadding}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobilePadding: e.detail.value,
+                  })}
+              ></editor-text-input>
+            </settings-section>
+            <settings-section title="Menu typography">
+              <editor-text-input
+                label="Font size"
+                placeholder="Inherit"
+                .value=${editor.navbarMobileFontSize}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobileFontSize: e.detail.value,
+                  })}
+              ></editor-text-input>
+              <editor-select
+                label="Font weight"
+                .value=${String(editor.navbarMobileFontWeight || "")}
+                .options=${[
+                  { label: "Inherit", value: "" },
+                  ...FONT_WEIGHT_OPTIONS,
+                ]}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobileFontWeight: e.detail.value,
+                  })}
+              ></editor-select>
+              <editor-text-input
+                label="Gap between links"
+                placeholder="24px"
+                .value=${editor.navbarMobileGap}
+                @change=${(e) =>
+                  editor.updateResponsiveSettingsState({
+                    navbarMobileGap: e.detail.value,
+                  })}
+              ></editor-text-input>
+            </settings-section>
+          `
+        : null
+    }
   `;
 }
 

@@ -2,10 +2,7 @@ import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
 import { OwbSlider, defaultSliderConfig } from "./slider.js";
-import {
-  getImageSize,
-  IMAGE_SIZE_OPTIONS,
-} from "../../utils/image-size.js";
+import { getImageSize, IMAGE_SIZE_OPTIONS } from "../../utils/image-size.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
 export { defaultSliderConfig };
@@ -91,7 +88,7 @@ installEditorPlugin(OwbSlider, {
               .value=${getImageSize(editor.sliderImageSize)}
               .options=${IMAGE_SIZE_OPTIONS}
               @change=${(event) =>
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   sliderImageSize: getImageSize(event.detail.value),
                 })}
             ></editor-select>
@@ -122,39 +119,43 @@ installEditorPlugin(OwbSlider, {
               .value=${editor.sliderFormat}
               .options=${FORMAT_OPTIONS}
               @change=${(event) =>
-                editor.updateSettingsState({
+                editor.updateResponsiveSettingsState({
                   sliderFormat: event.detail.value,
                 })}
             ></editor-select>
-            ${editor.sliderFormat === "auto"
-              ? html`
-                  <editor-text-input
-                    label="Height"
-                    placeholder="400px"
-                    .value=${editor.sliderHeight}
-                    @change=${(event) =>
-                      editor.updateSettingsState({
-                        sliderHeight: event.detail.value,
-                      })}
-                  ></editor-text-input>
-                `
-              : html`
-                  <editor-text-input
-                    label="Item width"
-                    placeholder="80%"
-                    .value=${editor.sliderItemWidth}
-                    @change=${(event) =>
-                      editor.updateSettingsState({
-                        sliderItemWidth: event.detail.value,
-                      })}
-                  ></editor-text-input>
-                `}
+            ${
+              editor.sliderFormat === "auto"
+                ? html`
+                    <editor-text-input
+                      label="Height"
+                      placeholder="400px"
+                      .value=${editor.sliderHeight}
+                      @change=${(event) =>
+                        editor.updateResponsiveSettingsState({
+                          sliderHeight: event.detail.value,
+                        })}
+                    ></editor-text-input>
+                  `
+                : html`
+                    <editor-text-input
+                      label="Item width"
+                      placeholder="80%"
+                      .value=${editor.sliderItemWidth}
+                      @change=${(event) =>
+                        editor.updateResponsiveSettingsState({
+                          sliderItemWidth: event.detail.value,
+                        })}
+                    ></editor-text-input>
+                  `
+            }
             <editor-text-input
               label="Gap"
               placeholder="12px"
               .value=${editor.sliderGap}
               @change=${(event) =>
-                editor.updateSettingsState({ sliderGap: event.detail.value })}
+                editor.updateResponsiveSettingsState({
+                  sliderGap: event.detail.value,
+                })}
             ></editor-text-input>
           </settings-section>
         `;

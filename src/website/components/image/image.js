@@ -1,10 +1,9 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { buildEditorCustomCss } from "../../utils/custom-css.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
-import {
-  getImageSize,
-  getImageUrlForSize,
-} from "../../utils/image-size.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
+import { getImageSize, getImageUrlForSize } from "../../utils/image-size.js";
 
 export const defaultImageConfig = {
   type: "image",
@@ -16,6 +15,35 @@ export function getImageMode(value) {
   return mode === "full-width" || mode === "contained" || mode === "cover"
     ? mode
     : "contained";
+}
+
+export function buildResponsiveImageCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => {
+    const mode = getImageMode(effectiveSettings.imageSizeMode);
+    const isFullWidth = mode === "full-width";
+    return [
+      {
+        selector: ".image-block",
+        declarations: [`height: ${isFullWidth ? "auto" : "100%"}`],
+      },
+      {
+        selector: ".image-frame",
+        declarations: [
+          `min-height: ${isFullWidth ? "0" : "30px"}`,
+          `height: ${isFullWidth ? "auto" : "100%"}`,
+        ],
+      },
+      {
+        selector: ".image-frame img",
+        declarations: [
+          "width: 100%",
+          `height: ${isFullWidth ? "auto" : "100%"}`,
+          "max-height: none",
+          `object-fit: ${mode === "cover" ? "cover" : "contain"}`,
+        ],
+      },
+    ];
+  });
 }
 
 function renderImageFrame(url, mode) {
@@ -189,26 +217,39 @@ export class OwbImage extends LitElement {
     const linkUrl = String(settings?.imageLinkUrl || "").trim();
     const linkTarget = String(settings?.imageLinkTarget || "current");
     const isEditorMode = OwbImage.editorPlugin !== null;
+    const responsiveCss = buildResponsiveImageCss(settings);
+    const renderedCustomCss = buildEditorCustomCss(customCss, isEditorMode);
 
     return html`
       <link rel="stylesheet" href="/owb-styles/image.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
-      ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
-      ${isEditorMode
-        ? unsafeHTML(
-            `<link rel="stylesheet" href="/src/editor/components/layout/editor-component/styles-blocks.css" />`,
-          )
-        : null}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
+      ${
+        renderedCustomCss
+          ? unsafeHTML(`<style>${renderedCustomCss}</style>`)
+          : null
+      }
+      ${
+        isEditorMode
+          ? unsafeHTML(
+              `<link rel="stylesheet" href="/src/editor/components/layout/editor-component/styles-blocks.css" />`,
+            )
+          : null
+      }
       <div
-        class="image-block size-${mode}${this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
+        class="image-block size-${mode}${
+          this.isSettingsOpen ? " is-settings-open" : ""
+        }"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbImage.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbImage.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
         ${this.renderImageWithAction(
           imageUrl,
@@ -218,24 +259,26 @@ export class OwbImage extends LitElement {
           linkTarget,
         )}
       </div>
-      ${this.lightboxOpen && imageUrl
-        ? html`
-            <div class="image-lightbox" @click=${() => this.closeLightbox()}>
-              <button
-                class="image-lightbox-close"
-                type="button"
-                aria-label="Close image"
-                @click=${(event) => {
-                  event.stopPropagation();
-                  this.closeLightbox();
-                }}
-              >
-                x
-              </button>
-              <img class="image-lightbox-image" src=${imageUrl} alt="" />
-            </div>
-          `
-        : null}
+      ${
+        this.lightboxOpen && imageUrl
+          ? html`
+              <div class="image-lightbox" @click=${() => this.closeLightbox()}>
+                <button
+                  class="image-lightbox-close"
+                  type="button"
+                  aria-label="Close image"
+                  @click=${(event) => {
+                    event.stopPropagation();
+                    this.closeLightbox();
+                  }}
+                >
+                  x
+                </button>
+                <img class="image-lightbox-image" src=${imageUrl} alt="" />
+              </div>
+            `
+          : null
+      }
     `;
   }
 }

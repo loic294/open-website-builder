@@ -1,5 +1,6 @@
 import { LitElement, html, nothing } from "lit";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
 export const defaultYoutubeConfig = {
@@ -62,9 +63,20 @@ function sanitizeYoutubeUrlInput(value) {
   return sanitizeId(raw);
 }
 
-function aspectRatioToCss(ratio) {
+export function aspectRatioToCss(ratio) {
   if (!VALID_ASPECT_RATIOS.has(ratio)) return "16 / 9";
   return ratio.replace(":", " / ");
+}
+
+export function buildResponsiveYoutubeCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => ({
+    selector: ".youtube-block",
+    declarations: {
+      "aspect-ratio": aspectRatioToCss(
+        String(effectiveSettings.settingAspectRatio || "16:9"),
+      ),
+    },
+  }));
 }
 
 export function buildYoutubeEmbedUrl(settings = {}) {
@@ -342,39 +354,52 @@ export class OwbYoutube extends LitElement {
     const isEditorMode = OwbYoutube.editorPlugin !== null;
     const aspectCss = aspectRatioToCss(this.settingAspectRatio);
     const spacingCss = getSpacingStyleBlock(this.settings || {});
+    const responsiveCss = buildResponsiveYoutubeCss(this.settings || {});
 
     return html`
       <link rel="stylesheet" href="/owb-styles/youtube.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
       <div
-        class="youtube-block${isEditorMode && this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
+        class="youtube-block${
+          isEditorMode && this.isSettingsOpen ? " is-settings-open" : ""
+        }"
         style="aspect-ratio: ${aspectCss};"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbYoutube.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbYoutube.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
-        ${url
-          ? html`<iframe
-              class="youtube-iframe"
-              src=${url}
-              title="YouTube video player"
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerpolicy="strict-origin-when-cross-origin"
-              allowfullscreen
-              loading="lazy"
-            ></iframe>`
-          : html`<div class="youtube-placeholder">
-              Add a YouTube video ID or playlist ID
-            </div>`}
-        ${isEditorMode && url
-          ? html`<div class="youtube-editor-overlay" aria-hidden="true"></div>`
-          : null}
+        ${
+          url
+            ? html`<iframe
+                class="youtube-iframe"
+                src=${url}
+                title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen
+                loading="lazy"
+              ></iframe>`
+            : html`<div class="youtube-placeholder">
+                Add a YouTube video ID or playlist ID
+              </div>`
+        }
+        ${
+          isEditorMode && url
+            ? html`<div
+                class="youtube-editor-overlay"
+                aria-hidden="true"
+              ></div>`
+            : null
+        }
       </div>
     `;
   }

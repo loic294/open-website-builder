@@ -76,71 +76,81 @@ class BrowserPopover extends LitElement {
       >
         <div class="modal-box card card-border bg-base-100 text-base-content">
           <h3 class="text-lg font-bold">${this.options.title}</h3>
-          ${this.options.message
-            ? html`<p class="py-3 text-sm">${this.options.message}</p>`
-            : html``}
-          ${isOutput
-            ? html`<pre class="command-output">${this.options.output}</pre>`
-            : html``}
-          ${isPrompt
-            ? html`
-                <form
-                  @submit=${(event) => {
-                    event.preventDefault();
-                    const input =
-                      event.currentTarget.elements.namedItem("value");
-                    this.finish(input.value);
-                  }}
-                >
-                  <fieldset class="fieldset">
-                    <legend class="fieldset-legend">
-                      ${this.options.label}
-                    </legend>
-                    <input
-                      class="input w-full"
-                      name="value"
-                      type=${this.options.inputType || "text"}
-                      .value=${String(this.options.defaultValue || "")}
-                      required
-                    />
-                  </fieldset>
+          ${
+            this.options.message
+              ? html`<p class="py-3 text-sm">${this.options.message}</p>`
+              : html``
+          }
+          ${
+            isOutput
+              ? html`<pre class="command-output">${this.options.output}</pre>`
+              : html``
+          }
+          ${
+            isPrompt
+              ? html`
+                  <form
+                    @submit=${(event) => {
+                      event.preventDefault();
+                      const input =
+                        event.currentTarget.elements.namedItem("value");
+                      this.finish(input.value);
+                    }}
+                  >
+                    <fieldset class="fieldset">
+                      <legend class="fieldset-legend">
+                        ${this.options.label}
+                      </legend>
+                      <input
+                        class="input w-full"
+                        name="value"
+                        type=${this.options.inputType || "text"}
+                        .value=${String(this.options.defaultValue || "")}
+                        required
+                      />
+                    </fieldset>
+                    <div class="modal-action">
+                      <button
+                        type="button"
+                        class="btn btn-ghost"
+                        @click=${() => this.finish(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" class="btn">
+                        ${this.options.confirmLabel || "Save"}
+                      </button>
+                    </div>
+                  </form>
+                `
+              : html`
                   <div class="modal-action">
+                    ${
+                      isConfirm
+                        ? html`
+                            <button
+                              type="button"
+                              class="btn btn-ghost"
+                              @click=${() => this.finish(false)}
+                            >
+                              Cancel
+                            </button>
+                          `
+                        : html``
+                    }
                     <button
                       type="button"
-                      class="btn btn-ghost"
-                      @click=${() => this.finish(null)}
+                      class=${isConfirm ? "btn btn-error" : "btn"}
+                      @click=${() => this.finish(isConfirm ? true : null)}
                     >
-                      Cancel
-                    </button>
-                    <button type="submit" class="btn">
-                      ${this.options.confirmLabel || "Save"}
+                      ${
+                        this.options.confirmLabel ||
+                        (isConfirm ? "Confirm" : "OK")
+                      }
                     </button>
                   </div>
-                </form>
-              `
-            : html`
-                <div class="modal-action">
-                  ${isConfirm
-                    ? html`
-                        <button
-                          type="button"
-                          class="btn btn-ghost"
-                          @click=${() => this.finish(false)}
-                        >
-                          Cancel
-                        </button>
-                      `
-                    : html``}
-                  <button
-                    type="button"
-                    class=${isConfirm ? "btn btn-error" : "btn"}
-                    @click=${() => this.finish(isConfirm ? true : null)}
-                  >
-                    ${this.options.confirmLabel ||
-                    (isConfirm ? "Confirm" : "OK")}
-                  </button>
-                </div>
-              `}
+                `
+          }
         </div>
         <button
           type="button"
@@ -153,7 +163,9 @@ class BrowserPopover extends LitElement {
   }
 }
 
-customElements.define("browser-popover", BrowserPopover);
+if (!customElements.get("browser-popover")) {
+  customElements.define("browser-popover", BrowserPopover);
+}
 
 function getPopover() {
   let popover = document.querySelector("browser-popover");

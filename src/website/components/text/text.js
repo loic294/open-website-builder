@@ -1,11 +1,22 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { buildEditorCustomCss } from "../../utils/custom-css.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
 
 export const defaultTextConfig = {
   type: "text",
   content: "<p>This is a default text</p>",
 };
+
+export function buildResponsiveTextCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => ({
+    selector: ".text-block",
+    declarations: effectiveSettings.fontSize
+      ? { "font-size": String(effectiveSettings.fontSize) }
+      : [],
+  }));
+}
 
 function normalizeTextLinksToSameTab(rawHtml) {
   const raw = String(rawHtml ?? "");
@@ -98,22 +109,40 @@ export class OwbText extends LitElement {
     const settings = this.settings ?? {};
     const customCss = String(settings.customCss || "").trim();
     const spacingCss = getSpacingStyleBlock(settings);
+    const responsiveCss = buildResponsiveTextCss(settings);
     const normalizedContent = normalizeTextLinksToSameTab(content);
     const isEditorMode = OwbText.editorPlugin !== null;
+    const renderedCustomCss = buildEditorCustomCss(customCss, isEditorMode);
     return html`
       <link rel="stylesheet" href="/owb-styles/text.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
-      ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
+      ${
+        settings.fontSize
+          ? unsafeHTML(
+              `<style>.text-block { font-size: ${String(settings.fontSize)}; }</style>`,
+            )
+          : null
+      }
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
+      ${
+        renderedCustomCss
+          ? unsafeHTML(`<style>${renderedCustomCss}</style>`)
+          : null
+      }
       <div
-        class="text-block ProseMirror${isEditorMode && this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
+        class="text-block ProseMirror${
+          isEditorMode && this.isSettingsOpen ? " is-settings-open" : ""
+        }"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbText.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbText.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
         ${isEditorMode ? nothing : unsafeHTML(normalizedContent)}
       </div>

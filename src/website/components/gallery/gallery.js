@@ -1,6 +1,7 @@
 import { LitElement, html, isServer, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
 import { getImageSize, getImageUrlForSize } from "../../utils/image-size.js";
 import { createElement, X, ChevronLeft, ChevronRight } from "lucide";
 
@@ -8,6 +9,20 @@ export const defaultGalleryConfig = {
   type: "gallery",
   images: [],
 };
+
+export function buildResponsiveGalleryCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => ({
+    selector: ".gallery-grid",
+    declarations: {
+      "--gallery-columns": Math.max(
+        1,
+        Number.parseInt(effectiveSettings.galleryColumns, 10) || 3,
+      ),
+      "--gallery-gap": String(effectiveSettings.galleryGap || "8px"),
+      "--gallery-ratio": String(effectiveSettings.galleryFormat || "1 / 1"),
+    },
+  }));
+}
 
 export class OwbGallery extends LitElement {
   static editorPlugin = null;
@@ -126,82 +141,96 @@ export class OwbGallery extends LitElement {
       this.lightboxIndex >= 0 ? images[this.lightboxIndex] : "";
     const activeHiresImage = getImageUrlForSize(activeImage, "hires");
     const spacingCss = getSpacingStyleBlock(settings);
+    const responsiveCss = buildResponsiveGalleryCss(settings);
     const isEditorMode = OwbGallery.editorPlugin !== null;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/gallery.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
       <div
         class="gallery-block${this.isSettingsOpen ? " is-settings-open" : ""}"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbGallery.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbGallery.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
-        ${images.length === 0
-          ? html`<div class="gallery-empty">No gallery images configured</div>`
-          : html`
-              <div
-                class="gallery-grid"
-                style="--gallery-columns: ${cols}; --gallery-gap: ${gap}; --gallery-ratio: ${format};"
-              >
-                ${images.map(
-                  (url, index) => html`
-                    <button
-                      type="button"
-                      class="gallery-thumb"
-                      @click=${() => this.openLightbox(index)}
-                    >
-                      <img
-                        src=${getImageUrlForSize(url, thumbnailImageSize)}
-                        alt=""
-                        loading="lazy"
-                      />
-                    </button>
-                  `,
-                )}
-              </div>
-              ${isServer
-                ? null
-                : html`<dialog
-                    class="lightbox"
-                    @click=${(event) => {
-                      if (event.target === event.currentTarget)
-                        this.closeLightbox();
-                    }}
-                  >
-                    <div class="lightbox-inner">
-                      <img src=${activeHiresImage} alt="" />
+        ${
+          images.length === 0
+            ? html`<div class="gallery-empty">
+                No gallery images configured
+              </div>`
+            : html`
+                <div
+                  class="gallery-grid"
+                  style="--gallery-columns: ${cols}; --gallery-gap: ${gap}; --gallery-ratio: ${format};"
+                >
+                  ${images.map(
+                    (url, index) => html`
                       <button
-                        class="lightbox-close"
                         type="button"
-                        @click=${() => this.closeLightbox()}
+                        class="gallery-thumb"
+                        @click=${() => this.openLightbox(index)}
                       >
-                        ${createElement(X)}
+                        <img
+                          src=${getImageUrlForSize(url, thumbnailImageSize)}
+                          alt=""
+                          loading="lazy"
+                        />
                       </button>
-                      ${images.length > 1
-                        ? html`
-                            <button
-                              class="lightbox-nav is-prev"
-                              type="button"
-                              @click=${() => this.navigate(-1)}
-                            >
-                              ${createElement(ChevronLeft)}
-                            </button>
-                            <button
-                              class="lightbox-nav is-next"
-                              type="button"
-                              @click=${() => this.navigate(1)}
-                            >
-                              ${createElement(ChevronRight)}
-                            </button>
-                          `
-                        : null}
-                    </div>
-                  </dialog>`}
-            `}
+                    `,
+                  )}
+                </div>
+                ${
+                  isServer
+                    ? null
+                    : html`<dialog
+                        class="lightbox"
+                        @click=${(event) => {
+                        if (event.target === event.currentTarget)
+                          this.closeLightbox();
+                      }}
+                      >
+                        <div class="lightbox-inner">
+                          <img src=${activeHiresImage} alt="" />
+                          <button
+                            class="lightbox-close"
+                            type="button"
+                            @click=${() => this.closeLightbox()}
+                          >
+                            ${createElement(X)}
+                          </button>
+                          ${
+                          images.length > 1
+                            ? html`
+                                <button
+                                  class="lightbox-nav is-prev"
+                                  type="button"
+                                  @click=${() => this.navigate(-1)}
+                                >
+                                  ${createElement(ChevronLeft)}
+                                </button>
+                                <button
+                                  class="lightbox-nav is-next"
+                                  type="button"
+                                  @click=${() => this.navigate(1)}
+                                >
+                                  ${createElement(ChevronRight)}
+                                </button>
+                              `
+                            : null
+                        }
+                        </div>
+                      </dialog>`
+                }
+              `
+        }
       </div>
     `;
   }

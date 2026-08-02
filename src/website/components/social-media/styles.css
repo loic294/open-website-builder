@@ -122,6 +122,16 @@
 .social-icon svg {
   width: var(--social-button-icon-size, 15px);
   height: var(--social-button-icon-size, 15px);
+  fill: var(--social-brand-color, currentColor);
+}
+
+.social-block.icon-color-text .social-icon svg {
+  fill: currentColor;
+}
+
+.social-block.display-text .social-icon,
+.social-block.display-icon .social-label {
+  display: none;
 }
 
 .social-empty {

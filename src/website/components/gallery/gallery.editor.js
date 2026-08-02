@@ -87,7 +87,7 @@ installEditorPlugin(OwbGallery, {
               .value=${getImageSize(editor.galleryImageSize, "thumb")}
               .options=${IMAGE_SIZE_OPTIONS}
               @change=${(event) =>
-                editor.updateSettingsState({
+                editor.updateGlobalSettingsState({
                   galleryImageSize: getImageSize(event.detail.value, "thumb"),
                 })}
             ></editor-select>
@@ -131,7 +131,7 @@ installEditorPlugin(OwbGallery, {
               max="12"
               .value=${String(editor.galleryColumns)}
               @change=${(event) =>
-                editor.updateSettingsState({
+                editor.updateResponsiveSettingsState({
                   galleryColumns: Math.max(
                     1,
                     Math.min(12, Number.parseInt(event.detail.value, 10) || 1),
@@ -143,7 +143,7 @@ installEditorPlugin(OwbGallery, {
               .value=${editor.galleryFormat}
               .options=${FORMAT_OPTIONS}
               @change=${(event) =>
-                editor.updateSettingsState({
+                editor.updateResponsiveSettingsState({
                   galleryFormat: event.detail.value,
                 })}
             ></editor-select>
@@ -152,7 +152,9 @@ installEditorPlugin(OwbGallery, {
               placeholder="8px"
               .value=${editor.galleryGap}
               @change=${(event) =>
-                editor.updateSettingsState({ galleryGap: event.detail.value })}
+                editor.updateResponsiveSettingsState({
+                  galleryGap: event.detail.value,
+                })}
             ></editor-text-input>
           </settings-section>
         `;

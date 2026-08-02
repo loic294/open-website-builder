@@ -59,6 +59,32 @@
   display: block;
 }
 
+.icon-slot-left {
+  display: none;
+}
+
+.icon-slot-right {
+  display: inline-flex;
+}
+
+.icon-variant {
+  display: none;
+}
+
+.collapsable-block.icon-chevron .icon-variant-chevron,
+.collapsable-block.icon-plus-minus.is-closed .icon-variant-plus,
+.collapsable-block.icon-plus-minus.is-open .icon-variant-minus {
+  display: block;
+}
+
+.collapsable-block.icon-left .icon-slot-left {
+  display: inline-flex;
+}
+
+.collapsable-block.icon-left .icon-slot-right {
+  display: none;
+}
+
 /* Chevron rotates 180° when closed (so it points down/up to suggest action). */
 .collapsable-block.icon-chevron.is-closed .collapsable-icon {
   transform: rotate(-90deg);

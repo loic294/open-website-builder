@@ -470,12 +470,14 @@ const COLLECTION_VARIANT_CONFIG = {
       <settings-section title="Collection">
         <editor-select
           label="Collection"
-          .options=${options.length > 0
-            ? options
-            : [{ label: "No collections available", value: "" }]}
+          .options=${
+            options.length > 0
+              ? options
+              : [{ label: "No collections available", value: "" }]
+          }
           .value=${host.settingCollectionId}
           @change=${(event) => {
-            host.settings.updateSettingsState({
+            host.settings.updateGlobalSettingsState({
               settingCollectionId: event.detail.value,
             });
           }}
@@ -485,7 +487,7 @@ const COLLECTION_VARIANT_CONFIG = {
           .options=${countOptions}
           .value=${host.settingCollectionItemsCount}
           @change=${(event) => {
-            host.settings.updateSettingsState({
+            host.settings.updateGlobalSettingsState({
               settingCollectionItemsCount: event.detail.value,
             });
           }}
@@ -495,16 +497,18 @@ const COLLECTION_VARIANT_CONFIG = {
           .options=${COLLECTION_SORT_OPTIONS}
           .value=${host.settingCollectionSort}
           @change=${(event) => {
-            host.settings.updateSettingsState({
+            host.settings.updateGlobalSettingsState({
               settingCollectionSort: event.detail.value,
             });
           }}
         ></editor-select>
         <div class="settings-css-help">
           Available dynamic fields:
-          ${dynamicFields.length > 0
-            ? dynamicFields.map((fieldName) => `{{${fieldName}}}`).join(", ")
-            : "None"}
+          ${
+            dynamicFields.length > 0
+              ? dynamicFields.map((fieldName) => `{{${fieldName}}}`).join(", ")
+              : "None"
+          }
         </div>
       </settings-section>
     `;

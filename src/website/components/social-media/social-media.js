@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
+import { buildResponsiveCss } from "../../utils/responsive.js";
 import * as simpleIcons from "simple-icons";
 
 export const defaultSocialMediaConfig = {
@@ -90,6 +91,105 @@ export function getSocialButtonShapeRadius(shape, customRadius) {
   return customRadius || "12px";
 }
 
+const SOCIAL_BUTTON_SIZES = {
+  xs: ["6px", "0.28rem", "0.45rem", "0.82rem", "18px"],
+  small: ["7px", "0.34rem", "0.56rem", "0.9rem", "22px"],
+  medium: ["8px", "0.38rem", "0.62rem", "1rem", "28px"],
+  large: ["14px", "0.42rem", "0.72rem", "1.1rem", "34px"],
+  xxl: ["24px", "1.4rem", "1.4rem", "0.6rem", "36px"],
+};
+
+const SOCIAL_TONES = {
+  primary: "var(--website-primary-color, #116dff)",
+  secondary: "var(--website-secondary-color, #f97316)",
+  light: "var(--website-light-color, #f5f5f5)",
+  dark: "var(--website-dark-color, #111827)",
+  muted: "var(--website-muted-color, #6b7280)",
+};
+
+export function buildResponsiveSocialCss(settings = {}) {
+  return buildResponsiveCss(settings, (effectiveSettings) => {
+    const displayMode = String(
+      effectiveSettings.socialDisplayMode || "icon-text",
+    );
+    const size =
+      SOCIAL_BUTTON_SIZES[effectiveSettings.socialButtonSize] ||
+      SOCIAL_BUTTON_SIZES.medium;
+    const tone =
+      SOCIAL_TONES[effectiveSettings.socialButtonTheme] || SOCIAL_TONES.primary;
+    const variant = String(effectiveSettings.socialButtonVariant || "filled");
+    const radius = getSocialButtonShapeRadius(
+      String(effectiveSettings.socialButtonShape || "rounded"),
+      String(effectiveSettings.socialButtonRadiusCustom || "12px"),
+    );
+    const buttonDeclarations = [
+      `--social-button-gap: ${size[0]}`,
+      `--social-button-padding-y: ${size[1]}`,
+      `--social-button-padding-x: ${size[2]}`,
+      `--social-button-font-size: ${size[3]}`,
+      `--social-button-icon-size: ${size[4]}`,
+      `--social-button-radius: ${radius}`,
+      `border-radius: ${radius}`,
+    ];
+    if (variant === "border") {
+      buttonDeclarations.push(
+        "background: transparent",
+        `border-color: ${tone}`,
+        `color: ${tone}`,
+      );
+    } else if (variant === "ghost") {
+      buttonDeclarations.push(
+        `background: color-mix(in srgb, ${tone} 14%, transparent)`,
+        "border-color: transparent",
+        `color: ${tone}`,
+      );
+    } else {
+      buttonDeclarations.push(
+        `background: ${tone}`,
+        "border-color: transparent",
+        "color: var(--website-text-light-color, #fff)",
+      );
+    }
+    return [
+      {
+        selector: ".social-buttons-grid",
+        declarations: {
+          "justify-content": String(
+            effectiveSettings.socialButtonAlignment === "center"
+              ? "center"
+              : effectiveSettings.socialButtonAlignment === "right"
+                ? "flex-end"
+                : "flex-start",
+          ),
+        },
+      },
+      { selector: ".social-button", declarations: buttonDeclarations },
+      {
+        selector: ".social-icon",
+        declarations: [
+          `display: ${displayMode === "text" ? "none" : "inline-flex"}`,
+        ],
+      },
+      {
+        selector: ".social-label",
+        declarations: [
+          `display: ${displayMode === "icon" ? "none" : "inline"}`,
+        ],
+      },
+      {
+        selector: ".social-icon svg",
+        declarations: [
+          `fill: ${
+            effectiveSettings.socialIconColorMode === "text"
+              ? "currentColor"
+              : "var(--social-brand-color, currentColor)"
+          }`,
+        ],
+      },
+    ];
+  });
+}
+
 export class OwbSocialMedia extends LitElement {
   static editorPlugin = null;
 
@@ -174,27 +274,19 @@ export class OwbSocialMedia extends LitElement {
     const customRadius = String(settings.socialButtonRadiusCustom || "9999px");
     const displayMode = String(settings.socialDisplayMode || "icon-text");
     const iconColorMode = String(settings.socialIconColorMode || "brand");
-    const showIcon = displayMode !== "text";
-    const showText = displayMode !== "icon";
     const radius = getSocialButtonShapeRadius(shape, customRadius);
 
-    const iconEl =
-      showIcon && icon
-        ? html`<span class="social-icon"
-            >${unsafeHTML(
-              iconColorMode === "brand"
-                ? icon.svg.replace(
-                    "<svg",
-                    `<svg style="fill:#${icon.hex ?? "000"}"`,
-                  )
-                : icon.svg.replace("<svg", `<svg style="fill:currentColor"`),
-            )}</span
-          >`
-        : null;
-
-    const label = showText
-      ? html`<span>${item?.name || icon?.title || "Social"}</span>`
+    const iconEl = icon
+      ? html`<span
+          class="social-icon"
+          style="--social-brand-color: #${icon.hex ?? "000"}"
+          >${unsafeHTML(icon.svg)}</span
+        >`
       : null;
+
+    const label = html`<span class="social-label"
+      >${item?.name || icon?.title || "Social"}</span
+    >`;
 
     const href = String(item?.link || "").trim();
 
@@ -216,29 +308,37 @@ export class OwbSocialMedia extends LitElement {
     const settings = this.settings || {};
     const alignment = String(settings.socialButtonAlignment || "left");
     const spacingCss = getSpacingStyleBlock(settings);
+    const responsiveCss = buildResponsiveSocialCss(settings);
     const isEditorMode = OwbSocialMedia.editorPlugin !== null;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/social-media.css" />
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
+      ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
       <div
-        class="social-block${isEditorMode && this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
+        class="social-block${
+          isEditorMode && this.isSettingsOpen ? " is-settings-open" : ""
+        } display-${String(settings.socialDisplayMode || "icon-text")} icon-color-${String(settings.socialIconColorMode || "brand")}"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbSocialMedia.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbSocialMedia.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
-        ${items.length === 0
-          ? html`<div class="social-empty">No social links configured</div>`
-          : html`
-              <div class="social-buttons-grid align-${alignment}">
-                ${items.map((item) => this.renderButton(item))}
-              </div>
-            `}
+        ${
+          items.length === 0
+            ? html`<div class="social-empty">No social links configured</div>`
+            : html`
+                <div class="social-buttons-grid align-${alignment}">
+                  ${items.map((item) => this.renderButton(item))}
+                </div>
+              `
+        }
       </div>
     `;
   }

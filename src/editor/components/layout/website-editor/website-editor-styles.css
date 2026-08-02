@@ -74,6 +74,9 @@
   width: 100%;
   margin: 0 auto;
   background-color: var(--editor-white-color);
+  container-name: owb-viewport;
+  container-type: inline-size;
+  --owb-responsive-bucket: desktop;
 }
 
 .orientation-switcher {
@@ -92,21 +95,25 @@
 .website-viewport.size-tablet.orientation-horizontal {
   width: min(100%, 1180px);
   height: 820px;
+  --owb-responsive-bucket: tabletHorizontal;
 }
 
 .website-viewport.size-tablet.orientation-vertical {
   width: min(100%, 820px);
   height: 1180px;
+  --owb-responsive-bucket: tabletVertical;
 }
 
 .website-viewport.size-mobile.orientation-horizontal {
   width: min(100%, 844px);
   height: 440px;
+  --owb-responsive-bucket: mobileHorizontal;
 }
 
 .website-viewport.size-mobile.orientation-vertical {
   width: min(100%, 440px);
   height: 844px;
+  --owb-responsive-bucket: mobileVertical;
 }
 
 .website-preview-iframe {

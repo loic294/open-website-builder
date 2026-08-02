@@ -5,6 +5,7 @@
 .settings-overlay-root {
   position: fixed;
   inset: 0;
+  background: transparent;
   pointer-events: none;
   z-index: 9999;
 }
@@ -179,6 +180,29 @@
   background: rgba(255, 199, 0, 0.08);
 }
 
+.settings-css-breakpoint-controls {
+  display: grid;
+  gap: 5px;
+}
+
+.settings-css-breakpoint-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.settings-css-breakpoint-actions select {
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--editor-border-color, #e4e0db);
+  border-radius: 5px;
+  background: #ffffff;
+  color: var(--editor-text-color, #1e1b16);
+  font: inherit;
+  font-size: 12px;
+}
+
 .settings-css-help,
 .settings-css-error {
   margin: 0;
@@ -209,6 +233,18 @@
   cursor: pointer;
   accent-color: var(--editor-primary-color, #ffc700);
   flex-shrink: 0;
+}
+
+.settings-grid-placement {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.settings-item-alignment {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .settings-css-help {
@@ -242,66 +278,52 @@
   gap: 6px;
   padding-top: 6px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
 
-  /* ── Responsive viewport banner ─────────────────────────────────── */
-  .settings-overlay-viewport-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 6px 10px;
-    border-bottom: 2px solid #1c6ef3;
-    background: #eaf1ff;
-  }
+.settings-overlay-viewport-bar {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 0;
+  padding: 6px 10px;
+  border-radius: 0;
+}
 
-  .settings-overlay-viewport-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #1c4db5;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
+.settings-overlay-viewport-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
-  .settings-overlay-viewport-reset {
-    border: 1px solid #1c6ef3;
-    border-radius: 4px;
-    background: #ffffff;
-    color: #1c4db5;
-    font: inherit;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
+.settings-overlay-viewport-reset {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 
-  .settings-overlay-viewport-reset:hover {
-    background: #d7e6ff;
-  }
+.setting-override-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #1c6ef3;
+  border-radius: 3px;
+  background: #eaf1ff;
+  color: #1c4db5;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
 
-  /* ── Per-setting override clear button ───────────────────────────── */
-  .setting-override-clear {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    border: 1px solid #1c6ef3;
-    border-radius: 3px;
-    background: #eaf1ff;
-    color: #1c4db5;
-    font-size: 12px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0;
-    font-family: inherit;
-  }
-
-  .setting-override-clear:hover {
-    background: #1c6ef3;
-    color: #ffffff;
-  }
+.setting-override-clear:hover {
+  background: #1c6ef3;
+  color: #ffffff;
 }
 
 .settings-node-order-actions {

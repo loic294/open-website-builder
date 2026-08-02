@@ -1,5 +1,10 @@
 import { render as ssrRender } from "@lit-labs/ssr";
 import { collectResult } from "@lit-labs/ssr/lib/render-result.js";
+import {
+  buildResponsiveLayoutItemCss,
+  getLayoutItemDeclarations,
+} from "../../src/website/utils/layout-item.js";
+import { RESPONSIVE_BUCKET_ORDER } from "../../src/website/utils/responsive.js";
 
 export function escapeAttr(value) {
   return String(value ?? "")
@@ -227,18 +232,7 @@ function getHostZIndexFromCustomCss(settings = {}) {
 }
 
 export function getGridItemStyle(settings = {}) {
-  const columnStart = Number.parseInt(settings.gridColumnStart, 10);
-  const rowStart = Number.parseInt(settings.gridRowStart, 10);
-  const columnSpan = Number.parseInt(settings.gridColumnSpan, 10);
-  const rowSpan = Number.parseInt(settings.gridRowSpan, 10);
-
-  const parts = [];
-  if (Number.isFinite(columnStart) && Number.isFinite(columnSpan)) {
-    parts.push(`grid-column: ${columnStart} / span ${Math.max(1, columnSpan)}`);
-  }
-  if (Number.isFinite(rowStart) && Number.isFinite(rowSpan)) {
-    parts.push(`grid-row: ${rowStart} / span ${Math.max(1, rowSpan)}`);
-  }
+  const parts = getLayoutItemDeclarations(settings);
 
   // Keep the wrapper as a proper stacking context target for overlapping grid items.
   parts.push("position: relative");
@@ -253,10 +247,26 @@ export function getGridItemStyle(settings = {}) {
   return parts.join("; ");
 }
 
+function escapeCssAttributeValue(value) {
+  return String(value ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/[\n\r\f]/g, " ");
+}
+
 export async function renderChildrenWithGrid(node, context) {
   const settings = node?.settings ?? {};
   const alignmentMode = String(settings.settingAlignmentMode || "block");
-  const isGridMode = alignmentMode === "grid" || alignmentMode === "visual";
+  const responsiveOverrides = settings.responsiveOverrides || {};
+  const layoutModes = [
+    alignmentMode,
+    ...RESPONSIVE_BUCKET_ORDER.map(
+      (bucket) => responsiveOverrides[bucket]?.settingAlignmentMode,
+    ),
+  ];
+  const hasItemLayout = layoutModes.some(
+    (mode) => mode === "flex" || mode === "grid" || mode === "visual",
+  );
   const children = Array.isArray(node?.content) ? node.content : [];
   const renderedChildren = [];
 
@@ -264,10 +274,18 @@ export async function renderChildrenWithGrid(node, context) {
     const childHtml = await context.renderNode(child, context);
     if (!childHtml) continue;
 
-    if (isGridMode) {
-      const style = getGridItemStyle(child?.settings ?? {});
+    if (hasItemLayout) {
+      const childSettings = child?.settings ?? {};
+      const childId = String(child?.id || "");
+      const style = getGridItemStyle(childSettings);
+      const selector = childId
+        ? `[data-grid-child-id="${escapeCssAttributeValue(childId)}"]`
+        : "";
+      const responsiveCss = selector
+        ? buildResponsiveLayoutItemCss(childSettings, selector)
+        : "";
       renderedChildren.push(
-        `<div style="${escapeAttr(style)}">${childHtml}</div>`,
+        `${responsiveCss ? `<style>${responsiveCss}</style>` : ""}<div${childId ? ` data-grid-child-id="${escapeAttr(childId)}"` : ""} style="${escapeAttr(style)}">${childHtml}</div>`,
       );
     } else {
       renderedChildren.push(childHtml);

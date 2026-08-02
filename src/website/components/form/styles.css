@@ -19,7 +19,12 @@
 
 .owb-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+}
+
+.owb-form > ::slotted(*) {
+  min-width: 0;
 }
 
 .owb-form-success {

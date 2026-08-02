@@ -22,12 +22,12 @@
   color: var(--navbar-hover-color, var(--navbar-color, inherit));
 }
 
-.navbar.has-underline-hover .navbar-link:hover {
-  text-decoration: underline;
+.navbar-link:hover {
+  text-decoration: var(--navbar-hover-decoration, none);
 }
 
-.navbar.has-underline-active .navbar-link.is-active {
-  text-decoration: underline;
+.navbar-link.is-active {
+  text-decoration: var(--navbar-active-decoration, none);
 }
 
 .navbar-empty {
@@ -51,7 +51,7 @@
   cursor: pointer;
   padding: 4px;
   color: var(--navbar-color, inherit);
-  font-size: 1.5rem;
+  font-size: var(--navbar-mobile-icon-size, 1.5rem);
   line-height: 1;
 }
 

@@ -80,13 +80,7 @@ installEditorPlugin(OwbButton, {
         if (tab === "general") {
           return html`
             <settings-section title="Content">
-              <settings-section
-                title="Content"
-                ?overridden=${editor.hasAnyOverriddenKeys(
-                  "buttonLink",
-                  "buttonType",
-                )}
-              >
+              <settings-section title="Content">
                 <editor-text-input
                   label="Label"
                   .value=${element.content}
@@ -102,7 +96,7 @@ installEditorPlugin(OwbButton, {
                   .value=${editor.buttonLink}
                   .disabled=${editor.buttonType !== "link"}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateGlobalSettingsState({
                       buttonLink: event.detail.value,
                     })}
                 ></editor-text-input>
@@ -115,7 +109,7 @@ installEditorPlugin(OwbButton, {
                     { label: "Submit button", value: "submit" },
                   ]}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateGlobalSettingsState({
                       buttonType: event.detail.value,
                     })}
                 ></editor-select>
@@ -134,31 +128,33 @@ installEditorPlugin(OwbButton, {
                   .options=${SIZE_OPTIONS}
                   .value=${editor.buttonSize}
                   @change=${(event) =>
-                    editor.updateSettingsState({
+                    editor.updateResponsiveSettingsState({
                       buttonSize: event.detail.value,
                     })}
                 ></editor-radio-button>
-                ${editor.buttonSize === "custom"
-                  ? html`
-                      <editor-padding-input
-                        .value=${{
-                          top: editor.buttonPaddingTop,
-                          right: editor.buttonPaddingRight,
-                          bottom: editor.buttonPaddingBottom,
-                          left: editor.buttonPaddingLeft,
-                        }}
-                        @change=${(event) => {
-                          const value = event.detail.value || {};
-                          editor.updateSettingsState({
-                            buttonPaddingTop: value.top || "",
-                            buttonPaddingRight: value.right || "",
-                            buttonPaddingBottom: value.bottom || "",
-                            buttonPaddingLeft: value.left || "",
-                          });
-                        }}
-                      ></editor-padding-input>
-                    `
-                  : null}
+                ${
+                  editor.buttonSize === "custom"
+                    ? html`
+                        <editor-padding-input
+                          .value=${{
+                            top: editor.buttonPaddingTop,
+                            right: editor.buttonPaddingRight,
+                            bottom: editor.buttonPaddingBottom,
+                            left: editor.buttonPaddingLeft,
+                          }}
+                          @change=${(event) => {
+                            const value = event.detail.value || {};
+                            editor.updateResponsiveSettingsState({
+                              buttonPaddingTop: value.top || "",
+                              buttonPaddingRight: value.right || "",
+                              buttonPaddingBottom: value.bottom || "",
+                              buttonPaddingLeft: value.left || "",
+                            });
+                          }}
+                        ></editor-padding-input>
+                      `
+                    : null
+                }
               </settings-section>
             </settings-section>
           `;
@@ -181,7 +177,7 @@ installEditorPlugin(OwbButton, {
                   { label: "Muted", value: "muted" },
                 ]}
                 @change=${(event) =>
-                  editor.updateSettingsState({
+                  editor.updateResponsiveSettingsState({
                     buttonTheme: event.detail.value,
                   })}
               ></editor-select>
@@ -198,7 +194,7 @@ installEditorPlugin(OwbButton, {
                 ]}
                 .value=${editor.buttonVariant}
                 @change=${(event) =>
-                  editor.updateSettingsState({
+                  editor.updateResponsiveSettingsState({
                     buttonVariant: event.detail.value,
                   })}
               ></editor-radio-button>
@@ -218,23 +214,25 @@ installEditorPlugin(OwbButton, {
                 ]}
                 .value=${editor.buttonShape}
                 @change=${(event) =>
-                  editor.updateSettingsState({
+                  editor.updateResponsiveSettingsState({
                     buttonShape: event.detail.value,
                   })}
               ></editor-radio-button>
-              ${editor.buttonShape === "custom"
-                ? html`
-                    <editor-text-input
-                      label="Radius"
-                      placeholder="12px"
-                      .value=${editor.buttonRadiusCustom}
-                      @change=${(event) =>
-                        editor.updateSettingsState({
-                          buttonRadiusCustom: event.detail.value,
-                        })}
-                    ></editor-text-input>
-                  `
-                : null}
+              ${
+                editor.buttonShape === "custom"
+                  ? html`
+                      <editor-text-input
+                        label="Radius"
+                        placeholder="12px"
+                        .value=${editor.buttonRadiusCustom}
+                        @change=${(event) =>
+                          editor.updateResponsiveSettingsState({
+                            buttonRadiusCustom: event.detail.value,
+                          })}
+                      ></editor-text-input>
+                    `
+                  : null
+              }
             </settings-section>
           `;
         }

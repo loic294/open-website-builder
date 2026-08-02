@@ -20,7 +20,7 @@
 
 import { html, render } from "lit";
 import { Ellipsis, ArrowUp, ArrowDown, Trash, X, createElement } from "lucide";
-import { EditorState } from "@codemirror/state";
+import { EditorSelection, EditorState } from "@codemirror/state";
 import {
   EditorView,
   keymap,
@@ -32,18 +32,33 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { css } from "@codemirror/lang-css";
 import { syntaxTree } from "@codemirror/language";
 import { linter, lintGutter } from "@codemirror/lint";
+import daisyUI from "../../../styles/daisyui.css?inline";
 import overlayStyles from "./styles-settings.css?inline";
+import {
+  RESPONSIVE_BREAKPOINTS,
+  RESPONSIVE_BUCKET_ORDER,
+  getEffectiveSettings,
+} from "../../../../website/utils/responsive.js";
+
+const GRID_PLACEMENT_KEYS = [
+  "gridColumnStart",
+  "gridColumnSpan",
+  "gridRowStart",
+  "gridRowSpan",
+];
+
+const ITEM_ALIGNMENT_KEYS = ["alignSelf", "justifySelf"];
+const ITEM_ALIGNMENT_OPTIONS = [
+  { label: "Auto", value: "auto" },
+  { label: "Start", value: "start" },
+  { label: "Center", value: "center" },
+  { label: "End", value: "end" },
+  { label: "Stretch", value: "stretch" },
+  { label: "Baseline", value: "baseline" },
+];
 
 export const OVERLAY_WIDTH = 340;
 export const OVERLAY_HEIGHT = 480;
-
-// Ordered widest-first. Each bucket inherits from all buckets before it.
-const RESPONSIVE_BUCKET_ORDER = [
-  "tabletHorizontal",
-  "mobileHorizontal",
-  "tabletVertical",
-  "mobileVertical",
-];
 
 const REORDERABLE_PARENT_TYPES = new Set(["section", "container", "form"]);
 
@@ -173,6 +188,7 @@ export class SettingsController {
     this._ownerElement = null;
     this.settingsDefaultState = {};
     this.settingsOverlayContainer = null;
+    this.settingsOverlayRoot = null;
     this.settingsOverlayContent = null;
     this.settingsOverlayTabs = [{ id: "settings", label: "Settings" }];
     this.settingsOverlayActiveTab = "settings";
@@ -234,6 +250,7 @@ export class SettingsController {
     if (this.settingsOverlayContainer) {
       this.settingsOverlayContainer.remove();
       this.settingsOverlayContainer = null;
+      this.settingsOverlayRoot = null;
     }
 
     window.removeEventListener("pointermove", this.onOverlayPointerMove);
@@ -268,6 +285,7 @@ export class SettingsController {
     container.setAttribute("data-settings-overlay-root", "true");
     document.body.appendChild(container);
     this.settingsOverlayContainer = container;
+    this.settingsOverlayRoot = container.attachShadow({ mode: "open" });
   }
 
   // ---------- Opening the settings overlay for plugin-based owners ----------
@@ -289,8 +307,12 @@ export class SettingsController {
     }
 
     this._ownerElement = ownerElement;
-    this.host.node = ownerElement.node;
     this.host.pageConfig = ownerElement.pageConfig;
+    this.host.node =
+      this.findNodeParentInTree(
+        this.host.pageConfig?.content,
+        ownerElement.node?.id,
+      )?.node || ownerElement.node;
 
     const cssFromNode = this.getNodeCustomCss();
     if (this.host.settingCustomCss !== cssFromNode) {
@@ -436,7 +458,7 @@ export class SettingsController {
   }
 
   ensureCssEditorMounted() {
-    const host = this.settingsOverlayContainer?.querySelector(
+    const host = this.settingsOverlayRoot?.querySelector(
       "[data-css-code-editor]",
     );
 
@@ -471,7 +493,7 @@ export class SettingsController {
           const nextCss = update.state.doc.toString();
           this.validateCustomCss(nextCss);
           this.applyCustomCssToRenderRoot(nextCss);
-          this.updateSettingsState({
+          this.updateGlobalSettingsState({
             settingCustomCss: nextCss,
           });
         }),
@@ -503,6 +525,33 @@ export class SettingsController {
       },
     });
     this.isSyncingCssEditorUpdate = false;
+  }
+
+  insertCssBreakpoint(bucket) {
+    if (!this.cssEditorView) return;
+
+    const breakpoint = RESPONSIVE_BREAKPOINTS.find(
+      ({ bucket: breakpointBucket }) => breakpointBucket === bucket,
+    );
+    if (!breakpoint) return;
+
+    const { from, to } = this.cssEditorView.state.selection.main;
+    const document = this.cssEditorView.state.doc;
+    const prefix =
+      from > 0 && document.sliceString(from - 1, from) !== "\n" ? "\n\n" : "";
+    const suffix =
+      to < document.length && document.sliceString(to, to + 1) !== "\n"
+        ? "\n\n"
+        : "";
+    const snippet = `${prefix}@media (max-width: ${breakpoint.maxWidth}px) {\n  :host {\n    \n  }\n}${suffix}`;
+    const cursor = from + snippet.indexOf("    \n") + 4;
+
+    this.cssEditorView.dispatch({
+      changes: { from, to, insert: snippet },
+      selection: EditorSelection.cursor(cursor),
+      scrollIntoView: true,
+    });
+    this.cssEditorView.focus();
   }
 
   destroyCssEditor() {
@@ -609,8 +658,35 @@ export class SettingsController {
 
   // ---------- Settings tab rendering ----------
 
+  getEffectiveNodeSettings() {
+    return getEffectiveSettings(
+      this.host.node?.settings || {},
+      this.activeViewportBucket,
+    );
+  }
+
+  hasGridPlacementSettings() {
+    const settings = this.host.node?.settings;
+    if (!settings || typeof settings !== "object") return false;
+
+    return GRID_PLACEMENT_KEYS.some(
+      (key) =>
+        key in settings ||
+        Object.values(settings.responsiveOverrides || {}).some(
+          (overrides) => overrides && key in overrides,
+        ),
+    );
+  }
+
+  updateGridPlacement(settingKey, value) {
+    const parsedValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsedValue) || parsedValue < 1) return;
+    this.updateResponsiveSettingsState({ [settingKey]: parsedValue });
+  }
+
   renderCssSettingsTab() {
     const orderState = this.getNodeOrderState();
+    const effectiveSettings = this.getEffectiveNodeSettings();
 
     return html`
       <div class="settings-css-tab">
@@ -719,6 +795,79 @@ export class SettingsController {
             }}
           ></editor-color-picker>
         </settings-section>
+        ${
+          this.hasGridPlacementSettings()
+            ? html`
+                <settings-section
+                  title="Grid placement"
+                  ?overridden=${this.hasAnyOverriddenKeys(
+                    ...GRID_PLACEMENT_KEYS,
+                  )}
+                >
+                  <div class="settings-grid-placement">
+                    ${[
+                      ["gridColumnStart", "Col start"],
+                      ["gridColumnSpan", "Col span"],
+                      ["gridRowStart", "Row start"],
+                      ["gridRowSpan", "Row span"],
+                    ].map(
+                      ([settingKey, label]) => html`
+                        <editor-text-input
+                          type="number"
+                          label=${label}
+                          min="1"
+                          step="1"
+                          .value=${String(effectiveSettings[settingKey] || 1)}
+                          @change=${(event) =>
+                            this.updateGridPlacement(
+                              settingKey,
+                              event.detail?.value,
+                            )}
+                        ></editor-text-input>
+                      `,
+                    )}
+                  </div>
+                  <p class="settings-css-help">
+                    Position and size within the parent grid for this viewport.
+                  </p>
+                </settings-section>
+              `
+            : null
+        }
+        <settings-section
+          title="Item alignment"
+          ?overridden=${this.hasAnyOverriddenKeys(...ITEM_ALIGNMENT_KEYS)}
+        >
+          <div class="settings-item-alignment">
+            <editor-select
+              label="Align self"
+              .options=${ITEM_ALIGNMENT_OPTIONS}
+              .value=${effectiveSettings.alignSelf || "auto"}
+              @change=${(event) => {
+                if (event.detail?.value) {
+                  this.updateResponsiveSettingsState({
+                    alignSelf: event.detail.value,
+                  });
+                }
+              }}
+            ></editor-select>
+            <editor-select
+              label="Justify self"
+              .options=${ITEM_ALIGNMENT_OPTIONS}
+              .value=${effectiveSettings.justifySelf || "auto"}
+              @change=${(event) => {
+                if (event.detail?.value) {
+                  this.updateResponsiveSettingsState({
+                    justifySelf: event.detail.value,
+                  });
+                }
+              }}
+            ></editor-select>
+          </div>
+          <p class="settings-css-help">
+            Align this item within its flex or grid area for this viewport.
+          </p>
+        </settings-section>
         <settings-section
           title="Visibility"
           ?overridden=${this.hasAnyOverriddenKeys("settingSpacingHidden")}
@@ -726,6 +875,7 @@ export class SettingsController {
           <label class="settings-toggle-label">
             <input
               type="checkbox"
+              class="checkbox checkbox-sm"
               .checked=${this.host.settingSpacingHidden}
               @change=${(e) => {
                 this.updateSettingsState({
@@ -743,34 +893,65 @@ export class SettingsController {
         <settings-section title="Custom CSS">
           <label class="settings-css-label">CSS</label>
           <div class="settings-css-editor" data-css-code-editor></div>
+          <div class="settings-css-breakpoint-controls">
+            <label class="settings-css-label" for="css-breakpoint-snippet">
+              Breakpoint example
+            </label>
+            <div class="settings-css-breakpoint-actions">
+              <select
+                id="css-breakpoint-snippet"
+                class="select select-sm w-full"
+              >
+                ${RESPONSIVE_BREAKPOINTS.map(
+                  ({ bucket, maxWidth }) => html`
+                    <option value=${bucket}>
+                      ${VIEWPORT_LABELS[bucket]} (${maxWidth}px)
+                    </option>
+                  `,
+                )}
+              </select>
+              <editor-btn
+                style="light"
+                @click=${(event) => {
+                  const select = event.currentTarget
+                    .closest(".settings-css-breakpoint-actions")
+                    ?.querySelector("select");
+                  this.insertCssBreakpoint(select?.value);
+                }}
+                >Insert</editor-btn
+              >
+            </div>
+          </div>
           <p class="settings-css-help">
             Styles are scoped to this block. Syntax errors appear in the gutter.
           </p>
         </settings-section>
-        ${orderState?.isEligible
-          ? html`
-              <div class="settings-node-order">
-                <label class="settings-css-label">Node order</label>
-                <div class="settings-node-order-actions">
-                  <editor-btn
-                    style="light"
-                    ?disabled=${!orderState.canMoveBackward}
-                    @click=${() => this.moveNodeWithinSection("backward")}
-                    >${createElement(ArrowUp)} Backward</editor-btn
-                  >
-                  <editor-btn
-                    style="light"
-                    ?disabled=${!orderState.canMoveForward}
-                    @click=${() => this.moveNodeWithinSection("forward")}
-                    >${createElement(ArrowDown)} Forward</editor-btn
-                  >
+        ${
+          orderState?.isEligible
+            ? html`
+                <div class="settings-node-order">
+                  <label class="settings-css-label">Node order</label>
+                  <div class="settings-node-order-actions">
+                    <editor-btn
+                      style="light"
+                      ?disabled=${!orderState.canMoveBackward}
+                      @click=${() => this.moveNodeWithinSection("backward")}
+                      >${createElement(ArrowUp)} Backward</editor-btn
+                    >
+                    <editor-btn
+                      style="light"
+                      ?disabled=${!orderState.canMoveForward}
+                      @click=${() => this.moveNodeWithinSection("forward")}
+                      >${createElement(ArrowDown)} Forward</editor-btn
+                    >
+                  </div>
+                  <p class="settings-css-help">
+                    Moves this block within the current section.
+                  </p>
                 </div>
-                <p class="settings-css-help">
-                  Moves this block within the current section.
-                </p>
-              </div>
-            `
-          : null}
+              `
+            : null
+        }
       </div>
     `;
   }
@@ -789,8 +970,10 @@ export class SettingsController {
           >
           <editor-btn
             style="light text-danger"
-            ?disabled=${!this.host.node?.id ||
-            !Array.isArray(this.host.pageConfig?.content)}
+            ?disabled=${
+              !this.host.node?.id ||
+              !Array.isArray(this.host.pageConfig?.content)
+            }
             @click=${() => this.deleteCurrentNode()}
             >${createElement(Trash)} Delete node</editor-btn
           >
@@ -1376,7 +1559,7 @@ export class SettingsController {
     this.applySpacingToRenderRoot();
   }
 
-  getPersistedSettings(nextState) {
+  getPersistedSettings(nextState, scope = "responsive") {
     const normalizedState = { ...nextState };
 
     if ("settingCustomCss" in normalizedState) {
@@ -1399,7 +1582,7 @@ export class SettingsController {
     const { responsiveOverrides: currentOverrides = {}, ...baseSettings } =
       currentSettings;
 
-    const bucket = this.activeViewportBucket;
+    const bucket = scope === "global" ? null : this.activeViewportBucket;
 
     if (!bucket) {
       const nextBase = { ...baseSettings, ...normalizedState };
@@ -1432,10 +1615,26 @@ export class SettingsController {
       ) {
         delete nextBase.settingSpacingHidden;
       }
-      const hasOverrides = Object.keys(currentOverrides).some(
-        (k) => Object.keys(currentOverrides[k] || {}).length > 0,
+      const nextOverrides = { ...currentOverrides };
+      if (scope === "global") {
+        for (const [overrideBucket, overrideSettings] of Object.entries(
+          nextOverrides,
+        )) {
+          const nextBucket = { ...(overrideSettings || {}) };
+          for (const key of Object.keys(normalizedState)) {
+            delete nextBucket[key];
+          }
+          if (Object.keys(nextBucket).length > 0) {
+            nextOverrides[overrideBucket] = nextBucket;
+          } else {
+            delete nextOverrides[overrideBucket];
+          }
+        }
+      }
+      const hasOverrides = Object.values(nextOverrides).some(
+        (overrideSettings) => Object.keys(overrideSettings || {}).length > 0,
       );
-      if (hasOverrides) nextBase.responsiveOverrides = currentOverrides;
+      if (hasOverrides) nextBase.responsiveOverrides = nextOverrides;
       return nextBase;
     }
 
@@ -1528,13 +1727,13 @@ export class SettingsController {
     return { nextNodes, didChange };
   }
 
-  updateSettingsState(nextState) {
+  updateSettingsState(nextState, scope = "responsive") {
     Object.assign(this.host, nextState);
     this.applySpacingToRenderRoot();
 
     const node = this.host.node;
     if (node && typeof node === "object") {
-      const nextPersistedSettings = this.getPersistedSettings(nextState);
+      const nextPersistedSettings = this.getPersistedSettings(nextState, scope);
 
       if (this._ownerElement && "settings" in this._ownerElement) {
         this._ownerElement.settings =
@@ -1580,6 +1779,14 @@ export class SettingsController {
     }
   }
 
+  updateResponsiveSettingsState(nextState) {
+    this.updateSettingsState(nextState, "responsive");
+  }
+
+  updateGlobalSettingsState(nextState) {
+    this.updateSettingsState(nextState, "global");
+  }
+
   findParentCollection() {
     const startElement = this._ownerElement || this.host;
     if (startElement.tagName === "OWB-COLLECTION-EDITOR") {
@@ -1612,7 +1819,7 @@ export class SettingsController {
     }
 
     if (!this.settingsOverlayContent) {
-      render(html``, this.settingsOverlayContainer);
+      render(html``, this.settingsOverlayRoot);
       this.destroyCssEditor();
       return;
     }
@@ -1627,11 +1834,13 @@ export class SettingsController {
     render(
       html`
         <style>
+          ${daisyUI}
           ${overlayStyles}
         </style>
         <div class="settings-overlay-root">
           <div
             class="settings-overlay-panel"
+            data-theme="mylight"
             role="dialog"
             style=${`left: ${this.settingsOverlayPosition.x}px; top: ${this.settingsOverlayPosition.y}px;`}
           >
@@ -1643,10 +1852,11 @@ export class SettingsController {
                 ${this.settingsOverlayTabs.map(
                   (tab) => html`
                     <button
-                      class="settings-overlay-tab ${tab.id ===
-                      this.settingsOverlayActiveTab
-                        ? "is-active"
-                        : ""}"
+                      class="btn btn-sm settings-overlay-tab ${
+                        tab.id === this.settingsOverlayActiveTab
+                          ? "is-active"
+                          : ""
+                      }"
                       type="button"
                       @click=${() => this.setActiveSettingsTab(tab.id)}
                     >
@@ -1656,7 +1866,7 @@ export class SettingsController {
                 )}
               </div>
               <button
-                class="settings-overlay-close"
+                class="btn btn-ghost btn-sm btn-square settings-overlay-close"
                 type="button"
                 aria-label="Close settings editor"
                 @click=${() => this.closeSettingsEditor()}
@@ -1664,47 +1874,58 @@ export class SettingsController {
                 ${createElement(X)}
               </button>
             </div>
-            ${viewportLabel
-              ? html`<div class="settings-overlay-viewport-bar">
-                  <span class="settings-overlay-viewport-label"
-                    >${viewportLabel}</span
+            ${
+              viewportLabel
+                ? html`<div
+                    class="alert alert-info settings-overlay-viewport-bar"
+                    role="status"
                   >
-                  ${overriddenCount > 0
-                    ? html`<button
-                        type="button"
-                        class="settings-overlay-viewport-reset"
-                        title="Reset all overrides for this viewport"
-                        @click=${() => this.clearSettingOverrides()}
-                      >
-                        Reset ${overriddenCount}
-                      </button>`
-                    : null}
-                </div>`
-              : null}
-            ${parentCollection
-              ? html`
-                  <div class="settings-overlay-collection-bar">
-                    <button
-                      type="button"
-                      class="settings-overlay-collection-btn"
-                      @click=${() => {
-                        void parentCollection.openSectionSettings();
-                      }}
+                    <span class="settings-overlay-viewport-label"
+                      >${viewportLabel}</span
                     >
-                      ← Edit collection list
-                    </button>
-                  </div>
-                `
-              : null}
+                    ${
+                      overriddenCount > 0
+                        ? html`<button
+                            type="button"
+                            class="btn btn-xs settings-overlay-viewport-reset"
+                            title="Reset all overrides for this viewport"
+                            @click=${() => this.clearSettingOverrides()}
+                          >
+                            Reset ${overriddenCount}
+                          </button>`
+                        : null
+                    }
+                  </div>`
+                : null
+            }
+            ${
+              parentCollection
+                ? html`
+                    <div class="settings-overlay-collection-bar">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline settings-overlay-collection-btn"
+                        @click=${() => {
+                          void parentCollection.openSectionSettings();
+                        }}
+                      >
+                        ← Edit collection list
+                      </button>
+                    </div>
+                  `
+                : null
+            }
             <div class="settings-overlay-body">
-              ${typeof this.settingsOverlayContent === "function"
-                ? this.settingsOverlayContent(this.settingsOverlayActiveTab)
-                : this.settingsOverlayContent}
+              ${
+                typeof this.settingsOverlayContent === "function"
+                  ? this.settingsOverlayContent(this.settingsOverlayActiveTab)
+                  : this.settingsOverlayContent
+              }
             </div>
           </div>
         </div>
       `,
-      this.settingsOverlayContainer,
+      this.settingsOverlayRoot,
     );
 
     if (this.settingsOverlayActiveTab === "css") {

@@ -2,65 +2,15 @@ import { LitElement, html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { getSpacingStyleBlock } from "../../utils/spacing.js";
 import {
+  buildResponsiveLayoutCss,
   getSectionInlineStyle,
   getContainerInlineStyle,
-} from "../site-section/section.js";
+} from "../../utils/layout.js";
 
 export const defaultContainerConfig = {
   type: "container",
   content: [],
 };
-
-// Responsive breakpoints for container media queries
-const RESPONSIVE_BREAKPOINTS = [
-  { bucket: "tabletHorizontal", maxWidth: 1180 },
-  { bucket: "mobileHorizontal", maxWidth: 844 },
-  { bucket: "tabletVertical", maxWidth: 820 },
-  { bucket: "mobileVertical", maxWidth: 390 },
-];
-
-function buildResponsiveContainerCss(settings) {
-  const overrides = settings.responsiveOverrides;
-  if (!overrides || typeof overrides !== "object") return "";
-
-  const rules = RESPONSIVE_BREAKPOINTS.map(({ bucket, maxWidth }) => {
-    const bucketOverrides = overrides[bucket];
-    if (
-      !bucketOverrides ||
-      typeof bucketOverrides !== "object" ||
-      Object.keys(bucketOverrides).length === 0
-    ) {
-      return "";
-    }
-    const merged = { ...settings, ...bucketOverrides };
-    const sectionCss = getSectionInlineStyle(merged)
-      .split(";")
-      .map((p) => p.trim())
-      .filter(Boolean)
-      .map((p) => `${p} !important`)
-      .join("; ");
-    const containerCss = getContainerInlineStyle(merged)
-      .split(";")
-      .map((p) => p.trim())
-      .filter(Boolean)
-      .map((p) => `${p} !important`)
-      .join("; ");
-    const parts = [];
-    if (sectionCss)
-      parts.push(
-        `@media (max-width: ${maxWidth}px) { .container { ${sectionCss} } }`,
-      );
-    if (containerCss)
-      parts.push(
-        `@media (max-width: ${maxWidth}px) { .container { ${containerCss} } }`,
-      );
-    return parts.join(" ");
-  })
-    .filter(Boolean)
-    .join("\n");
-
-  return rules;
-}
 
 export class OwbContainer extends LitElement {
   static editorPlugin = null;
@@ -151,28 +101,36 @@ export class OwbContainer extends LitElement {
         : width === "custom"
           ? ""
           : "is-normal-width";
-    const responsiveCss = buildResponsiveContainerCss(settings);
+    const responsiveCss = buildResponsiveLayoutCss(
+      settings,
+      ".container",
+      ".container",
+    );
     const isEditorMode = OwbContainer.editorPlugin !== null;
 
     return html`
       <link rel="stylesheet" href="/owb-styles/site-section.css" />
       <link rel="stylesheet" href="/owb-styles/container.css" />
       ${responsiveCss ? unsafeHTML(`<style>${responsiveCss}</style>`) : null}
-      ${spacingCss
-        ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
-        : null}
+      ${
+        spacingCss
+          ? unsafeHTML(`<style data-spacing>${spacingCss}</style>`)
+          : null
+      }
       ${customCss ? unsafeHTML(`<style>${customCss}</style>`) : null}
       <div
-        class="container ${widthClass}${isEditorMode && this.isSettingsOpen
-          ? " is-settings-open"
-          : ""}"
+        class="container ${widthClass}${
+          isEditorMode && this.isSettingsOpen ? " is-settings-open" : ""
+        }"
         style="${getSectionInlineStyle(settings)}; ${getContainerInlineStyle(
           settings,
         )}"
         data-editor-block=${isEditorMode ? "" : nothing}
-        @pointerdown=${isEditorMode
-          ? () => OwbContainer.editorPlugin?.onPointerDown?.(this)
-          : nothing}
+        @pointerdown=${
+          isEditorMode
+            ? () => OwbContainer.editorPlugin?.onPointerDown?.(this)
+            : nothing
+        }
       >
         <slot></slot>
       </div>
