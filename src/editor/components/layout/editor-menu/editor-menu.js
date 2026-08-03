@@ -26,6 +26,11 @@ import daisyUI from "../../../styles/daisyui.css?inline";
 
 const MENU_COLLAPSED_STORAGE_KEY = "editor-menu-collapsed";
 const MENU_MODE_STORAGE_KEY = "editor-menu-mode";
+const LAYER_PARENT_TYPES = new Set(["section", "container", "form"]);
+
+function canNodeAcceptLayerChildren(node) {
+  return LAYER_PARENT_TYPES.has(String(node?.type || ""));
+}
 
 function getNodeLabel(node) {
   const nodeType = String(node?.type || "component");
@@ -451,9 +456,11 @@ class EditorMenu extends LitElement {
       if (dy > 4) this._dragMoved = true;
       if (!this._dragMoved) return;
 
-      // Find closest drop zone by clientY
+      // Find closest sibling or parent drop target by clientY.
       const zones = Array.from(
-        this.renderRoot?.querySelectorAll(".layer-drop-zone") ?? [],
+        this.renderRoot?.querySelectorAll(
+          ".layer-drop-zone, .layer-row[data-zone-key]:not([data-zone-key=''])",
+        ) ?? [],
       );
       let bestKey = "";
       let bestDist = Infinity;
@@ -547,6 +554,12 @@ class EditorMenu extends LitElement {
     ) {
       return;
     }
+    if (normalizedTargetParentId) {
+      const targetParent = findNodeById(sourceTree, normalizedTargetParentId);
+      if (!canNodeAcceptLayerChildren(targetParent)) {
+        return;
+      }
+    }
 
     const removed = removeNodeById(sourceTree, sourceId);
     if (!removed.removed) {
@@ -578,6 +591,7 @@ class EditorMenu extends LitElement {
 
     const nodeId = String(node.id || "").trim();
     const hasChildren = Array.isArray(node.content) && node.content.length > 0;
+    const acceptsChildren = canNodeAcceptLayerChildren(node);
     const isExpanded = this.layerSections?.[nodeId] ?? true;
     const isActive = nodeId && nodeId === this.activeLayerNodeId;
 
@@ -588,15 +602,20 @@ class EditorMenu extends LitElement {
     return html`
       <div class="layer-entry" style=${`--layer-depth:${depth};`}>
         <div
-          class="layer-drop-zone ${this.dropTargetKey === beforeKey
-            ? "is-active"
-            : ""}"
+          class="layer-drop-zone ${
+            this.dropTargetKey === beforeKey ? "is-active" : ""
+          }"
           data-zone-key=${beforeKey}
         ></div>
         <div
-          class="layer-row ${isActive ? "is-active" : ""} ${isDraggedNode
-            ? "is-dragging"
-            : ""}"
+          class="layer-row ${isActive ? "is-active" : ""} ${
+            isDraggedNode ? "is-dragging" : ""
+          } ${
+            this.dropTargetKey === afterKey && acceptsChildren
+              ? "is-child-drop-target"
+              : ""
+          }"
+          data-zone-key=${acceptsChildren && !isDraggedNode ? afterKey : ""}
         >
           <span
             class="layer-drag-handle"
@@ -605,23 +624,25 @@ class EditorMenu extends LitElement {
           >
             ${createElement(GripVertical)}
           </span>
-          ${hasChildren
-            ? html`
-                <button
-                  type="button"
-                  class="layer-toggle"
-                  @click=${() => this.toggleLayerSection(nodeId)}
-                >
-                  <span
-                    class="collection-folder-chevron ${isExpanded
-                      ? ""
-                      : "is-collapsed"}"
+          ${
+            hasChildren
+              ? html`
+                  <button
+                    type="button"
+                    class="layer-toggle"
+                    @click=${() => this.toggleLayerSection(nodeId)}
                   >
-                    ${createElement(ChevronDown)}
-                  </span>
-                </button>
-              `
-            : html`<span class="layer-toggle layer-toggle-spacer"></span>`}
+                    <span
+                      class="collection-folder-chevron ${
+                        isExpanded ? "" : "is-collapsed"
+                      }"
+                    >
+                      ${createElement(ChevronDown)}
+                    </span>
+                  </button>
+                `
+              : html`<span class="layer-toggle layer-toggle-spacer"></span>`
+          }
 
           <button
             type="button"
@@ -635,21 +656,23 @@ class EditorMenu extends LitElement {
           </button>
         </div>
 
-        ${hasChildren && isExpanded
-          ? html`
-              <div class="layer-children">
-                ${(node.content || []).map((child, childIndex) =>
-                  this.renderLayerNode(child, nodeId, childIndex, depth + 1),
-                )}
-                <div
-                  class="layer-drop-zone ${this.dropTargetKey === afterKey
-                    ? "is-active"
-                    : ""}"
-                  data-zone-key=${afterKey}
-                ></div>
-              </div>
-            `
-          : html``}
+        ${
+          hasChildren && isExpanded
+            ? html`
+                <div class="layer-children">
+                  ${(node.content || []).map((child, childIndex) =>
+                    this.renderLayerNode(child, nodeId, childIndex, depth + 1),
+                  )}
+                  <div
+                    class="layer-drop-zone ${
+                      this.dropTargetKey === afterKey ? "is-active" : ""
+                    }"
+                    data-zone-key=${afterKey}
+                  ></div>
+                </div>
+              `
+            : html``
+        }
       </div>
     `;
   }
@@ -671,9 +694,9 @@ class EditorMenu extends LitElement {
           this.renderLayerNode(node, "", index, 0),
         )}
         <div
-          class="layer-drop-zone ${this.dropTargetKey === trailingKey
-            ? "is-active"
-            : ""}"
+          class="layer-drop-zone ${
+            this.dropTargetKey === trailingKey ? "is-active" : ""
+          }"
           data-zone-key=${trailingKey}
         ></div>
       </div>
@@ -920,13 +943,15 @@ class EditorMenu extends LitElement {
         >
           <span class="flex min-w-0 flex-col items-start">
             <span class="w-full truncate">${selection.title}</span>
-            ${selection.kind !== "collection-config"
-              ? html`
-                  <span class="w-full truncate text-[9px] opacity-60"
-                    >${subtitle}</span
-                  >
-                `
-              : html``}
+            ${
+              selection.kind !== "collection-config"
+                ? html`
+                    <span class="w-full truncate text-[9px] opacity-60"
+                      >${subtitle}</span
+                    >
+                  `
+                : html``
+            }
           </span>
         </a>
       </li>
@@ -964,9 +989,11 @@ class EditorMenu extends LitElement {
           </div>
           <ul>
             ${collectionItems.map((item) => this.renderSelectableItem(item))}
-            ${collectionItems.length === 0
-              ? html`<li class="menu-disabled"><a>No items yet</a></li>`
-              : html``}
+            ${
+              collectionItems.length === 0
+                ? html`<li class="menu-disabled"><a>No items yet</a></li>`
+                : html``
+            }
           </ul>
         </details>
       </li>
@@ -1032,20 +1059,22 @@ class EditorMenu extends LitElement {
         <details ?open=${this.pageTreeNodeHasActiveSelection(node)}>
           <summary
             class=${isParentPageActive ? "menu-active" : ""}
-            @click=${node.page
-              ? () => this.navigateToSelection(node.page)
-              : null}
+            @click=${
+              node.page ? () => this.navigateToSelection(node.page) : null
+            }
           >
-            ${node.page
-              ? html`
-                  <span class="flex min-w-0 flex-col items-start">
-                    <span class="w-full truncate">${node.page.title}</span>
-                    <span class="w-full truncate text-[9px] opacity-60">
-                      ${node.page.url}
+            ${
+              node.page
+                ? html`
+                    <span class="flex min-w-0 flex-col items-start">
+                      <span class="w-full truncate">${node.page.title}</span>
+                      <span class="w-full truncate text-[9px] opacity-60">
+                        ${node.page.url}
+                      </span>
                     </span>
-                  </span>
-                `
-              : node.segment}
+                  `
+                : node.segment
+            }
           </summary>
           <ul>
             ${children.map((child) => this.renderPageTreeNode(child))}
@@ -1138,50 +1167,29 @@ class EditorMenu extends LitElement {
           >
             ${createElement(Plus)}
             <span>
-              ${sectionKey === "pages"
-                ? "New page"
-                : sectionKey === "collections"
-                  ? "New collection"
-                  : "New component"}
+              ${
+                sectionKey === "pages"
+                  ? "New page"
+                  : sectionKey === "collections"
+                    ? "New collection"
+                    : "New component"
+              }
             </span>
           </button>
         </div>
-        ${expanded && !this.collapsed
-          ? html`
-              <div class="group-content-scroll">
-                <ul
-                  class=${isPagesSection
-                    ? "menu bg-base-200 rounded-box w-full"
-                    : "menu menu-paged menu-vertical bg-base-200 rounded-box w-full"}
-                >
-                  ${isPagesSection
-                    ? this.renderPagesItems(items)
-                    : isCollectionsSection
-                      ? this.renderCollectionsItems(normalizedItems)
-                      : normalizedItems.map((item) =>
-                          typeof item === "string"
-                            ? html`<li class="menu-disabled">
-                                <a>${item}</a>
-                              </li>`
-                            : this.renderSelectableItem(item),
-                        )}
-                </ul>
-              </div>
-            `
-          : this.collapsed
+        ${
+          expanded && !this.collapsed
             ? html`
-                <div class="group-flyout-wrap">
-                  <div class="group-flyout" role="menu" aria-label=${title}>
-                    <div class="group-flyout-header">
-                      <span class="section-icon">${createElement(icon)}</span>
-                      <span class="group-flyout-title">${title}</span>
-                    </div>
-                    <ul
-                      class=${isPagesSection
+                <div class="group-content-scroll">
+                  <ul
+                    class=${
+                      isPagesSection
                         ? "menu bg-base-200 rounded-box w-full"
-                        : "menu menu-paged menu-vertical w-full"}
-                    >
-                      ${isPagesSection
+                        : "menu menu-paged menu-vertical bg-base-200 rounded-box w-full"
+                    }
+                  >
+                    ${
+                      isPagesSection
                         ? this.renderPagesItems(items)
                         : isCollectionsSection
                           ? this.renderCollectionsItems(normalizedItems)
@@ -1191,12 +1199,45 @@ class EditorMenu extends LitElement {
                                     <a>${item}</a>
                                   </li>`
                                 : this.renderSelectableItem(item),
-                            )}
-                    </ul>
-                  </div>
+                            )
+                    }
+                  </ul>
                 </div>
               `
-            : html``}
+            : this.collapsed
+              ? html`
+                  <div class="group-flyout-wrap">
+                    <div class="group-flyout" role="menu" aria-label=${title}>
+                      <div class="group-flyout-header">
+                        <span class="section-icon">${createElement(icon)}</span>
+                        <span class="group-flyout-title">${title}</span>
+                      </div>
+                      <ul
+                        class=${
+                          isPagesSection
+                            ? "menu bg-base-200 rounded-box w-full"
+                            : "menu menu-paged menu-vertical w-full"
+                        }
+                      >
+                        ${
+                          isPagesSection
+                            ? this.renderPagesItems(items)
+                            : isCollectionsSection
+                              ? this.renderCollectionsItems(normalizedItems)
+                              : normalizedItems.map((item) =>
+                                  typeof item === "string"
+                                    ? html`<li class="menu-disabled">
+                                        <a>${item}</a>
+                                      </li>`
+                                    : this.renderSelectableItem(item),
+                                )
+                        }
+                      </ul>
+                    </div>
+                  </div>
+                `
+              : html``
+        }
       </section>
     `;
   }
