@@ -30,14 +30,19 @@ async function createFixture(t, specification = "^0.1.11") {
   return { appRoot, contentRoot };
 }
 
-test("updates the dependency, installs with Husky disabled, and commits metadata", async (t) => {
+test("updates the dependency without lifecycle scripts and commits metadata", async (t) => {
   const { appRoot, contentRoot } = await createFixture(t);
   const calls = [];
   const service = createDependencyVersionService({
     appRoot,
     contentRoot,
     install: async ({ projectRoot, env }) => {
-      calls.push({ type: "install", projectRoot, husky: env.HUSKY });
+      calls.push({
+        type: "install",
+        projectRoot,
+        husky: env.HUSKY,
+        ignoreScripts: env.NPM_CONFIG_IGNORE_SCRIPTS,
+      });
       await writeFile(resolve(contentRoot, "package-lock.json"), "{}\n");
       return { exitCode: 0 };
     },
@@ -55,6 +60,7 @@ test("updates the dependency, installs with Husky disabled, and commits metadata
       type: "install",
       projectRoot: contentRoot,
       husky: "0",
+      ignoreScripts: "true",
     },
     {
       type: "commit",

@@ -18,7 +18,8 @@ export class DependencyVersionError extends Error {
 
 function runNpmInstall({ projectRoot, env }) {
   return new Promise((resolveCommand, rejectCommand) => {
-    const child = spawn("npm", ["i"], {
+    const command = "npm i --ignore-scripts";
+    const child = spawn("npm", ["i", "--ignore-scripts"], {
       cwd: projectRoot,
       env,
       stdio: ["ignore", "pipe", "pipe"],
@@ -35,7 +36,7 @@ function runNpmInstall({ projectRoot, env }) {
     child.on("error", (error) => {
       rejectCommand(
         new DependencyVersionError(error.message, {
-          command: "HUSKY=0 npm i",
+          command,
           stdout: stdout.trim(),
           stderr: stderr.trim(),
           exitCode: null,
@@ -44,7 +45,7 @@ function runNpmInstall({ projectRoot, env }) {
     });
     child.on("close", (exitCode) => {
       const result = {
-        command: "HUSKY=0 npm i",
+        command,
         stdout: stdout.trim(),
         stderr: stderr.trim(),
         exitCode,
@@ -161,7 +162,11 @@ export function createDependencyVersionService({
       );
       const installResult = await install({
         projectRoot: contentRoot,
-        env: { ...process.env, HUSKY: "0" },
+        env: {
+          ...process.env,
+          HUSKY: "0",
+          NPM_CONFIG_IGNORE_SCRIPTS: "true",
+        },
       });
       const paths = ["package.json"];
       if (await pathExists(resolve(contentRoot, "package-lock.json"))) {
