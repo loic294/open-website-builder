@@ -103,6 +103,20 @@ OWB_IMAGE=ghcr.io/loic294/open-website-builder:0.1.7 docker compose up
 The mounted project must provide `package.json`, `vite.config.js`, and
 `owb.config.js`. `OWB_SITE_CONFIG` defaults to `./owb.config.js`.
 
+## Publishing with the filesystem backend
+
+Before a Docker filesystem publish that pushes to Git, OWB compares the
+version baked into the editor image with the mounted project's
+`dependencies["open-website-builder"]`. If they differ, OWB preserves an
+existing exact, caret, or tilde range, updates the dependency, and runs
+`HUSKY=0 npm i` so `package-lock.json` and the dependency volume are current.
+
+OWB creates a local commit containing only `package.json` and
+`package-lock.json` before running the configured upload script. The normal Git
+step then commits any remaining website changes and pushes both commits. If the
+dependency update, installation, or dependency commit fails, upload and push
+do not run. Matching versions do not run npm or create a dependency commit.
+
 ## Filesystem and SQLite backends
 
 For the filesystem backend, mount the repository root so `/workspace` includes

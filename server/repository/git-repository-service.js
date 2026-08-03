@@ -173,6 +173,22 @@ export async function createGitRepositoryService({ contentRoot }) {
     }
   }
 
+  async function assertAuthorIdentity() {
+    const [userName, userEmail] = await Promise.all([
+      runGit(repositoryRoot, ["config", "--get", "user.name"], {
+        allowedExitCodes: [0, 1],
+      }),
+      runGit(repositoryRoot, ["config", "--get", "user.email"], {
+        allowedExitCodes: [0, 1],
+      }),
+    ]);
+    if (!userName.stdout || !userEmail.stdout) {
+      throw new GitCommandError(
+        "Git author identity is not configured. Set user.name and user.email before committing.",
+      );
+    }
+  }
+
   return {
     repositoryRoot,
     getStatus: (options) => serialize(() => getStatus(options)),
@@ -210,6 +226,34 @@ export async function createGitRepositoryService({ contentRoot }) {
         await restoreStash(stash);
         return await getStatus({ fetch: false });
       }),
+    commit: ({ message, paths }) =>
+      serialize(async () => {
+        if (typeof message !== "string" || !message.trim()) {
+          throw new GitCommandError("A commit message is required.");
+        }
+        if (!Array.isArray(paths) || paths.length === 0) {
+          throw new GitCommandError("At least one commit path is required.");
+        }
+
+        await runGit(repositoryRoot, ["add", "--", ...paths]);
+        const staged = await runGit(
+          repositoryRoot,
+          ["diff", "--cached", "--quiet", "--", ...paths],
+          { allowedExitCodes: [0, 1] },
+        );
+        if (staged.exitCode === 1) {
+          await assertAuthorIdentity();
+          await runGit(repositoryRoot, [
+            "commit",
+            "--only",
+            "--message",
+            message,
+            "--",
+            ...paths,
+          ]);
+        }
+        return await getStatus({ fetch: false });
+      }),
     commitAndPush: () =>
       serialize(async () => {
         const before = await getStatus({ fetch: true });
@@ -220,19 +264,7 @@ export async function createGitRepositoryService({ contentRoot }) {
         }
 
         if (before.dirty) {
-          const [userName, userEmail] = await Promise.all([
-            runGit(repositoryRoot, ["config", "--get", "user.name"], {
-              allowedExitCodes: [0, 1],
-            }),
-            runGit(repositoryRoot, ["config", "--get", "user.email"], {
-              allowedExitCodes: [0, 1],
-            }),
-          ]);
-          if (!userName.stdout || !userEmail.stdout) {
-            throw new GitCommandError(
-              "Git author identity is not configured. Set user.name and user.email before committing.",
-            );
-          }
+          await assertAuthorIdentity();
         }
 
         await runGit(repositoryRoot, ["add", "--all"]);

@@ -106,6 +106,30 @@ test("pull preserves the stash and reports output when local changes conflict", 
   assert.match(stashList.stdout, /OWB pull/);
 });
 
+test("commit records only requested paths without pushing", async (t) => {
+  const { local, other } = await setupRepository(t);
+  await writeFile(resolve(local, "package.json"), '{"version":"0.1.12"}\n');
+  await writeFile(resolve(local, "content.txt"), "local edit\n");
+  await git(local, "add", "content.txt");
+
+  const service = await createGitRepositoryService({ contentRoot: local });
+  const status = await service.commit({
+    message: "Update open-website-builder to 0.1.12",
+    paths: ["package.json"],
+  });
+  const committedPackage = await git(local, "show", "HEAD:package.json");
+  const committedContent = await git(local, "show", "HEAD:content.txt");
+  const staged = await git(local, "diff", "--cached", "--name-only");
+  const remoteLog = await git(other, "log", "-1", "--pretty=%s");
+
+  assert.equal(committedPackage.stdout, '{"version":"0.1.12"}\n');
+  assert.equal(committedContent.stdout, "initial\n");
+  assert.equal(staged.stdout.trim(), "content.txt");
+  assert.equal(remoteLog.stdout.trim(), "Initial content");
+  assert.equal(status.ahead, 1);
+  assert.equal(status.dirty, true);
+});
+
 test("commit and push stages all files with a timestamped commit", async (t) => {
   const { local, other } = await setupRepository(t);
   await writeFile(resolve(local, "content.txt"), "updated\n");

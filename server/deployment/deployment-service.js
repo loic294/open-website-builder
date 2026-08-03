@@ -8,13 +8,20 @@ function markPhase(error, phase) {
   return wrapped;
 }
 
-export function createDeploymentService({ upload, repository }) {
+export function createDeploymentService({ dependencies, upload, repository }) {
   let operationQueue = Promise.resolve();
 
   async function deploy() {
     let uploadResult = null;
     let repositoryResult = null;
 
+    if (dependencies) {
+      try {
+        await dependencies();
+      } catch (error) {
+        throw markPhase(error, "dependencies");
+      }
+    }
     if (upload) {
       try {
         uploadResult = await upload();

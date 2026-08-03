@@ -16,6 +16,7 @@ import { createRepositoryApiMiddleware } from "../repository/repository-api-midd
 import { createNpmScriptService } from "../deployment/npm-script-service.js";
 import { createDeploymentService } from "../deployment/deployment-service.js";
 import { createDeploymentApiMiddleware } from "../deployment/deployment-api-middleware.js";
+import { createDependencyVersionService } from "../deployment/dependency-version-service.js";
 
 export function createFilesystemBackendProviders({ appRoot, siteConfig, r2 }) {
   let repositoryServicePromise = null;
@@ -64,7 +65,19 @@ export function createFilesystemBackendProviders({ appRoot, siteConfig, r2 }) {
         scriptName: siteConfig.uploadScript,
       })
     : null;
+  const dependencyVersionService =
+    process.env.OWB_DOCKER === "1" && siteConfig.pushToGit
+      ? createDependencyVersionService({
+          appRoot,
+          contentRoot: siteConfig.contentRoot,
+          commit: async (options) =>
+            (await getRepositoryService()).commit(options),
+        })
+      : null;
   const deploymentService = createDeploymentService({
+    dependencies: dependencyVersionService
+      ? () => dependencyVersionService.sync()
+      : null,
     upload: npmScriptService ? () => npmScriptService.run() : null,
     repository: siteConfig.pushToGit
       ? async () => (await getRepositoryService()).commitAndPush()

@@ -26,6 +26,8 @@ RUN chmod 0755 /usr/local/bin/owb-entrypoint \
 
 WORKDIR /workspace
 
+ENV OWB_DOCKER=1
+
 EXPOSE 3003
 
 ENTRYPOINT ["/usr/local/bin/owb-entrypoint"]
