@@ -1331,9 +1331,11 @@ class WebsiteEditor extends LitElement {
               Select
             </button>
           </div>
-          ${seo.image
-            ? html`<img class="seo-image-preview" src=${seo.image} alt="" />`
-            : html``}
+          ${
+            seo.image
+              ? html`<img class="seo-image-preview" src=${seo.image} alt="" />`
+              : html``
+          }
         </div>
 
         <label class="settings-checkbox-label">
@@ -1376,13 +1378,15 @@ class WebsiteEditor extends LitElement {
               Select
             </button>
           </div>
-          ${imagePath
-            ? html`<img
-                class="metadata-image-preview"
-                src=${imagePath}
-                alt=""
-              />`
-            : html``}
+          ${
+            imagePath
+              ? html`<img
+                  class="metadata-image-preview"
+                  src=${imagePath}
+                  alt=""
+                />`
+              : html``
+          }
         </div>
       `;
     }
@@ -1408,26 +1412,28 @@ class WebsiteEditor extends LitElement {
             onAdd: (name) => this.addGeneralMetadataField(name),
           })}
         </div>
-        ${fields.length === 0
-          ? html`<p class="settings-empty">No metadata fields available.</p>`
-          : fields.map(
-              (field) => html`
-                <div class="metadata-value-row">
-                  <label class="settings-label">${field.path}</label>
-                  ${this.renderMetadataInput(field, (value) =>
-                    updateField(field.path, value, field.type),
-                  )}
-                  <button
-                    type="button"
-                    class="btn btn-error btn-sm btn-outline metadata-remove"
-                    title=${`Remove ${field.path}`}
-                    @click=${() => this.removeGeneralMetadataField(field.path)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              `,
-            )}
+        ${
+          fields.length === 0
+            ? html`<p class="settings-empty">No metadata fields available.</p>`
+            : fields.map(
+                (field) => html`
+                  <div class="metadata-value-row">
+                    <label class="settings-label">${field.path}</label>
+                    ${this.renderMetadataInput(field, (value) =>
+                      updateField(field.path, value, field.type),
+                    )}
+                    <button
+                      type="button"
+                      class="btn btn-error btn-sm btn-outline metadata-remove"
+                      title=${`Remove ${field.path}`}
+                      @click=${() => this.removeGeneralMetadataField(field.path)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                `,
+              )
+        }
       </div>
     `;
   }
@@ -1449,26 +1455,28 @@ class WebsiteEditor extends LitElement {
         <div class="settings-section-header">
           <h3>Collection metadata</h3>
         </div>
-        ${definitions.length === 0
-          ? html`<p class="settings-empty">
-              No collection metadata fields configured.
-            </p>`
-          : definitions.map(
-              (field) => html`
-                <div class="field-row field-row-compact">
-                  <label class="settings-label">
-                    ${field.path}${field.required ? " *" : ""}
-                  </label>
-                  ${this.renderMetadataInput(field, (value) =>
-                    this.updateCollectionItemMetadataField(
-                      field.path,
-                      value,
-                      field.type,
-                    ),
-                  )}
-                </div>
-              `,
-            )}
+        ${
+          definitions.length === 0
+            ? html`<p class="settings-empty">
+                No collection metadata fields configured.
+              </p>`
+            : definitions.map(
+                (field) => html`
+                  <div class="field-row field-row-compact">
+                    <label class="settings-label">
+                      ${field.path}${field.required ? " *" : ""}
+                    </label>
+                    ${this.renderMetadataInput(field, (value) =>
+                      this.updateCollectionItemMetadataField(
+                        field.path,
+                        value,
+                        field.type,
+                      ),
+                    )}
+                  </div>
+                `,
+              )
+        }
       </div>
     `;
   }
@@ -1689,6 +1697,35 @@ class WebsiteEditor extends LitElement {
         </div>
 
         ${this.renderSeoSettings()}
+        <div class="card card-border card-sm bg-base-100 settings-card">
+          <div class="settings-section-header">
+            <h3>Code injection</h3>
+          </div>
+
+          <div class="field-row field-row-compact">
+            <label class="settings-label">End of head</label>
+            <textarea
+              class="textarea textarea-sm w-full font-mono"
+              rows="6"
+              .value=${String(this.pageConfig?.headHtml || "")}
+              placeholder="<style>...</style>"
+              @change=${(event) =>
+                this.updatePageBaseField("headHtml", event.target.value)}
+            ></textarea>
+          </div>
+
+          <div class="field-row field-row-compact">
+            <label class="settings-label">End of body</label>
+            <textarea
+              class="textarea textarea-sm w-full font-mono"
+              rows="6"
+              .value=${String(this.pageConfig?.bodyHtml || "")}
+              placeholder="<script>...</script>"
+              @change=${(event) =>
+                this.updatePageBaseField("bodyHtml", event.target.value)}
+            ></textarea>
+          </div>
+        </div>
         ${this.renderGeneralMetadataCard(
           "Metadata fields",
           metadataFields,
@@ -1746,58 +1783,60 @@ class WebsiteEditor extends LitElement {
             })}
           </div>
 
-          ${metadataFields.length === 0
-            ? html`<p class="settings-empty">
-                No collection metadata fields configured.
-              </p>`
-            : metadataFields.map(
-                (field) => html`
-                  <div class="field-row metadata-definition-row">
-                    <input
-                      type="text"
-                      class="input input-sm w-full"
-                      .value=${field.name}
-                      @change=${(event) =>
-                        this.updateCollectionMetadataFieldName(
-                          field.name,
-                          event.target.value,
-                        )}
-                    />
-                    <select
-                      class="select select-sm w-full"
-                      .value=${field.type}
-                      @change=${(event) =>
-                        this.updateCollectionMetadataField(field.name, {
-                          type: event.target.value,
-                        })}
-                    >
-                      <option value="string">Text</option>
-                      <option value="number">Number</option>
-                      <option value="image">Image</option>
-                    </select>
-                    <label class="settings-checkbox-label">
+          ${
+            metadataFields.length === 0
+              ? html`<p class="settings-empty">
+                  No collection metadata fields configured.
+                </p>`
+              : metadataFields.map(
+                  (field) => html`
+                    <div class="field-row metadata-definition-row">
                       <input
-                        type="checkbox"
-                        class="checkbox checkbox-sm"
-                        .checked=${field.required}
+                        type="text"
+                        class="input input-sm w-full"
+                        .value=${field.name}
+                        @change=${(event) =>
+                          this.updateCollectionMetadataFieldName(
+                            field.name,
+                            event.target.value,
+                          )}
+                      />
+                      <select
+                        class="select select-sm w-full"
+                        .value=${field.type}
                         @change=${(event) =>
                           this.updateCollectionMetadataField(field.name, {
-                            required: event.target.checked,
+                            type: event.target.value,
                           })}
-                      />
-                      Required
-                    </label>
-                    <button
-                      type="button"
-                      class="btn btn-error btn-sm btn-outline"
-                      @click=${() =>
-                        this.removeCollectionMetadataField(field.name)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                `,
-              )}
+                      >
+                        <option value="string">Text</option>
+                        <option value="number">Number</option>
+                        <option value="image">Image</option>
+                      </select>
+                      <label class="settings-checkbox-label">
+                        <input
+                          type="checkbox"
+                          class="checkbox checkbox-sm"
+                          .checked=${field.required}
+                          @change=${(event) =>
+                            this.updateCollectionMetadataField(field.name, {
+                              required: event.target.checked,
+                            })}
+                        />
+                        Required
+                      </label>
+                      <button
+                        type="button"
+                        class="btn btn-error btn-sm btn-outline"
+                        @click=${() =>
+                          this.removeCollectionMetadataField(field.name)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  `,
+                )
+          }
         </div>
 
         <div class="card card-border card-sm bg-base-100 settings-card">
@@ -1812,90 +1851,94 @@ class WebsiteEditor extends LitElement {
             </button>
           </div>
 
-          ${fields.length === 0
-            ? html`<p class="settings-empty">No fields yet.</p>`
-            : fields.map(
-                (field) => html`
-                  <div class="field-row">
-                    <input
-                      type="text"
-                      class="input input-sm w-full"
-                      .value=${field.name}
-                      @change=${(event) =>
-                        this.updateCollectionConfigFieldName(
-                          field.name,
-                          event.target.value,
-                        )}
-                    />
-                    <select
-                      class="select select-sm w-full"
-                      .value=${field.type}
-                      @change=${(event) =>
-                        this.updateCollectionConfigFieldType(
-                          field.name,
-                          event.target.value,
-                        )}
-                    >
-                      <option value="string">Text</option>
-                      <option value="array">Array of text</option>
-                      <option value="object">Object</option>
-                    </select>
-                    <label class="settings-checkbox-label">
+          ${
+            fields.length === 0
+              ? html`<p class="settings-empty">No fields yet.</p>`
+              : fields.map(
+                  (field) => html`
+                    <div class="field-row">
                       <input
-                        type="checkbox"
-                        class="checkbox checkbox-sm"
-                        .checked=${field.required}
+                        type="text"
+                        class="input input-sm w-full"
+                        .value=${field.name}
                         @change=${(event) =>
-                          this.updateCollectionConfigFieldRequired(
+                          this.updateCollectionConfigFieldName(
                             field.name,
-                            event.target.checked,
+                            event.target.value,
                           )}
                       />
-                      Required
-                    </label>
-                    <button
-                      type="button"
-                      class="btn btn-error btn-sm btn-outline"
-                      @click=${() =>
-                        this.removeCollectionConfigField(field.name)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                `,
-              )}
+                      <select
+                        class="select select-sm w-full"
+                        .value=${field.type}
+                        @change=${(event) =>
+                          this.updateCollectionConfigFieldType(
+                            field.name,
+                            event.target.value,
+                          )}
+                      >
+                        <option value="string">Text</option>
+                        <option value="array">Array of text</option>
+                        <option value="object">Object</option>
+                      </select>
+                      <label class="settings-checkbox-label">
+                        <input
+                          type="checkbox"
+                          class="checkbox checkbox-sm"
+                          .checked=${field.required}
+                          @change=${(event) =>
+                            this.updateCollectionConfigFieldRequired(
+                              field.name,
+                              event.target.checked,
+                            )}
+                        />
+                        Required
+                      </label>
+                      <button
+                        type="button"
+                        class="btn btn-error btn-sm btn-outline"
+                        @click=${() =>
+                          this.removeCollectionConfigField(field.name)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  `,
+                )
+          }
         </div>
 
         <div class="card card-border card-sm bg-base-100 settings-card">
           <div class="settings-section-header">
             <h3>Metadata allowlist</h3>
           </div>
-          ${metadataFieldOptions.length === 0
-            ? html`<p class="settings-empty">
-                No metadata fields discovered yet.
-              </p>`
-            : html`
-                <div class="metadata-toggle-list">
-                  ${metadataFieldOptions.map((fieldPath) => {
-                    const isEnabled = selectedAllowlist.includes(fieldPath);
-                    return html`
-                      <label class="metadata-toggle-row">
-                        <input
-                          type="checkbox"
-                          class="checkbox checkbox-sm"
-                          .checked=${isEnabled}
-                          @change=${(event) =>
+          ${
+            metadataFieldOptions.length === 0
+              ? html`<p class="settings-empty">
+                  No metadata fields discovered yet.
+                </p>`
+              : html`
+                  <div class="metadata-toggle-list">
+                    ${metadataFieldOptions.map((fieldPath) => {
+                      const isEnabled = selectedAllowlist.includes(fieldPath);
+                      return html`
+                        <label class="metadata-toggle-row">
+                          <input
+                            type="checkbox"
+                            class="checkbox checkbox-sm"
+                            .checked=${isEnabled}
+                            @change=${(event) =>
                             this.toggleCollectionAllowlistField(
                               fieldPath,
                               event.target.checked,
                             )}
-                        />
-                        <span>${fieldPath}</span>
-                      </label>
-                    `;
-                  })}
-                </div>
-              `}
+                          />
+                          <span>${fieldPath}</span>
+                        </label>
+                      `;
+                    })}
+                  </div>
+                `
+          }
         </div>
 
         <div class="card card-border card-sm bg-base-100 settings-card">
@@ -1956,8 +1999,7 @@ class WebsiteEditor extends LitElement {
                   event.target.value,
                 )}
             >
-${String(this.pageConfig?.excerpt || "")}</textarea
-            >
+${String(this.pageConfig?.excerpt || "")}</textarea>
           </div>
 
           <div class="field-row field-row-compact">
@@ -2116,20 +2158,22 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
             <div class="page-info">
               <div class="page-info-main">
                 <span class="page-title"
-                  >${this.pageConfig?.title ||
-                  this.pageConfig?.id ||
-                  "Untitled"}</span
+                  >${
+                    this.pageConfig?.title || this.pageConfig?.id || "Untitled"
+                  }</span
                 >
               </div>
               <span class="page-path"
-                >${this.pageConfig?.url ||
-                (this.currentSelection?.type === "collection"
-                  ? `/collections/${this.currentSelection.collectionId}/${this.currentSelection.itemId}`
-                  : this.currentSelection?.type === "collection-config"
-                    ? `/collections/${this.currentSelection.collectionId}/_config.json`
-                    : this.currentSelection?.type === "shared"
-                      ? `/shared/${this.currentSelection.componentId}`
-                      : `/${this.currentSelection?.pageId || "index"}`)}</span
+                >${
+                  this.pageConfig?.url ||
+                  (this.currentSelection?.type === "collection"
+                    ? `/collections/${this.currentSelection.collectionId}/${this.currentSelection.itemId}`
+                    : this.currentSelection?.type === "collection-config"
+                      ? `/collections/${this.currentSelection.collectionId}/_config.json`
+                      : this.currentSelection?.type === "shared"
+                        ? `/shared/${this.currentSelection.componentId}`
+                        : `/${this.currentSelection?.pageId || "index"}`)
+                }</span
               >
             </div>
             <div class="view-mode-switcher">
@@ -2153,9 +2197,11 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
             <div class="publish-actions">
               <editor-btn
                 @click=${this.onPublishClick}
-                ?disabled=${!this.hasUnpublishedChanges ||
-                this.isPublishing ||
-                this.isDeploying}
+                ?disabled=${
+                  !this.hasUnpublishedChanges ||
+                  this.isPublishing ||
+                  this.isDeploying
+                }
                 ?loading=${this.isPublishing}
                 >${this.isPublishing ? "Saving" : "Save Changes"}</editor-btn
               >
@@ -2167,28 +2213,33 @@ ${String(this.pageConfig?.excerpt || "")}</textarea
                 >${this.isDeploying ? "Publishing" : "Publish"}</editor-btn
               >
             </div>
-            ${this.publishStatus
-              ? html`<span
-                  style="margin-left: 10px; font-size: 12px; opacity: 0.8;"
-                  >${this.publishStatus}</span
-                >`
-              : null}
+            ${
+              this.publishStatus
+                ? html`<span
+                    style="margin-left: 10px; font-size: 12px; opacity: 0.8;"
+                    >${this.publishStatus}</span
+                  >`
+                : null
+            }
           </div>
         </div>
         <div class="website website-container">
-          ${this.activeSize !== "desktop"
-            ? html`<div class="orientation-switcher">
-                <editor-radio-button
-                  .options=${this.orientationOptions}
-                  .value=${this.activeOrientation}
-                  @change=${this.onActiveOrientationChange}
-                  disabledTooltip=${true}
-                ></editor-radio-button>
-              </div>`
-            : ""}
+          ${
+            this.activeSize !== "desktop"
+              ? html`<div class="orientation-switcher">
+                  <editor-radio-button
+                    .options=${this.orientationOptions}
+                    .value=${this.activeOrientation}
+                    @change=${this.onActiveOrientationChange}
+                    disabledTooltip=${true}
+                  ></editor-radio-button>
+                </div>`
+              : ""
+          }
           <div
-            class="website-viewport size-${this.activeSize} orientation-${this
-              .activeOrientation}"
+            class="website-viewport size-${this.activeSize} orientation-${
+              this.activeOrientation
+            }"
           >
             ${this.renderViewContent(content)}
           </div>

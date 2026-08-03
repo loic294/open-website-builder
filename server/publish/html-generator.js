@@ -89,6 +89,8 @@ function buildPageHtml({ pageConfig = {}, bodyHtml, siteConfig = {} }) {
     .filter(Boolean)
     .join("\n    ");
   const analyticsScript = String(siteConfig?.analyticsScript || "").trim();
+  const headHtml = String(pageConfig?.headHtml || "");
+  const bodyEndHtml = String(pageConfig?.bodyHtml || "");
 
   return `<!DOCTYPE html>
 <html lang="en" class="owb-loading">
@@ -112,12 +114,14 @@ function buildPageHtml({ pageConfig = {}, bodyHtml, siteConfig = {} }) {
     <link rel="stylesheet" href="./base.css" />
     <link rel="modulepreload" href="./published.js" />
     <script type="module" src="./published.js"></script>
+    ${headHtml}
   </head>
   <body>
     <div class="website">
       ${bodyHtml}
     </div>
     ${analyticsScript}
+    ${bodyEndHtml}
   </body>
 </html>`;
 }

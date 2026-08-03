@@ -28,3 +28,22 @@ test("renders component content into declarative shadow roots", async () => {
   assert.match(html, /class="owb-loading"/);
   assert.match(html, /rel="modulepreload" href="\.\/published\.js"/);
 });
+
+test("injects page HTML at the end of the head and body", async () => {
+  const headHtml = '<meta name="custom-head" content="raw&value" />';
+  const bodyHtml =
+    "<script data-custom-body>window.customBody = true;</script>";
+  const { html } = await generatePageHtml({
+    pageConfig: {
+      title: "Code injection test",
+      headHtml,
+      bodyHtml,
+      content: [],
+    },
+  });
+
+  assert.ok(html.indexOf(headHtml) < html.indexOf("</head>"));
+  assert.ok(html.indexOf(bodyHtml) < html.indexOf("</body>"));
+  assert.ok(html.includes(`    ${headHtml}\n  </head>`));
+  assert.ok(html.includes(`    ${bodyHtml}\n  </body>`));
+});
