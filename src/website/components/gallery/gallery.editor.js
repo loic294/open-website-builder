@@ -2,7 +2,11 @@ import { html, unsafeCSS } from "lit";
 import { EditorComponent } from "../../../editor/components/layout/editor-component/editor-component.js";
 import { FileManager } from "../../../editor/components/layout/file-manager/file-manager.js";
 import { installEditorPlugin } from "../../../editor/editor-plugin.js";
-import { OwbGallery, defaultGalleryConfig } from "./gallery.js";
+import {
+  OwbGallery,
+  defaultGalleryConfig,
+  getGalleryLayout,
+} from "./gallery.js";
 import { getImageSize, IMAGE_SIZE_OPTIONS } from "../../utils/image-size.js";
 import blocksStyles from "../../../editor/components/layout/editor-component/styles-blocks.css?inline";
 
@@ -18,6 +22,11 @@ const FORMAT_OPTIONS = [
   { label: "2x3", value: "2 / 3" },
   { label: "3x4", value: "3 / 4" },
   { label: "9x16", value: "9 / 16" },
+];
+
+const LAYOUT_OPTIONS = [
+  { label: "Grid", value: "grid" },
+  { label: "Masonry", value: "masonry" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -72,6 +81,7 @@ installEditorPlugin(OwbGallery, {
     if (EditorComponent.activeSettingsOwner === element) return;
     EditorComponent.openFor(element, {
       defaultState: {
+        galleryLayout: "grid",
         galleryColumns: 3,
         galleryFormat: "1 / 1",
         galleryGap: "8px",
@@ -80,6 +90,7 @@ installEditorPlugin(OwbGallery, {
       tabs: [{ id: "general", label: "General" }],
       content: () => {
         const editor = EditorComponent.instance;
+        const layout = getGalleryLayout(editor.galleryLayout);
         return html`
           <settings-section title="Photos">
             <editor-select
@@ -120,10 +131,19 @@ installEditorPlugin(OwbGallery, {
             title="Layout"
             ?overridden=${editor.hasAnyOverriddenKeys(
               "galleryColumns",
-              "galleryFormat",
+              ...(layout === "grid" ? ["galleryFormat"] : []),
               "galleryGap",
             )}
           >
+            <editor-select
+              label="Layout"
+              .value=${layout}
+              .options=${LAYOUT_OPTIONS}
+              @change=${(event) =>
+                editor.updateGlobalSettingsState({
+                  galleryLayout: getGalleryLayout(event.detail.value),
+                })}
+            ></editor-select>
             <editor-text-input
               type="number"
               label="Columns"
@@ -138,15 +158,19 @@ installEditorPlugin(OwbGallery, {
                   ),
                 })}
             ></editor-text-input>
-            <editor-select
-              label="Picture format"
-              .value=${editor.galleryFormat}
-              .options=${FORMAT_OPTIONS}
-              @change=${(event) =>
-                editor.updateResponsiveSettingsState({
-                  galleryFormat: event.detail.value,
-                })}
-            ></editor-select>
+            ${
+              layout === "grid"
+                ? html`<editor-select
+                    label="Picture format"
+                    .value=${editor.galleryFormat}
+                    .options=${FORMAT_OPTIONS}
+                    @change=${(event) =>
+                      editor.updateResponsiveSettingsState({
+                        galleryFormat: event.detail.value,
+                      })}
+                  ></editor-select>`
+                : null
+            }
             <editor-text-input
               label="Gap"
               placeholder="8px"

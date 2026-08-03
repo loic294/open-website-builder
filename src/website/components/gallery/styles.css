@@ -81,6 +81,12 @@
   align-items: stretch;
 }
 
+.gallery-grid--masonry {
+  display: block;
+  column-count: var(--gallery-columns, 3);
+  column-gap: var(--gallery-gap, 8px);
+}
+
 .gallery-thumb {
   display: block;
   width: 100%;
@@ -93,11 +99,21 @@
   cursor: pointer;
 }
 
+.gallery-grid--masonry .gallery-thumb {
+  break-inside: avoid;
+  margin-bottom: var(--gallery-gap, 8px);
+  aspect-ratio: auto;
+}
+
 .gallery-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.gallery-grid--masonry .gallery-thumb img {
+  height: auto;
 }
 
 .gallery-empty {

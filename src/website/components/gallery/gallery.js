@@ -10,6 +10,10 @@ export const defaultGalleryConfig = {
   images: [],
 };
 
+export function getGalleryLayout(value) {
+  return value === "masonry" ? "masonry" : "grid";
+}
+
 export function buildResponsiveGalleryCss(settings = {}) {
   return buildResponsiveCss(settings, (effectiveSettings) => ({
     selector: ".gallery-grid",
@@ -133,6 +137,7 @@ export class OwbGallery extends LitElement {
   render() {
     const images = Array.isArray(this.images) ? this.images : [];
     const settings = this.settings ?? {};
+    const layout = getGalleryLayout(settings.galleryLayout);
     const cols = Math.max(1, Number.parseInt(settings.galleryColumns, 10) || 3);
     const format = String(settings.galleryFormat || "1 / 1");
     const gap = String(settings.galleryGap || "8px");
@@ -168,7 +173,7 @@ export class OwbGallery extends LitElement {
               </div>`
             : html`
                 <div
-                  class="gallery-grid"
+                  class="gallery-grid gallery-grid--${layout}"
                   style="--gallery-columns: ${cols}; --gallery-gap: ${gap}; --gallery-ratio: ${format};"
                 >
                   ${images.map(
@@ -193,9 +198,9 @@ export class OwbGallery extends LitElement {
                     : html`<dialog
                         class="lightbox"
                         @click=${(event) => {
-                        if (event.target === event.currentTarget)
-                          this.closeLightbox();
-                      }}
+                          if (event.target === event.currentTarget)
+                            this.closeLightbox();
+                        }}
                       >
                         <div class="lightbox-inner">
                           <img src=${activeHiresImage} alt="" />
@@ -207,25 +212,25 @@ export class OwbGallery extends LitElement {
                             ${createElement(X)}
                           </button>
                           ${
-                          images.length > 1
-                            ? html`
-                                <button
-                                  class="lightbox-nav is-prev"
-                                  type="button"
-                                  @click=${() => this.navigate(-1)}
-                                >
-                                  ${createElement(ChevronLeft)}
-                                </button>
-                                <button
-                                  class="lightbox-nav is-next"
-                                  type="button"
-                                  @click=${() => this.navigate(1)}
-                                >
-                                  ${createElement(ChevronRight)}
-                                </button>
-                              `
-                            : null
-                        }
+                            images.length > 1
+                              ? html`
+                                  <button
+                                    class="lightbox-nav is-prev"
+                                    type="button"
+                                    @click=${() => this.navigate(-1)}
+                                  >
+                                    ${createElement(ChevronLeft)}
+                                  </button>
+                                  <button
+                                    class="lightbox-nav is-next"
+                                    type="button"
+                                    @click=${() => this.navigate(1)}
+                                  >
+                                    ${createElement(ChevronRight)}
+                                  </button>
+                                `
+                              : null
+                          }
                         </div>
                       </dialog>`
                 }
