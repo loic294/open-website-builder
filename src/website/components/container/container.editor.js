@@ -5,6 +5,7 @@ import {
   LayoutEditorController,
   registerLayoutEditorProperties,
 } from "../site-section/layout-editor-controller.js";
+import editorStyles from "../site-section/styles.editor.css?inline";
 
 export { defaultContainerConfig } from "./container.js";
 
@@ -15,7 +16,11 @@ const existingStyles = Array.isArray(OwbContainer.styles)
   : OwbContainer.styles
     ? [OwbContainer.styles]
     : [];
-OwbContainer.styles = [...existingStyles, unsafeCSS(blocksStyles)];
+OwbContainer.styles = [
+  ...existingStyles,
+  unsafeCSS(editorStyles),
+  unsafeCSS(blocksStyles),
+];
 
 const CONTAINER_VARIANT_CONFIG = {
   variant: "container",
