@@ -2,13 +2,37 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { delimiter, dirname, resolve } from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 
-import { createGitRepositoryService } from "./git-repository-service.js";
+import {
+  buildGitCommandEnvironment,
+  createGitRepositoryService,
+} from "./git-repository-service.js";
 
 const execFileAsync = promisify(execFile);
+
+test("git commands prioritize repository tools and the active Node runtime", () => {
+  const cwd = resolve("site");
+  const nodeExecutable = resolve("runtime", "bin", "node");
+  const environment = buildGitCommandEnvironment(
+    cwd,
+    { PATH: "/usr/bin:/bin", CUSTOM_VALUE: "preserved" },
+    nodeExecutable,
+  );
+
+  assert.equal(
+    environment.PATH,
+    [
+      resolve(cwd, "node_modules/.bin"),
+      dirname(nodeExecutable),
+      "/usr/bin:/bin",
+    ].join(delimiter),
+  );
+  assert.equal(environment.CUSTOM_VALUE, "preserved");
+  assert.equal(environment.GIT_TERMINAL_PROMPT, "0");
+});
 
 async function git(cwd, ...args) {
   return await execFileAsync("git", args, { cwd });

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { delimiter, dirname, resolve } from "node:path";
 
 export class GitCommandError extends Error {
   constructor(message, details = {}) {
@@ -17,11 +17,28 @@ function displayCommand(args) {
     .join(" ");
 }
 
+export function buildGitCommandEnvironment(
+  cwd,
+  environment = process.env,
+  nodeExecutable = process.execPath,
+) {
+  const executablePaths = [
+    resolve(cwd, "node_modules/.bin"),
+    dirname(nodeExecutable),
+    environment.PATH,
+  ].filter(Boolean);
+  return {
+    ...environment,
+    PATH: executablePaths.join(delimiter),
+    GIT_TERMINAL_PROMPT: "0",
+  };
+}
+
 function runGit(cwd, args, { allowedExitCodes = [0] } = {}) {
   return new Promise((resolveCommand, rejectCommand) => {
     const child = spawn("git", args, {
       cwd,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+      env: buildGitCommandEnvironment(cwd),
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
