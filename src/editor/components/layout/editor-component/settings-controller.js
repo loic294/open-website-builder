@@ -173,6 +173,13 @@ export function setActiveSettingsOwner(nextOwner) {
   );
 }
 
+export function resolveSettingsOwnerNode(ownerNode, pageTreeNode) {
+  if (ownerNode && typeof ownerNode === "object") {
+    return ownerNode;
+  }
+  return pageTreeNode || null;
+}
+
 export class SettingsController {
   /**
    * @param {LitElement} host
@@ -308,11 +315,11 @@ export class SettingsController {
 
     this._ownerElement = ownerElement;
     this.host.pageConfig = ownerElement.pageConfig;
-    this.host.node =
-      this.findNodeParentInTree(
-        this.host.pageConfig?.content,
-        ownerElement.node?.id,
-      )?.node || ownerElement.node;
+    const pageTreeNode = this.findNodeParentInTree(
+      this.host.pageConfig?.content,
+      ownerElement.node?.id,
+    )?.node;
+    this.host.node = resolveSettingsOwnerNode(ownerElement.node, pageTreeNode);
 
     const cssFromNode = this.getNodeCustomCss();
     if (this.host.settingCustomCss !== cssFromNode) {
