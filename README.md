@@ -2,6 +2,9 @@
 
 A visual website editor built with [Lit](https://lit.dev/) and Vite. The package exports the editor runtime, publish pipeline, and plugin factories; the website repo owns the site config and composes those exports.
 
+﻿﻿<img width="4176" height="2994" alt="image" src="https://github.com/user-attachments/assets/a3cf8e06-767c-4d65-bb3d-20f48f2d3712" />
+
+
 ## License
 
 Open Website Builder is free for personal use, public open-source projects, and
